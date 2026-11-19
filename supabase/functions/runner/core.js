@@ -16,13 +16,13 @@ export function restoreBot(g, state, funding = null, filters = null) {
   const b = new Bot(g, funding, filters);
   // глибока копія: обробка не змінює переданий стан
   const s = state && state.b ? JSON.parse(JSON.stringify(state.b)) : null;
-  if (s) { b.pos = s.pos ?? null; b.tr = Array.isArray(s.tr) ? s.tr : []; b.cd = s.cd ?? 0; b.cum = s.cum ?? 0; }
+  if (s) { b.pos = s.pos ?? null; b.tr = Array.isArray(s.tr) ? s.tr : []; b.cd = s.cd ?? 0; b.cum = s.cum ?? 0; b.nd = s.nd ?? 0; }
   return b;
 }
 
 /**
  * @param g        налаштування бота (botConfig)
- * @param state    збережений стан {b:{pos,tr,cd,cum}, pk, dd, lt} або null для нового бота
+ * @param state    збережений стан {b:{pos,tr,cd,cum,nd}, pk, dd, lt} або null для нового бота (nd — закритих угод, для g.maxd)
  * @param candles  свічки таймфрейму бота в порядку зростання {t,o,h,l,c,v,ml?,mh?} (t — час відкриття, мс)
  * @param now      поточний час, мс (обробляються лише закриті свічки)
  * @param spans    інтервали роботи бота [[від, до|null], …] (config._sp): свічки, що закрилися під час паузи,
@@ -51,13 +51,13 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
     const v = b.eqv(c); pk = Math.max(pk, v); dd = Math.min(dd, v - pk);
     const p = b.pos;
     if (b.tr.length > n0) { const l = b.tr[b.tr.length - 1]; events.push({ kind: l.liq ? "liq" : l.sl ? "sl" : "close", pnl: l.pnl, price: l.f[l.f.length - 1].p, t: ct }); }
-    else if (!p0 && p) events.push({ kind: "open", notional: p.cost, price: c.c, t: ct });
+    else if (!p0 && p) events.push({ kind: "open", notional: p.cost, price: c.c, t: ct, ...(p.bf > 1 ? { bf: p.bf } : {}) }); // bf — множник реінвесту (драбина на біржі)
     else if (p0 && p && p.n > o0) events.push({ kind: "dca", notional: p.cost - c0, price: p.last, n: p.n, t: ct });
     // часткова фіксація TP (g.s1): модель зменшила позицію — цю частку треба закрити й на біржі
     else if (p0 && p && !h0 && p.t1 && q0 > 0) events.push({ kind: "part", share: 1 - p.q / q0, price: p.f[p.f.length - 1].p, t: ct });
   }
   const tr = b.tr.slice(-keepTrades);
-  return { state: { b: { pos: b.pos, tr, cd: b.cd, cum: b.cum }, pk, dd, lt, equity: A.length ? b.eqv(A[A.length - 1]) : b.cum }, events, skipped };
+  return { state: { b: { pos: b.pos, tr, cd: b.cd, cum: b.cum, nd: b.nd }, pk, dd, lt, equity: A.length ? b.eqv(A[A.length - 1]) : b.cum }, events, skipped };
 }
 
 /* текст події для журналу й Telegram */

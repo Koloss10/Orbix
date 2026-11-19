@@ -107,3 +107,26 @@ test('Ліміт ризику (entryOk: false): нових угод немає, 
   assert.deepEqual(b.events.slice(0, ib + 1), a.events.slice(0, ia + 1), 'до закриття відкритої угоди події ті самі');
   assert.equal(b.events.slice(ib + 1).filter((e) => e.kind === 'open').length, 0, 'після закриття нових угод немає');
 });
+
+test('Зупинка після N угод на сервері: лічильник угод зберігається між запусками', () => {
+  const cs = series(900), start = 400, gm = { ...g, maxd: 2 };
+  let st = processBot({ g: gm, state: null, candles: cs.slice(0, start), now: cs[start - 1].t + H }).state, opens = 0;
+  for (let i = start + 1; i <= cs.length; i++) {
+    const r = processBot({ g: gm, state: st, candles: cs.slice(Math.max(0, i - 300), i), now: cs[i - 1].t + H, keepTrades: 1 });
+    opens += r.events.filter((e) => e.kind === 'open').length; st = r.state;
+  }
+  // keepTrades: 1 — список угод обрізано, але nd рахує всі закриті угоди
+  assert.ok(st.b.nd >= 2, `nd = ${st.b.nd}`); assert.equal(st.b.tr.length, 1);
+  assert.equal(opens, 2, 'відкрито рівно 2 угоди');
+  assert.equal(st.b.nd, 2); assert.equal(st.b.pos, null);
+});
+
+test('Реінвест: подія входу несе множник bf, коли є прибуток', () => {
+  const cs = series(900), start = 400, gr = { ...g, rv: 1 };
+  const one = processBot({ g: gr, state: null, candles: cs.slice(0, start), now: cs[start - 1].t + H });
+  const r = processBot({ g: gr, state: one.state, candles: cs, now: cs.at(-1).t + H });
+  const opens = r.events.filter((e) => e.kind === 'open');
+  assert.ok(opens.length >= 2);
+  assert.equal(opens[0].bf, undefined, 'перша угода — без прибутку, без множника');
+  assert.ok(opens.some((e) => e.bf > 1), 'після прибуткових угод множник > 1');
+});
