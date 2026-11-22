@@ -22,6 +22,24 @@ const SYSTEM_PROMPT = `Ти Orbix AI — аналітичний помічник
 
 const safeError = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 500);
 
+function compactBotState(raw: any) {
+  if (!raw || typeof raw !== "object") return null;
+  const bot = raw.b && typeof raw.b === "object" ? raw.b : {};
+  const trades = Array.isArray(bot.tr) ? bot.tr : [];
+  return {
+    position: bot.pos ?? null,
+    cumulative_pnl: bot.cum ?? null,
+    trades_count: trades.length,
+    last_trade: trades.length ? trades[trades.length - 1] : null,
+    exchange_error: typeof raw.xe === "string" ? raw.xe.slice(0, 300) : null,
+    reconciliation: raw.fl?.mis ? {
+      type: String(raw.fl.mis.k ?? "").slice(0, 40),
+      message: String(raw.fl.mis.t ?? "").slice(0, 300),
+    } : null,
+    risk_lock: raw.fl?.rl ? String(raw.fl.rl.t ?? "").slice(0, 200) : null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -97,7 +115,7 @@ Deno.serve(async (req) => {
         timeframe: b.timeframe, side: b.side, mode: b.mode, status: b.status,
         base_order_size: b.base_order_size, max_budget: b.max_budget,
         config: b.config,
-        state: stateByBot.get(b.id) ?? null,
+        state: compactBotState(stateByBot.get(b.id)?.state),
       })),
       recent_events: eventsRes.data ?? [],
       recent_backtests: backtestsRes.data ?? [],
