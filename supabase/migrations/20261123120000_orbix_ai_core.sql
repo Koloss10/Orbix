@@ -57,3 +57,34 @@ revoke all on public.ai_conversations from anon, authenticated;
 revoke all on public.ai_messages from anon, authenticated;
 revoke all on public.ai_usage from anon, authenticated;
 grant select on public.ai_conversations, public.ai_messages, public.ai_usage to authenticated;
+
+-- Atomic per-user daily quota; prevents parallel requests bypassing the limit.
+create table if not exists public.ai_daily_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  usage_date date not null default current_date,
+  message_count integer not null default 0 check (message_count >= 0),
+  primary key (user_id, usage_date)
+);
+alter table public.ai_daily_usage enable row level security;
+revoke all on public.ai_daily_usage from anon, authenticated;
+
+create or replace function public.ai_claim_daily_quota(p_user_id uuid, p_limit integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare claimed integer;
+begin
+  if p_user_id is null or p_limit < 1 then return false; end if;
+  insert into public.ai_daily_usage(user_id, usage_date, message_count)
+  values (p_user_id, current_date, 1)
+  on conflict (user_id, usage_date) do update
+    set message_count = public.ai_daily_usage.message_count + 1
+    where public.ai_daily_usage.message_count < p_limit
+  returning message_count into claimed;
+  return claimed is not null;
+end;
+$$;
+revoke all on function public.ai_claim_daily_quota(uuid, integer) from public, anon, authenticated;
+grant execute on function public.ai_claim_daily_quota(uuid, integer) to service_role;
