@@ -133,7 +133,12 @@ Deno.serve(async (req) => {
       console.error("OpenAI Responses API error", aiResponse.status, payload?.error?.type ?? "unknown");
       return json({ error: "AI provider request failed", provider_status: aiResponse.status }, 502);
     }
-    const answer = typeof payload.output_text === "string" ? payload.output_text.trim() : "";
+    const outputText = Array.isArray(payload.output)
+      ? payload.output.flatMap((item: any) => Array.isArray(item.content) ? item.content : [])
+          .filter((part: any) => part.type === "output_text" && typeof part.text === "string")
+          .map((part: any) => part.text).join("\\n")
+      : "";
+    const answer = (typeof payload.output_text === "string" ? payload.output_text : outputText).trim();
     if (!answer) return json({ error: "AI returned an empty response" }, 502);
 
     const usage = payload.usage ?? {};
