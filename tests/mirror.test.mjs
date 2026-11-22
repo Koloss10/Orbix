@@ -1,7 +1,7 @@
 // Виконання угод серверного бота на демо-біржі: ордери на біржі й захист від повторів (фейкова біржа).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionsFor, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
+import { actionsFor, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, topUp, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
 import { botConfig } from '../supabase/functions/runner/core.js';
 import { Bot } from '../supabase/functions/runner/engine.js';
 
@@ -634,4 +634,237 @@ test('Ліміт ризику: про пропущений вхід — одне
   await handleBot({ bot: { id: BOT, state: st }, g, r: { state: { b: { pos: null }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: false, native: false, ex: null, now: T,
     save: async (x) => { st = JSON.parse(JSON.stringify(x)); return true; }, log: async () => {}, notify: async () => {} });
   assert.equal(st.fl.rl, undefined);
+});
+
+/* ---------- часткове виставлення ордерів (g.live) ---------- */
+const gl = { ...g, live: 1 }, ctxL = { ...ctx, g: gl };
+const openL = () => actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0];
+const links = async (ex) => (await ex.openOrders()).map((o) => o.link);
+
+test('Часткове виставлення: при вході на біржі лише live найближчих докупівель', async () => {
+  const ex = fakeEx(), fl = {};
+  const m = await execute(ex, openL(), { ...ctxL, fl });
+  assert.deepEqual(await links(ex), [fl.lb + 'd1']); assert.equal(fl.lt, 1);
+  assert.match(m, /1 лімітн\. докупівель \(з 3; решта — по одній після виконання\)/);
+  const ex2 = fakeEx(), fl2 = {};
+  await execute(ex2, openL(), { ...ctx, g: { ...g, live: 2 }, fl: fl2 });
+  assert.deepEqual(await links(ex2), [fl2.lb + 'd1', fl2.lb + 'd2']); assert.equal(fl2.lt, 2);
+  const ex3 = fakeEx(), fl3 = {};                                  // live = 0 — уся драбина, як раніше
+  await execute(ex3, openL(), { ...ctx, fl: fl3 });
+  assert.equal((await links(ex3)).length, 3); assert.equal(fl3.lt, undefined);
+});
+
+test('Часткове виставлення: виконалась докупівля — ставиться наступна, без дублів; повторний запуск нічого не додає', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 1 } }), null, 'модель ще не докуповувала — нічого не додається');
+  ex.hit(L[0].price);                                              // рівень 1 виконано на біржі, модель: n = 2
+  assert.match(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), /докладено 1 лімітн\. докупівель \(на біржі до рівня 2 з 3\)/);
+  assert.deepEqual(await links(ex), [fl.lb + 'd2']);
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), null, 'повтор — нічого');
+  ex.hit(L[1].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 3 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'd3']); assert.equal(fl.lt, 3);
+  ex.hit(L[2].price);
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 4 } }), null, 'драбину вичерпано');
+  const ids = ex.S.orders.map((o) => o.link); assert.equal(new Set(ids).size, ids.length, 'ідентифікатори не повторюються');
+  assert.equal(ex.S.orders.filter((o) => o.side === 'BUY' && o.status === 'Filled').length, 4, 'вхід і три докупівлі — по одній');
+});
+
+test('Часткове виставлення: ціна проскочила кілька рівнів — біржа наздоганяє модель; після TP1 нічого не ставиться', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  ex.hit(L[1].price);                                              // за свічку ціна пройшла рівні 1 і 2; на біржі був лише 1-й
+  await topUp(ex, { ...ctxL, fl, mp: { n: 3 } });                  // модель зарахувала обидва
+  assert.deepEqual(ex.S.orders.filter((o) => o.status === 'New').map((o) => o.link), [fl.lb + 'd2', fl.lb + 'd3']);
+  ex.hit(L[1].price);                                              // ліміт рівня 2 вище ринку (Long) — виконується одразу
+  assert.equal(ex.S.orders.find((o) => o.link === fl.lb + 'd2').status, 'Filled');
+  const ex2 = fakeEx(), fl2 = {};
+  await execute(ex2, openL(), { ...ctxL, fl: fl2 }); ex2.hit(L[0].price);
+  assert.equal(await topUp(ex2, { ...ctxL, fl: fl2, mp: { n: 2, t1: 1 } }), null, 'після TP1 модель не докуповує');
+});
+
+test('Часткове виставлення: збій біржі — статус невідомий, ордер не надсилається і повторюється наступного запуску', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl }); ex.hit(L[0].price);
+  const bl = ex.byLink; ex.byLink = async () => { throw new Error('timeout'); };
+  assert.match(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), /не вдалося: 2: timeout, повторю/);
+  assert.equal(fl.lt, 1); assert.equal((await links(ex)).length, 0, 'нового ордера немає');
+  ex.byLink = bl;
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'd2']);
+});
+
+test('Часткове виставлення: пауза — відновлюються лише live рівнів нового покоління, далі докладаються з тим самим поколінням', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  await park(ex, { symbol: 'TONUSDT', botId: BOT });
+  assert.match(await restore(ex, { ...ctxL, fl, mp: { n: 1 } }), /відновлено 1 лімітн/);
+  assert.deepEqual(await links(ex), [fl.lb + 'e1x1']); assert.equal(fl.lt, 1);
+  ex.hit(L[0].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'e1x2']);
+});
+
+test('Часткове виставлення: угода, відкрита без нього (немає fl.lt), — драбину вважаємо виставленою, нічого не додаємо', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, openL(), { ...ctx, fl });                      // відкрито з усією драбиною
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), null);
+  assert.equal(fl.lt, 3); assert.equal(count(ex, 'limit'), 3);
+});
+
+test('handleBot: часткове виставлення докладає ордер у звичайному запуску; угоду закрито — fl.lt прибрано', async () => {
+  const ex = fakeEx(), saved = [], logs = [], L = ladder(g, 2.5, F);
+  const go = (state, pos) => handleBot({ bot: { id: BOT, state }, g: gl, r: { state: { b: { pos }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: T,
+    save: async (s) => { saved.push(JSON.parse(JSON.stringify(s))); return true; }, log: async (_l, m) => logs.push(m), notify: async () => {} });
+  const fl = {}; await execute(ex, openL(), { ...ctxL, fl });
+  ex.hit(L[0].price);
+  await go({ fl, pend: [] }, { q: 24 + L[0].qty, n: 2, first: 2.5, f: [{ t: T }, { t: T + 1 }] });
+  assert.ok(logs.some((m) => /докладено 1 лімітн/.test(m)), logs.join(' | '));
+  assert.equal(saved.at(-1).fl.lt, 2);
+  ex.S.pos = null; ex.S.orders = [];
+  await go(saved.at(-1), null);
+  assert.equal(saved.at(-1).fl.lt, undefined);
+});
+
+test('Реінвест: драбина докупівель на біржі у масштабі угоди моделі (bf), і після паузи теж', async () => {
+  const a0 = actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0];
+  const a1 = actionsFor([{ kind: 'open', notional: 90, price: 2.5, t: T, bf: 1.5 }], BOT, true)[0];
+  assert.equal(a0.bf, undefined); assert.equal(a1.bf, 1.5);
+  const qOf = async (a) => { const ex = fakeEx(), fl = {}; await execute(ex, a, { ...ctx, fl }); return { ex, fl, q: ex.S.orders.filter((o) => o.status === 'New').map((o) => o.qty) }; };
+  const r0 = await qOf(a0), r1 = await qOf(a1);
+  assert.equal(r0.q.length, r1.q.length); assert.ok(r0.q.length > 0);
+  // кількість кожної сходинки — у 1,5 раза більша (з точністю до кроку кількості 0,1)
+  r0.q.forEach((q, i) => assert.ok(Math.abs(r1.q[i] - q * 1.5) <= 0.1 + 1e-9, `сходинка ${i + 1}: ${r1.q[i]} vs ${q * 1.5}`));
+  // пауза й відновлення: модель пам'ятає bf у позиції — нова драбина того ж масштабу
+  await park(r1.ex, { symbol: 'TONUSDT', botId: BOT });
+  await restore(r1.ex, { g, symbol: 'TONUSDT', fl: r1.fl, mp: { q: 1, n: 1, t1: 0, bf: 1.5 } });
+  const again = r1.ex.S.orders.filter((o) => o.status === 'New').map((o) => o.qty);
+  assert.deepEqual(again, r1.q);
+});
+
+test('Позапланова докупівля з картки: ринковий ордер один раз, без позиції — пропуск', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0], { ...ctx, fl });
+  const q0 = ex.S.pos.amt, a = actionsFor([{ kind: 'madd', notional: 25, price: 2.5, t: T + 5e3 }], BOT, true)[0];
+  assert.equal(a.kind, 'madd'); assert.ok(a.id.endsWith('m'));
+  assert.match(await execute(ex, a, { ...ctx, fl }), /позапланова докупівля 10 /);
+  assert.equal(ex.S.pos.amt, q0 + 10);
+  await execute(ex, a, { ...ctx, fl }); assert.equal(ex.S.pos.amt, q0 + 10, 'повтор тієї ж дії — без другого ордера');
+  const e2 = fakeEx(); assert.match(await execute(e2, a, { ...ctx, fl: {} }), /позиції вже немає/); assert.equal(count(e2, 'market'), 0);
+});
+
+test('Часткове виставлення разом з реінвестом: докладені сходинки у масштабі bf, як і перші', async () => {
+  const L = ladder(g, 2.5, F), gl2 = { ...g, live: 1 }, c2 = { ...ctx, g: gl2 };
+  const run = async (bf) => {
+    const ex = fakeEx(), fl = {}, a = actionsFor([{ kind: 'open', notional: 60 * (bf || 1), price: 2.5, t: T, ...(bf ? { bf } : {}) }], BOT, true)[0];
+    await execute(ex, a, { ...c2, fl });
+    const first = (await ex.openOrders()).map((o) => o.qty);
+    ex.hit(L[0].price);
+    await topUp(ex, { ...c2, fl, mp: { n: 2, ...(bf ? { bf } : {}) } });
+    return { first, next: (await ex.openOrders()).map((o) => o.qty) };
+  };
+  const a = await run(0), b = await run(1.5);
+  assert.equal(a.first.length, 1); assert.equal(b.first.length, 1); assert.equal(a.next.length, 1); assert.equal(b.next.length, 1);
+  assert.ok(Math.abs(b.first[0] - a.first[0] * 1.5) <= 0.1 + 1e-9, `перша сходинка ${b.first[0]} vs ${a.first[0] * 1.5}`);
+  assert.ok(Math.abs(b.next[0] - a.next[0] * 1.5) <= 0.1 + 1e-9, `докладена сходинка ${b.next[0]} vs ${a.next[0] * 1.5}`);
+});
+
+test('Перезапуск угоди після помилки: втрачені лімітні ордери бота повертаються, помилка біржі скидається', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0], { ...ctx, fl });
+  const n0 = (await ex.openOrders()).length; assert.ok(n0 > 0);
+  for (const o of ex.S.orders) if (o.status === 'New') o.status = 'Cancelled';   // ордери бота зникли з біржі
+  const xe = { m: 'timeout', at: T + 30e3 }, mp = { q: 1, n: 1, t1: 0 };
+  const go = async (manual) => { const saved = [], logs = [];
+    await handleBot({ bot: { id: BOT, state: { fl: { ...fl }, xe } }, g, r: { state: { b: { pos: mp }, lt: T }, events: [], manual }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: T + 60e3,
+      save: async (s) => { saved.push(JSON.parse(JSON.stringify(s))); return true; }, log: async (l, m) => logs.push(m), notify: async () => {} });
+    return { saved, logs }; };
+  const plain = await go(null);
+  assert.equal((await ex.openOrders()).length, 0, 'без перезапуску ордери не відновлюються');
+  assert.ok(plain.saved[0].xe, 'помилка лишається');
+  const rs = await go({ id: 'rs1', k: 'resync', ok: true });
+  assert.equal((await ex.openOrders()).length, n0, 'усі сходинки драбини знову на біржі');
+  assert.equal(rs.saved[0].xe, undefined, 'помилку скинуто');
+  assert.ok(rs.logs.some((m) => /Перезапуск угоди/.test(m)));
+  assert.ok(rs.logs.some((m) => /відновлено \d+ лімітн/.test(m)));
+});
+
+// ---------- лімітний вхід з відступом: усі розходження моделі й біржі ----------
+const PT = T, PX = 2.45, pendA = () => actionsFor([{ kind: 'pend', price: PX, notional: 60, t: PT }], BOT, true)[0];
+const openP = () => actionsFor([{ kind: 'open', notional: 60, price: PX, t: PT + 4 * 36e5, pt: PT }], BOT, true)[0];
+const pcanA = () => actionsFor([{ kind: 'pcan', t: PT + 4 * 36e5, pt: PT }], BOT, true)[0];
+
+test('Лімітний вхід: ордер з тим самим id, що й вхід; Binance (не рідний режим) — без ліміту', () => {
+  assert.equal(pendA().kind, 'plim'); assert.equal(pendA().id, openP().id); assert.equal(pcanA().id, openP().id);
+  assert.equal(actionsFor([{ kind: 'pend', price: PX, notional: 60, t: PT }], BOT, false).length, 0);
+  assert.equal(actionsFor([{ kind: 'pcan', t: PT, pt: PT }], BOT, false).length, 0);
+  assert.equal(actionsFor([{ kind: 'open', notional: 60, price: PX, t: PT + 1, pt: PT }], BOT, false)[0].id, openP().id);
+});
+
+test('Лімітний вхід: обидва виконались — ринкового ордера немає, драбина від ціни моделі', async () => {
+  const ex = fakeEx(), fl = {};
+  assert.match(await execute(ex, pendA(), { ...ctx, fl }), /лімітний вхід 24\.4 за 2\.45/);
+  ex.hit(2.44);                                                   // біржа виконала ліміт
+  await execute(ex, openP(), { ...ctx, fl });
+  assert.equal(count(ex, 'market'), 0); assert.equal(fl.e0, PX);
+  assert.ok((await ex.openOrders()).length > 0, 'драбина докупівель на біржі');
+  await execute(ex, pendA(), { ...ctx, fl }); assert.equal(ex.S.orders.filter((o) => o.link === openP().id).length, 1, 'повтор не дублює');
+});
+
+test('Лімітний вхід: модель увійшла, біржа ні — ліміт знято, вхід ринком під новим id, повтор без дубля', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, pendA(), { ...ctx, fl });
+  await execute(ex, openP(), { ...ctx, fl });
+  assert.equal(ex.S.orders.find((o) => o.link === openP().id).status, 'Cancelled');
+  assert.equal(count(ex, 'market'), 1); assert.ok(ex.S.pos && ex.S.pos.amt > 0);
+  const amt = ex.S.pos.amt; await execute(ex, openP(), { ...ctx, fl }); assert.equal(ex.S.pos.amt, amt, 'повтор — без другого входу');
+});
+
+test('Лімітний вхід знято паузою: після зняття паузи модель увійшла — вхід ринком', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, pendA(), { ...ctx, fl });
+  await park(ex, { symbol: 'TONUSDT', botId: BOT });
+  assert.equal(ex.S.orders.find((o) => o.link === openP().id).status, 'Cancelled');
+  await execute(ex, openP(), { ...ctx, fl }); assert.equal(count(ex, 'market'), 1); assert.ok(ex.S.pos);
+});
+
+test('Скасування моделлю: ордер знято; якщо біржа встигла виконати — позицію закрито', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, pendA(), { ...ctx, fl });
+  assert.match(await execute(ex, pcanA(), { ...ctx, fl }), /скасовано \(ціна пішла/);
+  assert.equal(ex.S.orders.find((o) => o.link === openP().id).status, 'Cancelled'); assert.equal(ex.S.pos, null);
+  const e2 = fakeEx(); await execute(e2, pendA(), { ...ctx, fl: {} }); e2.hit(2.44);
+  assert.ok(e2.S.pos); assert.match(await execute(e2, pcanA(), { ...ctx, fl: {} }), /встигла його виконати — позицію .* закрито/);
+  assert.equal(e2.S.pos, null);
+  assert.match(await execute(fakeEx(), pcanA(), { ...ctx, fl: {} }), /скасовувати нічого/);
+});
+
+test('Сервер не знімає ордер лімітного входу, а біржа, що виконала ліміт раніше за модель, — не тривога', async () => {
+  const ex = fakeEx(), logs = [];
+  await execute(ex, pendA(), { ...ctx, fl: {} });
+  const pe = { px: PX, q: 24.4, t: PT - 36e5 * 24 }; // pe.t — відкриття свічки; ідентифікатор від pe.t + W (tf = 24 год)
+  const run1 = (st) => handleBot({ bot: { id: BOT, state: st }, g, r: { state: { b: { pos: null, pe }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: T + 60e3,
+    save: async () => true, log: async (l, m) => logs.push([l, m]), notify: async () => {} });
+  await run1({ fl: {} });
+  assert.equal(ex.S.orders.find((o) => o.link === openP().id).status, 'New', 'ордер входу лишився');
+  ex.hit(2.44);                                                    // біржа виконала, модель ще ні
+  let st = { fl: {} };
+  for (let k = 0; k < 4; k++) { const saved = []; await handleBot({ bot: { id: BOT, state: st }, g, r: { state: { b: { pos: null, pe }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: T + 60e3 * (k + 2),
+    save: async (s) => { saved.push(JSON.parse(JSON.stringify(s))); return true; }, log: async (l, m) => logs.push([l, m]), notify: async () => {} }); st = saved.at(-1); }
+  assert.ok(st.fl.mis && st.fl.mis.k === 'pf' && !st.fl.mis.on, 'розбіжність «лімітний вхід виконано» без тривоги');
+  assert.ok(ex.S.pos && ex.S.pos.sl > 0, 'позиція на біржі вже під стопом (захист від ціни входу біржі)');
+});
+
+test('Підхопити позицію: на біржі ставляться драбина й захист від ціни моделі; позиції вже немає — пропуск', async () => {
+  const ex = fakeEx(), fl = {};
+  await ex.market('TONUSDT', 'BUY', 24, false, '');                  // ручна позиція користувача
+  const a = actionsFor([{ kind: 'adopt', price: 2.5, notional: 60, t: T }], BOT, true)[0];
+  assert.equal(a.kind, 'adopt'); assert.equal(actionsFor([{ kind: 'adopt', price: 2.5, notional: 60, t: T }], BOT, false).length, 0, 'Binance — лише модель');
+  const m = await execute(ex, a, { ...ctx, fl });
+  assert.match(m, /підхоплено позицію 24 за 2\.5/); assert.equal(fl.e0, 2.5);
+  assert.equal((await ex.openOrders()).length, g.orders - 1, 'уся драбина');
+  assert.ok(ex.S.pos.sl > 0, 'стоп на біржі');
+  const n = ex.S.orders.length; await execute(ex, a, { ...ctx, fl }); assert.equal(ex.S.orders.length, n, 'повтор — без дублів');
+  assert.match(await execute(fakeEx(), a, { ...ctx, fl: {} }), /вже немає — підхоплювати нічого/);
 });

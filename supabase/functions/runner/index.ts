@@ -8,22 +8,23 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { botConfig, INTERVAL, processBot } from "./core.js";
 import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
-import { limitsOf, riskBlock } from "./risk.js";
+import { addCap, limitsOf, riskBlock } from "./risk.js";
+import { htfNeed } from "./engine.js";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 const BYIV: Record<string, string> = { "1h": "60", "4h": "240", "12h": "720", "1d": "D", "1w": "W" };
-type C = { t: number; o: number; h: number; l: number; c: number; v: number; ml?: number; mh?: number };
+type C = { t: number; o: number; h: number; l: number; c: number; v: number; bv?: number; nt?: number; ml?: number; mh?: number };
 
 async function getJson(u: string) { const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status} ${u.split("?")[0]}`); return r.json(); }
 /* ринкові дані: Binance (ф'ючерси з mark price і funding або спот), резерв — Bybit */
-async function market(symbol: string, iv: string, fut: boolean) {
+async function market(symbol: string, iv: string, fut: boolean, lim = 400) {
   try {
     const base = fut ? "https://fapi.binance.com/fapi/v1" : "https://api.binance.com/api/v3";
-    const k = await getJson(`${base}/klines?symbol=${symbol}&interval=${iv}&limit=400`);
-    const candles: C[] = k.map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5] }));
+    const k = await getJson(`${base}/klines?symbol=${symbol}&interval=${iv}&limit=${lim}`);
+    const candles: C[] = k.map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5], bv: +r[9], nt: +r[8] })); // bv — об'єм покупців (taker buy) для фільтра китів, nt — кількість угод (сплеск активності)
     let funding: { t: number; r: number }[] | null = null;
     if (fut) {
-      const m = await getJson(`${base}/markPriceKlines?symbol=${symbol}&interval=${iv}&limit=400`).catch(() => []);
+      const m = await getJson(`${base}/markPriceKlines?symbol=${symbol}&interval=${iv}&limit=${lim}`).catch(() => []);
       const mm = new Map(m.map((r: any[]) => [+r[0], r]));
       for (const c of candles) { const x: any = mm.get(c.t); if (x) { c.ml = +x[3]; c.mh = +x[2]; } }
       const f = await getJson(`${base}/fundingRate?symbol=${symbol}&startTime=${Date.now() - 45 * 864e5}&limit=1000`).catch(() => []);
@@ -32,11 +33,11 @@ async function market(symbol: string, iv: string, fut: boolean) {
     return { candles, funding, src: "binance" };
   } catch (_e) {
     const cat = fut ? "linear" : "spot";
-    const j = await getJson(`https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYIV[iv]}&limit=400`);
+    const j = await getJson(`https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYIV[iv]}&limit=${lim}`);
     const candles: C[] = (j.result?.list ?? []).map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5] })).reverse();
     let funding: { t: number; r: number }[] | null = null;
     if (fut) {
-      const m = await getJson(`https://api.bybit.com/v5/market/mark-price-kline?category=linear&symbol=${symbol}&interval=${BYIV[iv]}&limit=400`).catch(() => ({}));
+      const m = await getJson(`https://api.bybit.com/v5/market/mark-price-kline?category=linear&symbol=${symbol}&interval=${BYIV[iv]}&limit=${lim}`).catch(() => ({}));
       const mm = new Map((m.result?.list ?? []).map((r: any[]) => [+r[0], r]));
       for (const c of candles) { const x: any = mm.get(c.t); if (x) { c.ml = +x[3]; c.mh = +x[2]; } }
       const f = await getJson(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${symbol}&limit=200`).catch(() => ({}));
@@ -118,8 +119,10 @@ Deno.serve(async (req) => {
       if (!/^[A-Z0-9]{2,20}\/USDT$/.test(g.pair || "")) continue;
       const iv = (INTERVAL as Record<number, string>)[g.tf || 1];
       if (!iv) continue;
-      const symbol = g.pair.replace("/", ""), mk = `${symbol}|${iv}|${g.fut ? 1 : 0}`;
-      if (!mcache.has(mk)) mcache.set(mk, market(symbol, iv, !!g.fut));
+      // фільтр тренду старшого таймфрейму потребує довшої історії: до 1000 свічок (ліміт Bybit)
+      const lim = Math.min(1000, Math.max(400, htfNeed(g) + 30));
+      const symbol = g.pair.replace("/", ""), mk = `${symbol}|${iv}|${g.fut ? 1 : 0}|${lim}`;
+      if (!mcache.has(mk)) mcache.set(mk, market(symbol, iv, !!g.fut, lim));
       const m = await mcache.get(mk);
       const exName = cfg._ex === "binance" ? "binance" : "bybit";
       const want = !!(cfg._tn && g.fut);
@@ -127,7 +130,8 @@ Deno.serve(async (req) => {
       // ліміт ризику: перевищено — нових угод не відкривати (позиції, що вже є, бот веде далі)
       const peers = mirror ? [...tnBots.entries()].filter(([id, x]) => id !== bot.id && x.uid === bot.user_id).map(([, x]) => x) : [];
       const blk = mirror ? riskBlock({ limits: limitsOf(lims.get(bot.user_id)), self: { g, state: bot.state }, peers, now: Date.now() }) : null;
-      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk });
+      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk, cmd: cfg._cmd, addCap: mirror ? addCap(limitsOf(lims.get(bot.user_id)), peers) : 0 });
+      if (r.manual && !r.manual.ok) await log(bot, "warn", `Ручна дія «${r.manual.k === "close" ? "закрити за ринком" : "докупити"}» не виконана: ${r.manual.why}`);
       evCount += r.events.length;
       if (tnBots.has(bot.id)) tnBots.get(bot.id)!.state = { ...(bot.state || {}), ...r.state }; // нова угода цього запуску займає ліміт для наступних ботів
       if (want && !mirror && r.events.length) await log(bot, "warn", `На демо-рахунку вже торгує інший бот ${g.pair} — угоду не продубльовано (позиції злилися б в одну)`);

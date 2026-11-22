@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node tools/build.js",
     "check": "node tools/build.js --check",
-    "test": "node --test tests/ui-ids.test.mjs tests/engine.test.js tests/exchange-sign.test.mjs tests/runner-core.test.mjs tests/risk.test.mjs tests/mirror.test.mjs tests/sim.test.mjs tests/quality.test.js",
+    "test": "node --test tests/ui-ids.test.mjs tests/engine.test.js tests/exchange-sign.test.mjs tests/runner-core.test.mjs tests/risk.test.mjs tests/mirror.test.mjs tests/sim.test.mjs tests/quality.test.js tests/veles.test.js",
     "verify": "npm run check && npm test"
   }
 }

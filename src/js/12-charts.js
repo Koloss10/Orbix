@@ -7,7 +7,7 @@ function barsOf(pair,tf){const H=D[pair],A=aggC(H,tf).slice(),lv=MD.live[pair],e
 if(tail.length){let h=-1/0,l=1/0,v=0;for(const c of tail){h=Math.max(h,c.h);l=Math.min(l,c.l);v+=c.v||0}const W=tfMs(tf),off=tfOff(tf);A.push({t:tf===1?tail[0].t:Math.floor((tail[0].t-off)/W)*W+off,o:tail[0].o,h,l,c:tail[tail.length-1].c,v})}return A}
 const pfmt=p=>{p=Math.abs(p)||1;const d=p>=1000?2:p>=1?4:Math.min(10,Math.ceil(-Math.log10(p))+4);return{type:'price',precision:d,minMove:+(10**-d).toFixed(d)}};
 /* маркери купівлі/продажу з угод бота: f — заповнення {t,p,k:'e'|'x'} */
-function tradeMarks(tr,pos,g){const C=TH(),o=[];const add=f=>{if(!f||!f.t)return;const buy=(f.k==='e')===(g.d>0);o.push({t:f.t,buy,p:f.p})};(tr||[]).slice(-150).forEach(t=>(t.f||[]).forEach(add));if(pos&&pos.f)pos.f.forEach(add);
+function tradeMarks(tr,pos,g){const C=TH(),o=[];const add=f=>{if(!f||!f.t)return;const buy=(f.k==='e'||f.k==='m')===(g.d>0);o.push({t:f.t,buy,p:f.p})};(tr||[]).slice(-150).forEach(t=>(t.f||[]).forEach(add));if(pos&&pos.f)pos.f.forEach(add);
 return o.map(m=>({t:m.t,position:m.buy?'belowBar':'aboveBar',color:m.buy?C.up:C.dn,shape:m.buy?'arrowUp':'arrowDown',text:m.buy?'B':'S',size:.8}))}
 /* ---------- біржовий графік (Lightweight Charts v5, вбудований у файл): market | full | mini ---------- */
 const sma=(c,n)=>{const o=[];let s=0;for(let i=0;i<c.length;i++){s+=c[i];if(i>=n)s-=c[i-n];o.push(i>=n-1?s/n:NaN)}return o};

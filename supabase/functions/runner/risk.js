@@ -11,7 +11,7 @@
 //   max_total — сума повних драбин усіх ботів користувача, що зараз мають позицію, разом із новою угодою;
 //   day_loss  — реалізований збиток за поточну добу UTC по всіх ботах користувача з біржею
 //               (закриття за даними біржі state.xr.l, а для ботів без них — угоди моделі state.b.tr).
-import { tfMs } from "./engine.js";
+import { tfMs, reinvestFactor } from "./engine.js";
 
 const DAY = 864e5;
 const num = (x) => (Number.isFinite(+x) && +x > 0 ? +x : 0);
@@ -31,6 +31,27 @@ export function ladderNotional(g) {
   let u = 0;
   for (let k = 0; k < n; k++) u += m ** k;
   return (+g.base || 0) * L * u;
+}
+
+/* експозиція бота, що вже має позицію: повна драбина з урахуванням реінвесту (pos.bf), але не менше за фактичну вартість
+   позиції — так враховуються й ручні докупівлі понад драбину */
+export function exposure(g, state) {
+  const pos = state && state.b && state.b.pos;
+  return Math.max(ladderNotional(g) * (pos && pos.bf > 1 ? +pos.bf : 1), pos ? +pos.cost || 0 : 0);
+}
+
+/* повна драбина НОВОЇ угоди цього бота: з урахуванням реінвесту (множник від накопиченого прибутку) */
+export function nextLadder(g, state) {
+  return ladderNotional(g) * reinvestFactor(g, state && state.b ? +state.b.cum || 0 : 0);
+}
+
+/* найбільша вартість позиції бота (USDT, з плечем), до якої можна докупити вручну, не порушивши лімітів; 0 — обмежень немає */
+export function addCap(limits, peers = []) {
+  const lim = limits || {}, busy = peers.reduce((a, b) => a + (b.state && b.state.b && b.state.b.pos ? exposure(b.g, b.state) : 0), 0);
+  const caps = [];
+  if (lim.maxPos) caps.push(lim.maxPos);
+  if (lim.maxTotal) caps.push(Math.max(0, lim.maxTotal - busy));
+  return caps.length ? Math.min(...caps) : 0;
 }
 
 /* початок поточної доби UTC */
@@ -56,10 +77,10 @@ export function riskBlock({ limits, self, peers = [], now = Date.now() }) {
     const pnl = [self, ...peers].reduce((a, b) => a + realizedSince(b.g, b.state, from), 0);
     if (pnl <= -lim.dayLoss) return { k: "day", t: `збиток за сьогодні (UTC) ${usd(-pnl, 2)} USDT досяг денного ліміту ${usd(lim.dayLoss)} USDT — нові угоди відновляться з нової доби` };
   }
-  const L = ladderNotional(self.g);
+  const L = nextLadder(self.g, self.state);
   if (lim.maxPos && L > lim.maxPos + 1e-9) return { k: "pos", t: `повна драбина бота ${usd(L)} USDT більша за ліміт угоди ${usd(lim.maxPos)} USDT — зменште суму чи кількість докупівель або підніміть ліміт у профілі` };
   if (lim.maxTotal) {
-    const busy = peers.reduce((a, b) => a + (b.state && b.state.b && b.state.b.pos ? ladderNotional(b.g) : 0), 0);
+    const busy = peers.reduce((a, b) => a + (b.state && b.state.b && b.state.b.pos ? exposure(b.g, b.state) : 0), 0);
     if (busy + L > lim.maxTotal + 1e-9) return { k: "total", t: `інші боти вже зайняли ${usd(busy)} USDT, разом із цією угодою (${usd(L)} USDT) буде більше за загальний ліміт ${usd(lim.maxTotal)} USDT` };
   }
   return null;

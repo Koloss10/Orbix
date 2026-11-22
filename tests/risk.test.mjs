@@ -58,3 +58,39 @@ test('Пріоритет причин: спершу денний збиток, �
   assert.equal(riskBlock({ limits: { dayLoss: 100, maxPos: 1, maxTotal: 1 }, self: bot(G(), { xr }), now: NOW }).k, 'day');
   assert.equal(riskBlock({ limits: { maxPos: 1, maxTotal: 1 }, self: bot(G()), now: NOW }).k, 'pos');
 });
+
+// ---------- реінвест і ручні докупівлі враховуються в лімітах ----------
+import { addCap, exposure, nextLadder } from '../supabase/functions/runner/risk.js';
+const gr = { base: 100, lev: 2, mult: 1, orders: 5, rv: 1 }; // драбина = 100·2·5 = 1000 USDT
+
+test('Реінвест збільшує повну драбину нової угоди: ліміт угоди бачить її', () => {
+  // M = base·orders = 500; cum = 250 → bf = 1 + 1·250/500 = 1.5 → драбина 1500
+  assert.equal(nextLadder(gr, { b: { cum: 250 } }), 1500);
+  assert.equal(nextLadder(gr, { b: { cum: -50 } }), 1000, 'збиток не зменшує');
+  assert.equal(nextLadder({ ...gr, rv: 0 }, { b: { cum: 250 } }), 1000, 'без реінвесту');
+  assert.equal(riskBlock({ limits: { maxPos: 1200 }, self: { g: gr, state: { b: { cum: 0 } } } }), null, 'без прибутку 1000 ≤ 1200');
+  const b = riskBlock({ limits: { maxPos: 1200 }, self: { g: gr, state: { b: { cum: 250 } } } });
+  assert.equal(b && b.k, 'pos', '1500 > 1200 після реінвесту');
+});
+
+test('Експозиція відкритої позиції: bf драбини й фактична вартість з ручними докупівлями', () => {
+  assert.equal(exposure(gr, { b: { pos: { bf: 1.5, cost: 300 } } }), 1500);
+  assert.equal(exposure(gr, { b: { pos: { cost: 400 } } }), 1000);
+  assert.equal(exposure(gr, { b: { pos: { cost: 2600 } } }), 2600, 'ручна докупівля понад драбину');
+  assert.equal(exposure(gr, { b: {} }), 1000);
+});
+
+test('Загальний ліміт: сусід з реінвестом або ручною докупівлею займає більше', () => {
+  const self = { g: { ...gr, rv: 0 }, state: { b: { cum: 0 } } };
+  const peerPlain = { g: gr, state: { b: { pos: { cost: 100 } } } }, peerBig = { g: gr, state: { b: { pos: { cost: 2600 } } } };
+  assert.equal(riskBlock({ limits: { maxTotal: 2500 }, self, peers: [peerPlain] }), null, '1000 + 1000 ≤ 2500');
+  assert.equal(riskBlock({ limits: { maxTotal: 2500 }, self, peers: [peerBig] }).k, 'total', '2600 + 1000 > 2500');
+});
+
+test('Стеля ручної докупівлі: min(ліміт угоди, ліміт загальний мінус сусіди)', () => {
+  const peer = { g: gr, state: { b: { pos: { cost: 300 } } } };
+  assert.equal(addCap({}, []), 0, 'без лімітів — без обмеження');
+  assert.equal(addCap({ maxPos: 3000 }, []), 3000);
+  assert.equal(addCap({ maxPos: 3000, maxTotal: 8000 }, [peer]), 3000);
+  assert.equal(addCap({ maxPos: 3000, maxTotal: 3500 }, [peer]), 2500, '3500 − 1000 сусіда');
+});

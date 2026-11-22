@@ -29,7 +29,7 @@ function build() {
 
 // Серверні копії: торговий рушій (модулі 01–06) для Edge Function `runner` і спільні файли бірж.
 // Рушій на сервері — той самий код, що й у браузері, тож результати ботів збігаються.
-const ENGINE_EXPORTS = ['Bot', 'entry', 'aggT', 'aggC', 'normG', 'tfMs', 'tfOff', 'DEF', 'rnd', 'lbT', 'lv'];
+const ENGINE_EXPORTS = ['Bot', 'entry', 'aggT', 'aggC', 'normG', 'tfMs', 'tfOff', 'DEF', 'rnd', 'lbT', 'lv', 'htfNeed', 'reinvestFactor'];
 function generated() {
   const fn = path.join(root, 'supabase', 'functions'), sh = path.join(fn, '_shared');
   const eng = fs.readdirSync(path.join(src, 'js')).filter(f => /^0\d-.*\.js$/.test(f)).sort();
