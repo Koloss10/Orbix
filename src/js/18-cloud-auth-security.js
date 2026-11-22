@@ -4,7 +4,7 @@ let SB=null;try{if(window.supabase&&window.supabase.createClient)SB=window.supab
 const CLOUD={u:null,known:new Set(),ok:0,err:''};
 const TFC={1:'1h',4:'4h',12:'12h',24:'1d',168:'1w'},RISK={low:'низький',medium:'середній',high:'високий'};
 const cloudFail=e=>{CLOUD.err=(e&&e.message)||String(e);accR()};
-const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit'},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
+const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',...(x.gh&&x.gh.length?{_gh:x.gh}:{})},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
 let csT=null,csQ=Promise.resolve();
 function cloudQ(){if(!CLOUD.u)return;clearTimeout(csT);csT=setTimeout(()=>{csQ=csQ.then(cloudSave)},400)}
 async function cloudSave(onlyNew){if(!CLOUD.u||!SB)return;try{
@@ -110,7 +110,7 @@ if(ld('zuid','')!==u.id)bots=bots.filter(x=>!x.rid);bots=bots.filter(x=>!x.demo)
 await (csQ=csQ.then(()=>cloudSave(1)));if(CLOUD.err)return;
 const r=await SB.from('bots').select('id,exchange,status,config,preset_id,started_at').order('created_at');if(r.error)return cloudFail(r.error);
 for(const row of r.data){const c=row.config||{};if(c.pair&&PAIRS[c.pair])try{await need(dk(c),hrsFor(c._t0,c.tf))}catch(e){}}
-bots=[];for(const row of r.data){const{_t0,_sp,_tn,_srv,_ex,...g}=row.config||{};if(!g.pair||!PAIRS[g.pair]||!ready(dk(g)))continue;const x=mk(g,row.exchange,row.status==='running',{t0:_t0||Date.parse(row.started_at||'')||0,sp:_sp,tn:_tn,srv:_srv,srvEx:_ex});x.rid=row.id;x.pid=row.preset_id;x._h=JSON.stringify(brow(x))}
+bots=[];for(const row of r.data){const{_t0,_sp,_tn,_srv,_ex,_gh,...g}=row.config||{};if(!g.pair||!PAIRS[g.pair]||!ready(dk(g)))continue;const x=mk(g,row.exchange,row.status==='running',{t0:_t0||Date.parse(row.started_at||'')||0,sp:_sp,tn:_tn,srv:_srv,srvEx:_ex,gh:_gh});x.rid=row.id;x.pid=row.preset_id;x._h=JSON.stringify(brow(x))}
 CLOUD.known=new Set(r.data.map(x=>x.id));sloc();lst();
 const b=await SB.from('backtests').select('id,exchange,config,results,created_at').order('created_at',{ascending:false}).limit(12);
 if(!b.error){BT=b.data.filter(x=>x.config&&PAIRS[x.config.pair]).map(x=>{const s=x.results||{};return{rid:x.id,ex:x.exchange,g:x.config,per:s.per||8760,dep:s.dep||1000,n:s.n||0,wr:s.wr||0,pnl:s.pnl||0,roi:s.roi||0,dd:s.dd||0,t:Date.parse(x.created_at)}});sv('zbt',BT)}

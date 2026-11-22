@@ -70,9 +70,45 @@ const ck=dk(c.g);if(!ready(ck)){$('#gs').textContent='Завантажую іс�
 const v=$('#gv');if(v._k!==ck||(v._g&&v._g.tf!==c.g.tf))v._mk=null;v._p=c.g.pair;v._k=ck;v._g=c.g;if(!v._d)lwChart(v,()=>({pair:v._p,key:v._k,tf:v._g.tf,lv:()=>lines(v._g,null,v._k),mk:()=>v._mk||[]}),'full');else v._d();if(v._lt!==c.g.tf){v._lt=c.g.tf;if(v._tf){v._tf(c.g.tf);v._d()}}
 const A=lv(c.g,lastC(ck).c,fltOf(c.g));$('#gs').textContent=`Сітка: ${n2(c.g.base*ladder(c.g),0)} USDT маржі, позиція до ${n2(A.L.reduce((a,l)=>a+l.s,0),0)} USDT. Лінії показано від поточної ціни.`}
 $('#fg').oninput=$('#fg').onchange=pv;
+/* додаткові метрики бектесту (лише інтерфейс, з угод і кривої капіталу run(); рушій не змінюється).
+   MAE/MFE — найгірше й найкраще проміжне значення угоди за цінами закриття свічок (тіні свічок не враховано). */
+function btMore(R,c,s){const g=c.g,tf=g.tf||1,A=aggC(hist(dk(g)),tf),k=Math.min(A.length,Math.floor(c.per/tf)),C=A.slice(-k),eq=R.eq||[],tr=R.b.tr,n=tr.length;
+if(!C.length)return null;const ix=new Map(C.map((x,i)=>[x.t,i])),days=k*tf/24,W=tfMs(tf);
+let ls=0,cur=0,mae=0,mfe=0,tin=0,tmax=0,best=-Infinity,worst=Infinity;
+for(const t of tr){if(t.pnl>0)cur=0;else ls=Math.max(ls,++cur);best=Math.max(best,t.pnl);worst=Math.min(worst,t.pnl);
+const t0=t.f&&t.f[0]?t.f[0].t:t.ts,d=Math.max(W,t.ts-t0+W);tin+=d;tmax=Math.max(tmax,d);
+if(t.pnl<mae)mae=t.pnl;if(t.pnl>mfe)mfe=t.pnl; // фінальний результат угоди теж межа MAE/MFE
+const a=ix.get(t0),b=ix.get(t.ts);if(a==null||b==null)continue;const base=a>0?eq[a-1]:0;
+for(let i=a;i<b;i++){const u=eq[i]-base;if(u<mae)mae=u;if(u>mfe)mfe=u}}
+const roi=s.pnl/c.dep,yr=days>=1&&roi>-1?(Math.pow(1+roi,365/days)-1)*100:NaN,dd=Math.abs(s.dd),ddp=Math.abs(s.ddp);
+const bh=(C[C.length-1].c/C[0].c-1)*100,q=n?1-s.wr/100:0,exp=n&&q>0&&q<1?Math.max(1,Math.round(Math.log(n*(1-q))/-Math.log(q))):0;
+return{days,yr,calmar:ddp>0&&isFinite(yr)?yr/ddp:NaN,rf:dd>0?s.pnl/dd:NaN,bh,vs:roi*100-bh,avg:n?tr.reduce((x,t)=>x+t.pnl,0)/n:0,best:n?best:0,worst:n?worst:0,
+ls,exp,tavg:n?tin/n:0,tmax,tshare:k?Math.min(100,tin/(k*W)*100):0,mae,mfe,maep:mae/c.dep*100,mfep:mfe/c.dep*100,n}}
+const hrs=ms=>{const h=ms/36e5;return h>=48?n2(h/24,1)+' дн.':n2(h,0)+' год'};
+function btMoreHtml(m){if(!m)return'';const x=v=>isFinite(v)?n2(v,2):'—';
+return`<details class="card" style="margin-top:12px" open><summary><b>Додаткові метрики</b></summary><div class="k" style="margin-top:10px">${K('Річна дохідність (CAGR)',isFinite(m.yr)?f(m.yr,1)+'%':'—',cls(m.yr))}${K('Calmar',x(m.calmar))}${K('Recovery factor',x(m.rf))}${K('Buy & Hold пари',f(m.bh,1)+'%',cls(m.bh))}${K('Бот проти Buy & Hold',f(m.vs,1)+' п.п.',cls(m.vs))}${K('Середня угода',f(m.avg),cls(m.avg))}${K('Найкраща / найгірша',f(m.best)+' / '+f(m.worst))}${K('Серія збитків: макс. / очікувана',m.ls+' / '+(m.n?m.exp:'—'))}${K('Час в угоді: сер. / макс.',m.n?hrs(m.tavg)+' / '+hrs(m.tmax):'—')}${K('Час у позиції',n2(m.tshare,0)+'%')}${K('MAE (найгірше в угоді)',f(m.mae)+' ('+f(m.maep,1)+'%)',cls(m.mae))}${K('MFE (найкраще в угоді)',f(m.mfe)+' ('+f(m.mfep,1)+'%)',cls(m.mfe))}</div>
+<p class="mu" style="margin-top:8px">Період ${n2(m.days,0)} дн. CAGR — дохідність у перерахунку на рік; Calmar — CAGR до макс. просадки у %; Recovery factor — прибуток до макс. просадки. MAE/MFE — найгірший і найкращий проміжний результат угоди у USDT і % депозиту, за цінами закриття свічок. Очікувана серія збитків — типова найдовша для такого win rate і кількості угод.</p></details>`}
+/* «Поділитися»: посилання з налаштуваннями бота в адресі (#b=…). Лише параметри стратегії, без ключів і даних користувача.
+   При відкритті посилання значення перевіряються: невідомі поля відкидаються, числа мають бути скінченними. */
+const SHK=['d','tf','fut','be','pair','sg',...Object.keys(DEF).filter(k=>typeof DEF[k]==='number')];
+const b64u=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const u64b=s=>decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))));
+function shareUrl(c){const g={};for(const k of SHK)if(c.g[k]!==undefined)g[k]=c.g[k];return location.origin+location.pathname+'#b='+b64u(JSON.stringify({v:1,g,ex:c.ex,per:c.per,dep:c.dep}))}
+function shareParse(h){const m=/^#b=([A-Za-z0-9_-]{8,4000})$/.exec(h||'');if(!m)return null;let o;try{o=JSON.parse(u64b(m[1]))}catch(e){return null}
+if(!o||o.v!==1||!o.g||typeof o.g!=='object')return null;const g={};
+for(const k of SHK){const v=o.g[k];if(v===undefined)continue;if(k==='pair'){if(typeof v==='string'&&Object.prototype.hasOwnProperty.call(PAIRS,v))g.pair=v}
+else if(k==='sg'){if(Array.isArray(v))g.sg=v.filter(x=>typeof x==='string'&&Object.prototype.hasOwnProperty.call(SGN,x))}else if(typeof v==='number'&&isFinite(v))g[k]=v}
+if(g.d!==1&&g.d!==-1)delete g.d;if(!g.pair)return null;return{g,ex:typeof o.ex==='string'?o.ex:'',per:+o.per,dep:+o.dep}}
+function shareApply(){const s=shareParse(location.hash);if(!location.hash.startsWith('#b='))return;history.replaceState(null,'',location.pathname+location.search);
+if(!s)return toast('Посилання на бота пошкоджене — налаштування не завантажено');fill(s.g,s.ex);
+const sv2=(id,v)=>{const e=$(id);if(!(v>0))return;const o=e.value;e.value=String(v);if(e.value!==String(v))e.value=o};sv2('#fper',s.per);sv2('#fdp',s.dep);
+go('bd');toast('Налаштування бота з посилання завантажено — можна запускати бектест')}
+$('#bshare').onclick=async()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;const url=shareUrl(c);
+try{if(navigator.share){await navigator.share({title:'Orbix: налаштування бота',url});return}}catch(er){if(er&&er.name==='AbortError')return}
+try{await navigator.clipboard.writeText(url);toast('Посилання на бота скопійовано')}catch(er){prompt('Скопіюйте посилання на бота:',url)}};
 $('#bt').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;
 withData(dk(c.g),$('#res'),()=>{const R=bt(c.g,c.per,c.dep,1),s=summ(R,c.dep);bsave(c,s);
-$('#res').innerHTML=`<div class="k">${K('Угод',s.n)}${K('Win rate',s.wr.toFixed(0)+'%')}${K('PnL з відкритою позицією',f(s.pnl),cls(s.pnl))}${K('Реалізований / відкритий',f(s.real,0)+' / '+f(s.unr,0))}${K('Дохідність',f(s.roi,1)+'%',cls(s.roi))}${K('Макс. просадка',f(s.dd)+' ('+f(s.ddp,1)+'%)',cls(s.dd))}${K('Профіт-фактор',pf(s))}${K('Ліквідацій',s.liq,s.liq?'dn':'')}${c.g.fut?K('Funding',f(-s.fund),cls(-s.fund)):''}</div><p class="mu" style="margin-top:10px">${dataNote(c.g)}</p><div class="card" id="qa" style="margin-top:12px"></div><h3>Графік угод</h3><div class="bt-ch"></div><h3>Крива капіталу</h3><div style="margin:8px 0 14px">${chart(s.cur)}</div><p class="mu">${c.g.pair}, ${tfl(c.g.tf)}, ${perl(c.per)} на ${hsrc()}${MD.mode==='live'&&D[dk(c.g)].length<c.per?` (доступно ${n2(D[dk(c.g)].length/24,0)} дн.)`:''}. Просадка враховує відкриті позиції, докупівлі в одній свічці виконуються до стопа. ${MD.mode==='live'?'Минулі результати не гарантують майбутніх, тому дивіться й розділ «Стрес-тест».':'Демо-ціни поводяться м’якше за реальний ринок, тому дивіться й розділ «Стрес-тест».'}</p>`+R.b.tr.slice(-8).reverse().map(t=>`<div class="tr"><span>${tm(t.ts)}, ордерів ${t.n}${t.liq?', ліквідація':t.sl?', SL':''}</span><span class="mono ${cls(t.pnl)}">${f(t.pnl)}</span></div>`).join('');
+$('#res').innerHTML=`<div class="k">${K('Угод',s.n)}${K('Win rate',s.wr.toFixed(0)+'%')}${K('PnL з відкритою позицією',f(s.pnl),cls(s.pnl))}${K('Реалізований / відкритий',f(s.real,0)+' / '+f(s.unr,0))}${K('Дохідність',f(s.roi,1)+'%',cls(s.roi))}${K('Макс. просадка',f(s.dd)+' ('+f(s.ddp,1)+'%)',cls(s.dd))}${K('Профіт-фактор',pf(s))}${K('Ліквідацій',s.liq,s.liq?'dn':'')}${c.g.fut?K('Funding',f(-s.fund),cls(-s.fund)):''}</div><p class="mu" style="margin-top:10px">${dataNote(c.g)}</p>${btMoreHtml(btMore(R,c,s))}<div class="card" id="qa" style="margin-top:12px"></div><h3>Графік угод</h3><div class="bt-ch"></div><h3>Крива капіталу</h3><div style="margin:8px 0 14px">${chart(s.cur)}</div><p class="mu">${c.g.pair}, ${tfl(c.g.tf)}, ${perl(c.per)} на ${hsrc()}${MD.mode==='live'&&D[dk(c.g)].length<c.per?` (доступно ${n2(D[dk(c.g)].length/24,0)} дн.)`:''}. Просадка враховує відкриті позиції, докупівлі в одній свічці виконуються до стопа. ${MD.mode==='live'?'Минулі результати не гарантують майбутніх, тому дивіться й розділ «Стрес-тест».':'Демо-ціни поводяться м’якше за реальний ринок, тому дивіться й розділ «Стрес-тест».'}</p>`+R.b.tr.slice(-8).reverse().map(t=>`<div class="tr"><span>${tm(t.ts)}, ордерів ${t.n}${t.liq?', ліквідація':t.sl?', SL':''}</span><span class="mono ${cls(t.pnl)}">${f(t.pnl)}</span></div>`).join('');
 btChart($('#res .bt-ch'),c.g,R);qaR(c);const v=$('#gv');if(v._d&&v._k===dk(c.g)){v._mk=tradeMarks(R.b.tr,R.b.pos,c.g);v._d()}},c.per+300)};
 function btChart(el,g,R){if(!el)return;const mk=tradeMarks(R.b.tr,R.b.pos,g),k=dk(g),lv=()=>R.b.pos?lines(g,R.b.pos,k):[];lwChart(el,()=>({pair:g.pair,key:k,tf:g.tf,lv,mk:()=>mk}),'mini')}
 /* ---------- якість стратегії (06-quality.js): витрати, ринкові умови, стабільність, walk-forward ---------- */
@@ -83,7 +119,7 @@ el.innerHTML=`<h2>Якість стратегії</h2><p style="margin:0 0 10px"
 ${q.flags.length?`<ul style="margin:0 0 10px;padding-left:18px">${q.flags.map(x=>`<li class="${x.sev?'dn':''}">${esc(x.t)}</li>`).join('')}</ul>`:''}
 <h3>PnL за різних витрат, USDT</h3>${ROW('Без витрат',f(q.gross.pnl),cls(q.gross.pnl))}${ROW('Як у бектесті',f(q.base.pnl),cls(q.base.pnl))}${ROW('Подвоєні витрати',f(q.hard.pnl),cls(q.hard.pnl))}${ROW('Витрати від валового прибутку',q.costShare==null?'—':Math.round(q.costShare*100)+' %',q.costShare>.5?'dn':'')}
 <h3>Стабільність</h3>${q.W?ROW(`Вікон по ${W} у плюсі`,q.act?q.pos+' з '+q.act:'—',q.posShare==null?'':q.posShare>=.6?'up':q.posShare<.5?'dn':''):''}${q.conc!=null?ROW('Частка прибутку найкращого вікна',Math.round(q.conc*100)+' %',q.conc>.6?'dn':''):''}${ROW('1-а / 2-а половина, % за 30 дн.',f(q.h1m,1)+' / '+f(q.h2m,1),cls(Math.min(q.h1m,q.h2m)))}
-${reg?`<h3>Ринкові умови</h3><div class="sc"><table style="min-width:0"><tr><th>Ринок</th><th>Вікон у плюсі</th><th>PnL</th></tr>${reg}</table></div><p class="mu">${q.vol.hi.n?`Висока волатильність: ${q.vol.hi.n} вікон, PnL ${f(q.vol.hi.pnl)}; звичайна: ${q.vol.lo.n} вікон, PnL ${f(q.vol.lo.pnl)}.`:'Волатильність у всіх вікнах схожа.'}</p>`:''}
+${reg?`<h3>Ринкові умови</h3><div class="sc" tabindex="0" role="region" aria-label="Таблиця, гортайте вбік"><table style="min-width:0"><tr><th>Ринок</th><th>Вікон у плюсі</th><th>PnL</th></tr>${reg}</table></div><p class="mu">${q.vol.hi.n?`Висока волатильність: ${q.vol.hi.n} вікон, PnL ${f(q.vol.hi.pnl)}; звичайна: ${q.vol.lo.n} вікон, PnL ${f(q.vol.lo.pnl)}.`:'Волатильність у всіх вікнах схожа.'}</p>`:''}
 <p class="mu" style="margin-top:8px">Подвоєні витрати: комісії ×2, ще 0,1&nbsp;% прослизання на кожному ринковому вході й стопі, прослизання стопу щонайменше 0,2&nbsp;%, funding ×2. Кожне вікно — окремий бот із нуля. Ринок вікна — ріст чи падіння, якщо ціна змінилась більш ніж на ${q.W===168?'3,9':'8'} %, інакше бічний.</p>
 <div id="qawf"><button class="b sm" id="qawfb">Walk-forward: чи заробляє підбір на цій парі поза навчанням</button></div>`;
 $('#qawfb').onclick=()=>{const w=$('#qawf');w.innerHTML='<p class="mu">Рахую walk-forward…</p>';setTimeout(()=>{let r;try{r=qualityWF({...c.g},c.ex,c.per)}catch(e){w.innerHTML=`<p class="dn">Помилка розрахунку: ${esc(e.message)}</p>`;return}
@@ -91,8 +127,36 @@ if(!r){w.innerHTML='<p class="mu">Замало історії для walk-forwar
 w.innerHTML=wfHtml(r).replace('<h2>Walk-forward перевірка</h2>','<h3>Walk-forward</h3>')+`<p class="mu">Ваші параметри на тих самих тестових відрізках: <b class="${cls(r.mine)}">${f(r.mine,1)}%</b>, підбір без знання майбутнього: ${f(r.oos,1)}%.${r.mine>2*Math.max(r.oos,0)+5?' Ваші параметри помітно кращі — можливо, вони підігнані під історію; порівняйте з результатом на Demo.':''}</p>`},30)}}
 /* опис джерела даних і моделі комісій для бектесту */
 function dataNote(g){const k=dk(normG({...g}));if(MD.mode!=='live')return'Дані: демо-історія.';
-if(isF(k))return`Дані: ф'ючерси ${MD.fsrc} (USDⓈ-M), ліквідація за mark price, funding кожні 8 год враховано. Комісії: 0,02% мейкер (DCA, TP), 0,05% тейкер (вхід, стоп).`;
+if(isF(k))return`Дані: ф'ючерси ${MD.fsrc} (USDⓈ-M), ліквідація за mark price, funding враховано за фактичним розкладом біржі (8, 4 або 1 год). Комісії: 0,02% мейкер (DCA, TP), 0,05% тейкер (вхід, стоп).`;
 return g.fut?`Ф'ючерсних даних для пари немає${MD.ferr?' ('+esc(MD.ferr)+')':''}: використано спот ${MD.src}, без funding і mark price. Комісії 0,1%.`:`Дані: спот ${MD.src}. Комісії 0,1%.`}
+/* ---------- Редагування бота, що вже працює (як «Edit» у Veles) ----------
+   Конструктор заповнюється налаштуваннями бота. Пара, напрям, ринок, таймфрейм і біржа цін не змінюються (це вже інший бот —
+   для нього «Клонувати»). Поки угода відкрита, заблоковано й розмір сітки (сума, кількість і крок докупівель, мартингейл,
+   плече): драбина на біржі вже стоїть за старими рівнями. Вихід (TP, SL, трейлінг) і сигнали змінюються одразу.
+   Зберігається лише змінене поверх наявних налаштувань бота; стара версія з часом зміни — у x.gh (для відтворення історії). */
+let EDIT=null;
+const ED_FIX=['fp','fdr','fmk','ftf','fe'],ED_GRID=['fb','fo','fs','fx','fm','flv'];
+const edBusy=x=>!!(x.b.pos||x.b.pe);
+function edLock(on,x){const busy=on&&edBusy(x);
+for(const id of ED_FIX){const e=$('#'+id);if(e){e.disabled=on;e.title=on?'Не змінюється в наявного бота — для іншої пари чи напряму скористайтеся «Клонувати»':''}}
+for(const id of ED_GRID){const e=$('#'+id);if(e){e.disabled=busy;e.title=busy?'Поки угода відкрита, розмір сітки не змінюється':''}}
+$$('[data-m]').forEach(b=>b.disabled=busy)}
+function edStart(x){EDIT={id:x.id};fill(x.g,x.ex);edLock(true,x);
+$('#fgt').textContent='Редагування бота '+ttl(x);
+const h=$('#edh');h.hidden=false;h.textContent='Змінюйте налаштування й натисніть «Зберегти зміни». Пара, напрям, ринок, таймфрейм і біржа не змінюються — для них скористайтеся «Клонувати».'+(edBusy(x)?' Угода зараз відкрита: розмір сітки (сума, докупівлі, крок, мартингейл, плече) заблоковано до її закриття, а TP, SL, трейлінг і сигнали застосуються до цієї угоди.':' Зміни діють з наступної угоди.')+(x.srv?' Бот працює на сервері: зміни застосуються протягом 5 хвилин.':'');
+$('#ad').hidden=true;$('#esv').hidden=false;$('#ecn').hidden=false;go('bd');pv()}
+function edEnd(){if(!EDIT)return;const x=bots.find(b=>b.id===EDIT.id);EDIT=null;edLock(false,x||{b:{}});$('#fgt').textContent='Налаштування бота';$('#edh').hidden=true;$('#ad').hidden=false;$('#esv').hidden=true;$('#ecn').hidden=true}
+/* змінені поля: порівнюються лише поля форми (без fee/slip, які cfg() підставляє сам), заблоковані — ігноруються */
+const edSame=(a,b)=>Array.isArray(a)||Array.isArray(b)?JSON.stringify(a)===JSON.stringify(b):typeof a==='number'&&typeof b==='number'?Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b)):a===b;
+function edDiff(x,c){const busy=edBusy(x),skip=new Set(['fee','slip','pair','d','fut','tf',...(busy?['base','orders','step','smul','mult','lev']:[])]),ch={};
+for(const[k,v]of Object.entries(c.g)){if(skip.has(k))continue;if(!edSame(v,x.g[k]))ch[k]=v}return ch}
+$('#esv').onclick=()=>{const x=EDIT&&bots.find(b=>b.id===EDIT.id);if(!x){edEnd();return toast('Бота не знайдено.')}
+const c=cfg();c.g={...c.g,pair:x.g.pair,d:x.g.d,fut:x.g.fut,tf:x.g.tf};c.ex=x.ex;const e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;
+const ch=edDiff(x,c);if(!Object.keys(ch).length){toast('Змін немає.');return}
+const t=Math.max(Date.now(),x.lt||0),ng=normG({...x.g,...ch});
+x.gh=[...(x.gh||[]),{u:t,g:x.g}].slice(-50);x.g=ng;x.b.g=ng;sbots();lst();edEnd();go(VARIANT===2?'bots':'ov');
+toast(`Зміни бота ${x.g.pair} збережено (${Object.keys(ch).length} пол.)`+(x.srv?' — сервер застосує їх протягом 5 хвилин.':' — діють з цього моменту.')+(typeof rkWarn==='function'&&x.srv&&x.tn?rkWarn(x):''))};
+$('#ecn').onclick=()=>{edEnd();go(VARIANT===2?'bots':'ov')};
 $('#ad').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;withData(dk(c.g),$('#res'),()=>{mk(c.g,c.ex);sbots();lst();go(VARIANT===2?'bots':'ov')})};
 $('#sxb').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;SXG=c.g;go('sx')};
 

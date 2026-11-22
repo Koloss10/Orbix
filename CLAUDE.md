@@ -53,6 +53,8 @@ npm run verify   # check + test
 ## Документи
 - `docs/readiness-report.md` — звіт про готовність і поточні обмеження.
 - `docs/engine-audit.md` — аудит рушія й усі знайдені розбіжності.
+- `docs/exchange-review.md` — порівняння роботи з біржами з Hummingbot і Freqtrade, прогалини за пріоритетом.
+- `docs/veles-comparison.md` — функції Orbix у порівнянні з Veles (за публічною довідкою), план за пріоритетом.
 - `archive/` — старі версії (Zorya, старі гілки, знімки Orbix) і правила відкату. Збирання й CI його не чіпають.
 
 ## Поточний етап

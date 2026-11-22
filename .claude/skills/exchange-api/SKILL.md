@@ -89,7 +89,7 @@ description: Довідка по API Bybit V5 (Demo Trading) і Binance USDⓈ-M
 
 **Ордер** `POST /fapi/v1/order` (trade/rest-api)
 - Обов'язкові: `symbol`, `side`, `type`, `timestamp`; LIMIT — `quantity`, `price` (+`timeInForce`); MARKET — `quantity`; STOP/TAKE_PROFIT — `quantity`, `price`, `stopPrice`; STOP_MARKET/TAKE_PROFIT_MARKET — `stopPrice` і `quantity` або `closePosition=true`; TRAILING_STOP_MARKET — `quantity`, `callbackRate` (`activationPrice` типово — поточна ціна).
-- `newClientOrderId`: ≤36, регулярний вираз `^[\.A-Z\:/a-z0-9_-]{1,36}$`.
+- `newClientOrderId`: ≤36, регулярний вираз `^[\.A-Z\:/a-z0-9_-]{1,36}$`. ⚠️ Унікальний **лише серед відкритих ордерів** («A unique id among open orders»): виконаний ринковий ордер з тим самим id біржа прийме вдруге. На Bybit `orderLinkId` унікальний завжди (`110072`).
 - `reduceOnly` не можна в hedge-режимі й разом з `closePosition`. `positionSide`: `BOTH` (one-way), `LONG`/`SHORT` (hedge, обов'язково).
 - `newOrderRespType`: `ACK` (типово) або `RESULT` (Orbix просить `RESULT`, щоб отримати `executedQty`/`avgPrice`).
 - Вага: 1 в ордерних лімітах 10 с і 1 хв, 0 в IP-ліміті.
