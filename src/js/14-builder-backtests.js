@@ -129,6 +129,34 @@ w.innerHTML=wfHtml(r).replace('<h2>Walk-forward перевірка</h2>','<h3>Wa
 function dataNote(g){const k=dk(normG({...g}));if(MD.mode!=='live')return'Дані: демо-історія.';
 if(isF(k))return`Дані: ф'ючерси ${MD.fsrc} (USDⓈ-M), ліквідація за mark price, funding враховано за фактичним розкладом біржі (8, 4 або 1 год). Комісії: 0,02% мейкер (DCA, TP), 0,05% тейкер (вхід, стоп).`;
 return g.fut?`Ф'ючерсних даних для пари немає${MD.ferr?' ('+esc(MD.ferr)+')':''}: використано спот ${MD.src}, без funding і mark price. Комісії 0,1%.`:`Дані: спот ${MD.src}. Комісії 0,1%.`}
+/* ---------- Редагування бота, що вже працює (як «Edit» у Veles) ----------
+   Конструктор заповнюється налаштуваннями бота. Пара, напрям, ринок, таймфрейм і біржа цін не змінюються (це вже інший бот —
+   для нього «Клонувати»). Поки угода відкрита, заблоковано й розмір сітки (сума, кількість і крок докупівель, мартингейл,
+   плече): драбина на біржі вже стоїть за старими рівнями. Вихід (TP, SL, трейлінг) і сигнали змінюються одразу.
+   Зберігається лише змінене поверх наявних налаштувань бота; стара версія з часом зміни — у x.gh (для відтворення історії). */
+let EDIT=null;
+const ED_FIX=['fp','fdr','fmk','ftf','fe'],ED_GRID=['fb','fo','fs','fx','fm','flv'];
+const edBusy=x=>!!(x.b.pos||x.b.pe);
+function edLock(on,x){const busy=on&&edBusy(x);
+for(const id of ED_FIX){const e=$('#'+id);if(e){e.disabled=on;e.title=on?'Не змінюється в наявного бота — для іншої пари чи напряму скористайтеся «Клонувати»':''}}
+for(const id of ED_GRID){const e=$('#'+id);if(e){e.disabled=busy;e.title=busy?'Поки угода відкрита, розмір сітки не змінюється':''}}
+$$('[data-m]').forEach(b=>b.disabled=busy)}
+function edStart(x){EDIT={id:x.id};fill(x.g,x.ex);edLock(true,x);
+$('#fgt').textContent='Редагування бота '+ttl(x);
+const h=$('#edh');h.hidden=false;h.textContent='Змінюйте налаштування й натисніть «Зберегти зміни». Пара, напрям, ринок, таймфрейм і біржа не змінюються — для них скористайтеся «Клонувати».'+(edBusy(x)?' Угода зараз відкрита: розмір сітки (сума, докупівлі, крок, мартингейл, плече) заблоковано до її закриття, а TP, SL, трейлінг і сигнали застосуються до цієї угоди.':' Зміни діють з наступної угоди.')+(x.srv?' Бот працює на сервері: зміни застосуються протягом 5 хвилин.':'');
+$('#ad').hidden=true;$('#esv').hidden=false;$('#ecn').hidden=false;go('bd');pv()}
+function edEnd(){if(!EDIT)return;const x=bots.find(b=>b.id===EDIT.id);EDIT=null;edLock(false,x||{b:{}});$('#fgt').textContent='Налаштування бота';$('#edh').hidden=true;$('#ad').hidden=false;$('#esv').hidden=true;$('#ecn').hidden=true}
+/* змінені поля: порівнюються лише поля форми (без fee/slip, які cfg() підставляє сам), заблоковані — ігноруються */
+const edSame=(a,b)=>Array.isArray(a)||Array.isArray(b)?JSON.stringify(a)===JSON.stringify(b):typeof a==='number'&&typeof b==='number'?Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b)):a===b;
+function edDiff(x,c){const busy=edBusy(x),skip=new Set(['fee','slip','pair','d','fut','tf',...(busy?['base','orders','step','smul','mult','lev']:[])]),ch={};
+for(const[k,v]of Object.entries(c.g)){if(skip.has(k))continue;if(!edSame(v,x.g[k]))ch[k]=v}return ch}
+$('#esv').onclick=()=>{const x=EDIT&&bots.find(b=>b.id===EDIT.id);if(!x){edEnd();return toast('Бота не знайдено.')}
+const c=cfg();c.g={...c.g,pair:x.g.pair,d:x.g.d,fut:x.g.fut,tf:x.g.tf};c.ex=x.ex;const e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;
+const ch=edDiff(x,c);if(!Object.keys(ch).length){toast('Змін немає.');return}
+const t=Math.max(Date.now(),x.lt||0),ng=normG({...x.g,...ch});
+x.gh=[...(x.gh||[]),{u:t,g:x.g}].slice(-50);x.g=ng;x.b.g=ng;sbots();lst();edEnd();go(VARIANT===2?'bots':'ov');
+toast(`Зміни бота ${x.g.pair} збережено (${Object.keys(ch).length} пол.)`+(x.srv?' — сервер застосує їх протягом 5 хвилин.':' — діють з цього моменту.')+(typeof rkWarn==='function'&&x.srv&&x.tn?rkWarn(x):''))};
+$('#ecn').onclick=()=>{edEnd();go(VARIANT===2?'bots':'ov')};
 $('#ad').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;withData(dk(c.g),$('#res'),()=>{mk(c.g,c.ex);sbots();lst();go(VARIANT===2?'bots':'ov')})};
 $('#sxb').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;SXG=c.g;go('sx')};
 

@@ -298,12 +298,13 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 </section>
 
 <section id="v-bd" class="s" hidden>
-<div class="card"><h2>Налаштування бота</h2>
+<div class="card"><h2 id="fgt">Налаштування бота</h2>
+<p class="rndw" id="edh" hidden></p>
 <div class="row" style="margin-bottom:12px"><button class="b" data-m="0">Консервативний</button><button class="b" data-m="1">Помірний</button><button class="b" data-m="2">Агресивний</button></div>
 <div id="fg"></div>
 <p class="mu" id="flh" style="margin-bottom:12px"></p>
 <p id="frw" class="rndw" hidden></p>
-<div class="row"><button class="b p" id="bt">Запустити бектест</button><button class="b" id="ad">Додати paper-бота</button><button class="b" id="sxb">Стрес-тест</button><button class="b" id="bshare" title="Посилання з налаштуваннями бота">Поділитися</button></div></div>
+<div class="row"><button class="b p" id="bt">Запустити бектест</button><button class="b" id="ad">Додати paper-бота</button><button class="b p" id="esv" hidden>Зберегти зміни</button><button class="b" id="ecn" hidden>Скасувати редагування</button><button class="b" id="sxb">Стрес-тест</button><button class="b" id="bshare" title="Посилання з налаштуваннями бота">Поділитися</button></div></div>
 <div class="card"><h2>Графік і сітка ордерів</h2><div id="gv"></div><p class="mu" id="gs" style="margin-top:8px"></p></div>
 <div class="card"><h2>Результат бектесту</h2><div id="res"><p class="mu">Задайте параметри й запустіть бектест на історії обраної пари.</p></div></div>
 </section>
@@ -855,15 +856,17 @@ let bots=[],uid=0;
 const clk=p=>{const H=DT[p];return Math.max(Date.now(),H&&H.length?H[H.length-1].t+36e5:0)};
 const actAt=(x,t)=>(x.sp||[]).some(([a,b])=>t>a&&(b==null||t<=b));
 function advance(x,live){if(x.srv&&(live||x.srvSt))return;const g=x.g,tf=g.tf||1,H=D[dk(g)];if(!H||!H.length)return;const A=aggC(H,tf),W=tfMs(tf);if(!A.length)return;
-if(A[0].t>x.t0)x.trunc=1;let i=A.length;while(i>0&&A[i-1].t+W>x.lt)i--;if(i>=A.length)return;const e=entry(A,g);
-for(;i<A.length;i++){const c=A[i],ct=c.t+W;x.lt=ct;if(!actAt(x,ct))continue;const n0=x.b.tr.length,p0=x.b.pos,o0=p0?p0.n:0,c0=p0?p0.cost:0;
+if(A[0].t>x.t0)x.trunc=1;let i=A.length;while(i>0&&A[i-1].t+W>x.lt)i--;if(i>=A.length)return;const V=[...(x.gh||[]),{u:Infinity,g}],EC=[];let vi=-1,e=null;
+for(;i<A.length;i++){const c=A[i],ct=c.t+W;x.lt=ct;{let v=0;while(ct>V[v].u)v++;if(v!==vi){vi=v;x.b.g=V[v].g;e=EC[v]||(EC[v]=entry(A,V[v].g))}}if(!actAt(x,ct))continue;const n0=x.b.tr.length,p0=x.b.pos,o0=p0?p0.n:0,c0=p0?p0.cost:0;
 x.b.step(Math.floor(c.t/W),c,e[i]);const v=x.b.eqv(c);x.pk=Math.max(x.pk,v);x.dd=Math.min(x.dd,v-x.pk);if(!live)continue;const t=x.b.tr,p=x.b.pos;
 if(t.length>n0){const l=t[t.length-1];notify(l.sl||l.liq?'sl':'close',x,{pnl:l.pnl,liq:l.liq});tnMirror(x,'close')}else if(!p0&&p){notify('open',x,{price:c.c});tnMirror(x,'open',p.cost)}else if(p0&&p&&p.n>o0){notify('dca',x,{price:p.last,n:p.n});tnMirror(x,'dca',p.cost-c0)}}}
+/* історія налаштувань бота (редагування): [{u — час зміни, до якого діяла ця версія, g}] у порядку часу */
+const ghOk=a=>Array.isArray(a)?a.filter(v=>v&&v.g&&typeof v.g==='object'&&isFinite(v.u)).map(v=>({u:+v.u,g:normG({...DEF,...v.g})})).sort((p,q)=>p.u-q.u).slice(-50):[];
 function mk(g,ex,on=true,m={}){g=normG({...DEF,...g});const t0=+m.t0||clk(dk(g)),sp=Array.isArray(m.sp)?m.sp:on?[[t0,null]]:[];
-const x={id:++uid,g,ex,on,b:new Bot(g),pk:0,dd:0,t0,lt:t0,sp,tn:!!m.tn&&!!g.fut,srv:!!m.srv,srvEx:m.srvEx||null};advance(x,0);bots.push(x);return x}
+const x={id:++uid,g,ex,on,b:new Bot(g),pk:0,dd:0,t0,lt:t0,sp,tn:!!m.tn&&!!g.fut,srv:!!m.srv,srvEx:m.srvEx||null,gh:ghOk(m.gh)};advance(x,0);bots.push(x);return x}
 function setOn(x,on){if(!!x.on===!!on)return;const t=clk(dk(x.g));x.on=!!on;if(on)x.sp.push([t,null]);else{const l=x.sp[x.sp.length-1];if(l&&l[1]==null)l[1]=t}}
 const bv=x=>x.b.eqv(lastC(dk(x.g)));
-let BOOT=0,KEEP=[];const sloc=()=>{if(BOOT)sv('zorya3',bots.map(({g,ex,on,rid,pid,t0,sp,tn,srv,srvEx,demo})=>({g,ex,on,rid,pid,t0,sp,tn,srv,srvEx,...(demo?{demo:1}:{})})).concat(KEEP))},sbots=()=>{sloc();cloudQ()};
+let BOOT=0,KEEP=[];const sloc=()=>{if(BOOT)sv('zorya3',bots.map(({g,ex,on,rid,pid,t0,sp,tn,srv,srvEx,demo,gh})=>({g,ex,on,rid,pid,t0,sp,tn,srv,srvEx,...(demo?{demo:1}:{}),...(gh&&gh.length?{gh}:{})})).concat(KEEP))},sbots=()=>{sloc();cloudQ()};
 /* модель перевіряє трейлінг лише на закритих свічках: ціна вже за стопом — пояснити, коли угоду буде закрито */
 function candleEnd(tf,now=Date.now()){const W=tfMs(tf||1),o=tf==168?4*864e5:0;return Math.floor((now-o)/W)*W+o+W} // тиждень біржі — з понеділка 00:00 UTC
 function trHint(x,p){const c=lastC(dk(x.g)),px=c&&+c.c,st=p.peak*(1-x.g.d*x.g.trail);if(!(px>0)||(x.g.d>0?px>st:px<st))return'';
@@ -882,7 +885,7 @@ return`<p class="mu" style="margin:0">Фандінг: ${p?`угода <b class="
 function bcard(x){const p=x.b.pos,v=bv(x),s=x.b.tr,w=s.filter(t=>t.pnl>0).length;
 return`<div class="bc ${x.on?'on':'off'}" data-bot="${x.id}"><div class="bh"><b>${x.g.pair}</b><span class="mu">${dir(x.g)} · ${tfl(x.g.tf)} · ${x.g.lev}× · ${x.ex} · з ${tm(x.t0)}</span><span class="st" style="margin-left:auto">${x.on?'Працює':'Пауза'}</span></div>${!s.length&&!p?`<p class="mu bwait">${x.on?'Чекає на сигнал':'На паузі'} · перевірка після закриття свічки ${tfl(x.g.tf)}</p>`:''}${x.trunc?'<p class="mu" style="margin:0">Історії бракує, щоб відтворити бота з самого запуску: показано з найранішої доступної свічки.</p>':''}
 ${srvLine(x)}${p&&p.ta&&+x.g.trail>0&&p.peak>0?`<p class="mu" style="margin:0">Тейк-профіт досягнуто — працює трейлінг: угода закриється, коли ціна відкотиться на ${n2(x.g.trail*100,2).replace(/,?0+$/,'')} % від ${x.g.d>0?'максимуму':'мінімуму'} ${n2(p.peak,p.peak<1?5:2)} (≈ ${n2(p.peak*(1-x.g.d*x.g.trail),p.peak<1?5:2)}).</p>${trHint(x,p)}`:''}${fdLine(x,p)}${x.tn?((ex,r)=>r&&(r.worst>=.1||r.zero)?`<p class="rndw" style="margin:0">${rndText(r,ex,1)}</p>`:'')(x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',rndInfo(x.g,x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit')):''}<div class="bm"><div>PnL з відкритою<b class="${cls(v)}">${f(v)}</b></div><div>Угод / win<b>${s.length} / ${s.length?Math.round(w/s.length*100):0}%</b></div><div>Позиція<b>${p?p.n+' з '+x.g.orders+' орд.':'немає'}</b></div><div>Просадка<b class="${cls(x.dd)}">${f(x.dd,0)}</b></div></div>
-<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button>${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden><button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
+<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button><button class="b sm" data-a="ed" data-id="${x.id}">Редагувати</button>${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden><button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
 function lstTo(el,list){if(!el)return;const on=list.filter(x=>x.on),off=list.filter(x=>!x.on);el.innerHTML=list.length?(on.length?`<h3>Працюють · ${on.length}</h3>`+on.map(bcard).join(''):'')+(off.length?`<h3>На паузі · ${off.length}</h3>`+off.map(bcard).join(''):''):'<p class="mu">Ботів ще немає. Запустіть топового бота, скористайтеся Авто-майстром або створіть свого.</p>'}
 function lst(){lstTo($('#bl'),bots);const q=($('#bq')&&$('#bq').value||'').trim().toUpperCase();lstTo($('#bl2'),q?bots.filter(x=>x.g.pair.includes(q)):bots);upd()}
 const jrn=x=>x.b.tr.length?x.b.tr.slice(-10).reverse().map(t=>`<div class="tr"><span>${tm(t.ts)}, ордерів ${t.n}${t.liq?', ліквідація':t.sl?', SL':''}</span><span class="mono ${cls(t.pnl)}">${f(t.pnl)}</span></div>`).join(''):'<p class="mu">Угод ще немає.</p>';
@@ -929,7 +932,8 @@ function botClick(e){const t=e.target.closest('button');if(!t||!t.dataset.a)retu
 if(a==='m'){const m=t.closest('.bc').querySelector('.bmo');if(m){m.hidden=!m.hidden;t.setAttribute('aria-expanded',!m.hidden)}return}
 if(a==='g'){const g=t.closest('.bc').querySelector('.gr');g.hidden=!g.hidden;if(!g.hidden&&!g._d)lwChart(g,()=>({pair:x.g.pair,key:dk(x.g),tf:x.g.tf,lv:()=>lines(x.g,x.b.pos,dk(x.g)),mk:()=>tradeMarks(x.b.tr,x.b.pos,x.g)}),'mini');else if(!g.hidden)g._d();return}
 if(a==='j'){const j=t.closest('.bc').querySelectorAll('.gr')[1];j.hidden=!j.hidden;j.innerHTML=jrn(x);return}
-if(a==='c'){fill(x.g,x.ex);go('bd');return}
+if(a==='c'){if(typeof edEnd==='function')edEnd();fill(x.g,x.ex);go('bd');return}
+if(a==='ed'){edStart(x);return}
 if(a==='srv'||a==='tn')x.demo=0; // користувач узяв демо-бота в роботу — тепер це звичайний бот
 if(a==='srv'){srvToggle(x);return}
 if(a==='tn'){if(!x.tn){const o=bots.find(y=>y!==x&&y.tn&&y.g.fut&&y.g.pair===x.g.pair);if(o){toast('На демо-рахунку вже торгує бот '+x.g.pair+' — позиції на біржі злилися б в одну. Вимкніть «Тестнет» в іншому боті або виберіть іншу пару.');return}}x.tn=!x.tn;sbots();lst();toast(x.tn?'Угоди бота '+x.g.pair+' дублюватимуться на демо-рахунку біржі'+(x.srv?' — сервером, цілодобово.'+rkWarn(x):' (поки застосунок відкритий)'):'Тестнет для бота вимкнено');return}
@@ -1074,6 +1078,34 @@ w.innerHTML=wfHtml(r).replace('<h2>Walk-forward перевірка</h2>','<h3>Wa
 function dataNote(g){const k=dk(normG({...g}));if(MD.mode!=='live')return'Дані: демо-історія.';
 if(isF(k))return`Дані: ф'ючерси ${MD.fsrc} (USDⓈ-M), ліквідація за mark price, funding враховано за фактичним розкладом біржі (8, 4 або 1 год). Комісії: 0,02% мейкер (DCA, TP), 0,05% тейкер (вхід, стоп).`;
 return g.fut?`Ф'ючерсних даних для пари немає${MD.ferr?' ('+esc(MD.ferr)+')':''}: використано спот ${MD.src}, без funding і mark price. Комісії 0,1%.`:`Дані: спот ${MD.src}. Комісії 0,1%.`}
+/* ---------- Редагування бота, що вже працює (як «Edit» у Veles) ----------
+   Конструктор заповнюється налаштуваннями бота. Пара, напрям, ринок, таймфрейм і біржа цін не змінюються (це вже інший бот —
+   для нього «Клонувати»). Поки угода відкрита, заблоковано й розмір сітки (сума, кількість і крок докупівель, мартингейл,
+   плече): драбина на біржі вже стоїть за старими рівнями. Вихід (TP, SL, трейлінг) і сигнали змінюються одразу.
+   Зберігається лише змінене поверх наявних налаштувань бота; стара версія з часом зміни — у x.gh (для відтворення історії). */
+let EDIT=null;
+const ED_FIX=['fp','fdr','fmk','ftf','fe'],ED_GRID=['fb','fo','fs','fx','fm','flv'];
+const edBusy=x=>!!(x.b.pos||x.b.pe);
+function edLock(on,x){const busy=on&&edBusy(x);
+for(const id of ED_FIX){const e=$('#'+id);if(e){e.disabled=on;e.title=on?'Не змінюється в наявного бота — для іншої пари чи напряму скористайтеся «Клонувати»':''}}
+for(const id of ED_GRID){const e=$('#'+id);if(e){e.disabled=busy;e.title=busy?'Поки угода відкрита, розмір сітки не змінюється':''}}
+$$('[data-m]').forEach(b=>b.disabled=busy)}
+function edStart(x){EDIT={id:x.id};fill(x.g,x.ex);edLock(true,x);
+$('#fgt').textContent='Редагування бота '+ttl(x);
+const h=$('#edh');h.hidden=false;h.textContent='Змінюйте налаштування й натисніть «Зберегти зміни». Пара, напрям, ринок, таймфрейм і біржа не змінюються — для них скористайтеся «Клонувати».'+(edBusy(x)?' Угода зараз відкрита: розмір сітки (сума, докупівлі, крок, мартингейл, плече) заблоковано до її закриття, а TP, SL, трейлінг і сигнали застосуються до цієї угоди.':' Зміни діють з наступної угоди.')+(x.srv?' Бот працює на сервері: зміни застосуються протягом 5 хвилин.':'');
+$('#ad').hidden=true;$('#esv').hidden=false;$('#ecn').hidden=false;go('bd');pv()}
+function edEnd(){if(!EDIT)return;const x=bots.find(b=>b.id===EDIT.id);EDIT=null;edLock(false,x||{b:{}});$('#fgt').textContent='Налаштування бота';$('#edh').hidden=true;$('#ad').hidden=false;$('#esv').hidden=true;$('#ecn').hidden=true}
+/* змінені поля: порівнюються лише поля форми (без fee/slip, які cfg() підставляє сам), заблоковані — ігноруються */
+const edSame=(a,b)=>Array.isArray(a)||Array.isArray(b)?JSON.stringify(a)===JSON.stringify(b):typeof a==='number'&&typeof b==='number'?Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b)):a===b;
+function edDiff(x,c){const busy=edBusy(x),skip=new Set(['fee','slip','pair','d','fut','tf',...(busy?['base','orders','step','smul','mult','lev']:[])]),ch={};
+for(const[k,v]of Object.entries(c.g)){if(skip.has(k))continue;if(!edSame(v,x.g[k]))ch[k]=v}return ch}
+$('#esv').onclick=()=>{const x=EDIT&&bots.find(b=>b.id===EDIT.id);if(!x){edEnd();return toast('Бота не знайдено.')}
+const c=cfg();c.g={...c.g,pair:x.g.pair,d:x.g.d,fut:x.g.fut,tf:x.g.tf};c.ex=x.ex;const e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;
+const ch=edDiff(x,c);if(!Object.keys(ch).length){toast('Змін немає.');return}
+const t=Math.max(Date.now(),x.lt||0),ng=normG({...x.g,...ch});
+x.gh=[...(x.gh||[]),{u:t,g:x.g}].slice(-50);x.g=ng;x.b.g=ng;sbots();lst();edEnd();go(VARIANT===2?'bots':'ov');
+toast(`Зміни бота ${x.g.pair} збережено (${Object.keys(ch).length} пол.)`+(x.srv?' — сервер застосує їх протягом 5 хвилин.':' — діють з цього моменту.')+(typeof rkWarn==='function'&&x.srv&&x.tn?rkWarn(x):''))};
+$('#ecn').onclick=()=>{edEnd();go(VARIANT===2?'bots':'ov')};
 $('#ad').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;withData(dk(c.g),$('#res'),()=>{mk(c.g,c.ex);sbots();lst();go(VARIANT===2?'bots':'ov')})};
 $('#sxb').onclick=()=>{const c=cfg(),e=bad(c);if(e)return $('#res').innerHTML=`<p class="dn">${e}</p>`;SXG=c.g;go('sx')};
 
@@ -1314,7 +1346,7 @@ m.innerHTML=head+MENU.filter(([k])=>(VARIANT!==2||k!=='pf')&&(k!=='adm'||CLOUD.a
 const t=$('#tab');if(VARIANT===2){t.hidden=false;$('#wrap').classList.add('tb');t.innerHTML=[['ov','Головна'],['bots','Боти'],['mk','Ринок'],['top','Топ'],['menu','Меню']].map(([k,l])=>`<button data-v="${k}" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k==='top'?'aw':k==='menu'?'set':k]}</svg>${l}</button>`).join('');t.onclick=e=>{const b=e.target.closest('button');if(!b)return;b.dataset.v==='menu'?mnu(1):go(b.dataset.v)}}}
 function mnu(o){if(o&&$('#srp')&&!$('#srp').hidden)srOpen(0);if(!o&&$('#mn').contains(document.activeElement))$('#mb').focus();$('#mn').hidden=$('#sh').hidden=!o;$('#mb').setAttribute('aria-expanded',!!o);if(o){const f=$('#mn button');f&&f.focus()}}
 const VIEWS=['ov','bots','mk','aw','bd','bs','jr','st','mon','sx','set','pf','fb','adm','help','wiki'];let CUR='ov';
-function go(n){if(n==='top'){go('ov');setTimeout(()=>{const e=$('#home-top');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
+function go(n){if(n!=='bd'&&typeof edEnd==='function')edEnd();if(n==='top'){go('ov');setTimeout(()=>{const e=$('#home-top');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
 if(n==='fb'&&CUR!=='fb')FB.from=CUR;VIEWS.forEach(k=>{const e=$('#v-'+k);if(e)e.hidden=k!==n});CUR=n;$$('.mi').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));$$('#tab button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));mnu(0);scrollTo(0,0);
 if(n==='st')sta();if(n==='mon')monR(1);if(n==='bd')pv();if(n==='bs')bsl();if(n==='pf')pfr();if(n==='sx')sxr();if(n==='set')setR();if(n==='jr')jr();if(n==='mk')mkt();if(n==='bots')lst();if(n==='adm')admR(1);if(n==='fb'){FB.msg='';fbR();fbMine()}if(n==='ov')$$('.chv').forEach(c=>{if(c.offsetParent)c._d()})}
 $('#mb').onclick=()=>mnu($('#mn').hidden);$('#sh').onclick=()=>mnu(0);$('#brand').onclick=()=>go('ov');
@@ -1328,7 +1360,7 @@ let SB=null;try{if(window.supabase&&window.supabase.createClient)SB=window.supab
 const CLOUD={u:null,known:new Set(),ok:0,err:''};
 const TFC={1:'1h',4:'4h',12:'12h',24:'1d',168:'1w'},RISK={low:'низький',medium:'середній',high:'високий'};
 const cloudFail=e=>{CLOUD.err=(e&&e.message)||String(e);accR()};
-const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit'},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
+const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',...(x.gh&&x.gh.length?{_gh:x.gh}:{})},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
 let csT=null,csQ=Promise.resolve();
 function cloudQ(){if(!CLOUD.u)return;clearTimeout(csT);csT=setTimeout(()=>{csQ=csQ.then(cloudSave)},400)}
 async function cloudSave(onlyNew){if(!CLOUD.u||!SB)return;try{
@@ -1434,7 +1466,7 @@ if(ld('zuid','')!==u.id)bots=bots.filter(x=>!x.rid);bots=bots.filter(x=>!x.demo)
 await (csQ=csQ.then(()=>cloudSave(1)));if(CLOUD.err)return;
 const r=await SB.from('bots').select('id,exchange,status,config,preset_id,started_at').order('created_at');if(r.error)return cloudFail(r.error);
 for(const row of r.data){const c=row.config||{};if(c.pair&&PAIRS[c.pair])try{await need(dk(c),hrsFor(c._t0,c.tf))}catch(e){}}
-bots=[];for(const row of r.data){const{_t0,_sp,_tn,_srv,_ex,...g}=row.config||{};if(!g.pair||!PAIRS[g.pair]||!ready(dk(g)))continue;const x=mk(g,row.exchange,row.status==='running',{t0:_t0||Date.parse(row.started_at||'')||0,sp:_sp,tn:_tn,srv:_srv,srvEx:_ex});x.rid=row.id;x.pid=row.preset_id;x._h=JSON.stringify(brow(x))}
+bots=[];for(const row of r.data){const{_t0,_sp,_tn,_srv,_ex,_gh,...g}=row.config||{};if(!g.pair||!PAIRS[g.pair]||!ready(dk(g)))continue;const x=mk(g,row.exchange,row.status==='running',{t0:_t0||Date.parse(row.started_at||'')||0,sp:_sp,tn:_tn,srv:_srv,srvEx:_ex,gh:_gh});x.rid=row.id;x.pid=row.preset_id;x._h=JSON.stringify(brow(x))}
 CLOUD.known=new Set(r.data.map(x=>x.id));sloc();lst();
 const b=await SB.from('backtests').select('id,exchange,config,results,created_at').order('created_at',{ascending:false}).limit(12);
 if(!b.error){BT=b.data.filter(x=>x.config&&PAIRS[x.config.pair]).map(x=>{const s=x.results||{};return{rid:x.id,ex:x.exchange,g:x.config,per:s.per||8760,dep:s.dep||1000,n:s.n||0,wr:s.wr||0,pnl:s.pnl||0,roi:s.roi||0,dd:s.dd||0,t:Date.parse(x.created_at)}});sv('zbt',BT)}
@@ -1842,7 +1874,7 @@ $('#fp').innerHTML=PK.map(k=>`<option value="${k}">${k}</option>`).join('');{con
 const saved=ld('zorya3',[]).filter(x=>x&&x.g),ps=[...new Set(saved.map(x=>x.g.pair).filter(p=>PAIRS[p]))];
 $('#tops').textContent=MD.mode==='live'?`Завантажую реальні дані ${MD.src}…`:'Біржі недоступні, працюю на демо-даних.';
 try{await need('BTC/USDT')}catch(e){}for(const x of saved)if(PAIRS[x.g.pair])try{await need(dk(x.g),hrsFor(x.t0,x.g.tf))}catch(e){}
-for(const x of saved){if(PAIRS[x.g.pair]&&ready(dk(x.g))){const b=mk(x.g,x.ex,x.on!==false,{t0:x.t0,sp:x.sp,tn:x.tn,srv:x.srv,srvEx:x.srvEx});b.rid=x.rid;b.pid=x.pid;if(x.demo)b.demo=1}else KEEP.push(x)}
+for(const x of saved){if(PAIRS[x.g.pair]&&ready(dk(x.g))){const b=mk(x.g,x.ex,x.on!==false,{t0:x.t0,sp:x.sp,tn:x.tn,srv:x.srv,srvEx:x.srvEx,gh:x.gh});b.rid=x.rid;b.pid=x.pid;if(x.demo)b.demo=1}else KEEP.push(x)}
 BOOT=1;{const xs=new Set(bots.filter(x=>x.tn).map(x=>x.srvEx||TN.ex||'bybit'));if(bots.some(x=>x.g.fut))xs.add(TN.ex||'bybit');for(const ex of xs)xRules(ex).then(m=>{if(m&&(CUR==='bots'||CUR==='ov'))lst()}).catch(()=>{})}sloc();lst();favs();shareApply();if(CUR==='bd')pv();if(CUR==='mk')mkt();
 cloudStart();setTimeout(()=>topJob(0),400);setInterval(()=>topJob(0),60000);
 if(MD.mode==='live'){setInterval(poll,15000);setInterval(()=>{if(CUR==='mk')tkRefresh().then(mkt)},30000)}else setInterval(tick,1500)}
