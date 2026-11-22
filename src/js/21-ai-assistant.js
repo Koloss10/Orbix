@@ -52,6 +52,8 @@ async function aiLoadMessages(id) {
 async function aiInit() {
   if (!$('#ai-chat')) return;
   if (!CLOUD.u || !SB) {
+    OAI.conversationId = null;
+    OAI.conversations = [];
     $('#ai-login-note').hidden = false;
     $('#ai-composer').disabled = true;
     $('#ai-send').disabled = true;
@@ -63,6 +65,7 @@ async function aiInit() {
   $('#ai-send').disabled = false;
   try {
     await aiLoadConversations();
+    if (OAI.conversationId && !OAI.conversations.some(c => c.id === OAI.conversationId)) OAI.conversationId = null;
     if (OAI.conversationId) await aiLoadMessages(OAI.conversationId);
     else aiRenderHistory([]);
     aiStatus('Підключено до Orbix. Режим: лише читання.');
