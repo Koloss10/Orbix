@@ -70,13 +70,12 @@ Deno.serve(async (req) => {
     if (!message || message.length > 4000) return json({ error: "message must contain 1–4000 characters" }, 400);
 
     const admin = createClient(url, service);
-    const { count, error: countError } = await admin.from("ai_messages")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId).eq("role", "user")
-      .gte("created_at", new Date(Date.now() - 86400000).toISOString());
-    if (countError) return json({ error: "usage check failed" }, 503);
     const dailyLimit = Math.max(1, Math.min(200, Number(Deno.env.get("AI_DAILY_LIMIT") || 40)));
-    if ((count ?? 0) >= dailyLimit) return json({ error: "daily AI message limit reached", limit: dailyLimit }, 429);
+    const { data: quotaOk, error: quotaError } = await admin.rpc("ai_claim_daily_quota", {
+      p_user_id: userId, p_limit: dailyLimit,
+    });
+    if (quotaError) return json({ error: "usage check failed" }, 503);
+    if (!quotaOk) return json({ error: "daily AI message limit reached", limit: dailyLimit }, 429);
 
     let convId = conversationId;
     if (convId) {
