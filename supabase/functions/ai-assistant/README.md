@@ -14,8 +14,8 @@ Existing Supabase runtime variables are used for `SUPABASE_URL`, `SUPABASE_ANON_
 
 1. Apply migration `20261123120000_orbix_ai_core.sql`.
 2. Set secrets with the Supabase CLI or Dashboard. Never commit secrets.
-3. Deploy function `ai-assistant`.
-4. Test with an authenticated user who satisfies the existing Orbix MFA policy.
+3. Set the model and key as server-side secrets (run locally; do not commit the key):\n   `supabase secrets set OPENAI_API_KEY=... AI_DEFAULT_MODEL=...`\n4. Deploy function `ai-assistant`: `supabase functions deploy ai-assistant`.\n5. Confirm the project is linked to the intended Supabase project before running `supabase db push` to apply the migration.
+6. Test with an authenticated user who satisfies the existing Orbix MFA policy.
 
 The function reads only user-scoped `bots`, `bot_state`, `bot_events`, and `backtests` rows. It never reads exchange credentials and exposes no trading tools.
 
