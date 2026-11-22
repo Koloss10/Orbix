@@ -13,6 +13,7 @@ const template = read('src/orbix.template.html');
 test('AI Edge Function requires authenticated user and existing MFA policy', () => {
   assert.match(edge, /auth\.getUser\(\)/);
   assert.match(edge, /rpc\("mfa_ok_now"\)/);
+  assert.match(edge, /rpc\("ai_claim_daily_quota"/);
   assert.match(edge, /authorization\.startsWith\("Bearer "/);
 });
 
@@ -29,6 +30,8 @@ test('AI database tables use RLS and expose no client write policies', () => {
     assert.match(migration, new RegExp('alter table public\\.' + table + ' enable row level security'));
   }
   assert.doesNotMatch(migration, /for (insert|update|delete) to authenticated/i);
+  assert.match(migration, /on conflict \(user_id, usage_date\) do update/i);
+  assert.match(migration, /grant execute on function public\.ai_claim_daily_quota\(uuid, integer\) to service_role/i);
 });
 
 test('AI UI is explicitly read-only and provides chat controls', () => {
