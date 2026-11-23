@@ -1597,6 +1597,8 @@ if(r.error){AI.err='Не вдалося завантажити діалог.';}e
 function aiNew(){AI.conv=null;AI.msgs=[];AI.err='';AI.ctx=null;aiR();const t=$('#aiin');t&&t.focus()}
 async function aiDel(id){if(!SB||!confirm('Видалити цей діалог?'))return;const r=await SB.from('ai_conversations').delete().eq('id',id);
 if(r.error)return toast('Не вдалося видалити діалог.');if(AI.conv===id)aiNew();aiList()}
+async function aiErase(){if(!SB||!CLOUD.u||!confirm('Видалити ВСІ ваші діалоги з Orbix AI? Це не можна скасувати.'))return;const r=await SB.rpc('ai_erase_my_data');
+if(r.error)return toast('Не вдалося видалити діалоги.');toast('Усі діалоги видалено.');aiNew();aiList()}
 async function aiSend(text){text=String(text||'').trim();if(!text||AI.busy)return;if(!SB||!CLOUD.u){AI.err='Увійдіть в акаунт, щоб користуватися Orbix AI.';return aiR()}
 if(text.length>2000){AI.err='Питання задовге: до 2000 символів.';return aiR()}
 const me=CLOUD.u.id;{const ti=$('#aiin');if(ti)ti.value=''}AI.busy=1;AI.err='';AI.msgs=[...AI.msgs,{role:'user',content:text,created_at:new Date().toISOString()}];aiR();
@@ -1656,7 +1658,7 @@ el.innerHTML=`<div class="aig${pop?' pop':''}"><div class="card aim"><div class=
 <p class="dn" id="aier" ${AI.err?'':'hidden'}></p>
 <form class="aif" id="aif"><label class="srl" for="aiin">Ваше питання</label><textarea id="aiin" rows="2" maxlength="2000" placeholder="Напр.: Чому BNB не відкриває угод?"${AI.busy?' disabled':''}></textarea><button class="b p" id="aisd"${AI.busy?' disabled':''}>${AI.busy?'Думаю…':'Надіслати'}</button></form>
 ${AI.left!=null?`<p class="mu" style="margin-top:6px">Сьогодні залишилось запитів: ${Math.max(0,AI.left)}</p>`:''}</div>
-<${pop?'details':'div'} class="card aic">${pop?'<summary>Історія діалогів</summary>':'<h3>Історія</h3>'}<div id="aicl"></div></${pop?'details':'div'}></div>`;
+<${pop?'details':'div'} class="card aic">${pop?'<summary>Історія діалогів</summary>':'<h3>Історія</h3>'}<div id="aicl"></div><button class="b sm" id="aier2" type="button">Видалити всі діалоги</button></${pop?'details':'div'}></div>`;
 const log=$('#ail');
 if(!AI.msgs.length){const p=document.createElement('p');p.className='mu';p.textContent=AI.ctx&&AI.ctx.type==='bot'?'Питання стосуватиметься вибраного бота.':'Поставте питання або виберіть швидкий запит.';log.append(p)}
 for(const m of AI.msgs){const d=document.createElement('div');d.className='aimg '+(m.role==='user'?'u':'a');const t=document.createElement('div');t.className='aitx';t.textContent=m.content;d.append(t);
@@ -1670,7 +1672,7 @@ const x=document.createElement('button');x.className='b sm';x.dataset.ad=c.id;x.
 $('#ainw').onclick=aiNew;$('#aif').onsubmit=e=>{e.preventDefault();const t=$('#aiin');aiSend(t.value)};
 $('#aiin').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend(e.target.value)}};
 $$('[data-aq]').forEach(b=>b.onclick=()=>aiSend(AI_Q[+b.dataset.aq][1]));
-cl.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.ac)aiOpenConv(b.dataset.ac);else if(b.dataset.ad)aiDel(b.dataset.ad)};
+$('#aier2').onclick=aiErase;cl.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.ac)aiOpenConv(b.dataset.ac);else if(b.dataset.ad)aiDel(b.dataset.ad)};
 const ti=$('#aiin');if(ti&&keep&&!ti.disabled)ti.value=keep;if(ti&&hadF&&!ti.disabled)ti.focus()}
 /* ---------- Відгук: учасник бета-тесту пише відгук прямо з Orbix ----------
    Запис у таблицю feedback (RLS: лише свої; тригер ставить автора й статус, не більше 20 на добу).

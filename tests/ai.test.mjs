@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createProvider, AIError } from '../supabase/functions/ai-assistant/provider.js';
-import { createTools, TOOL_DEFS } from '../supabase/functions/ai-assistant/tools.js';
+import { createTools, TOOL_DEFS, untrusted } from '../supabase/functions/ai-assistant/tools.js';
 import { LIMITS, overLimit, parseRequest, runConversation, trimHistory, contextNote } from '../supabase/functions/ai-assistant/agent.js';
 import { searchDocs } from '../supabase/functions/ai-assistant/docs.js';
 
@@ -215,9 +215,17 @@ test('Діалог: дані читаються один раз на питан�
   const m = fakeModel([callTools(['list_user_bots'], ['get_bot_state', { bot: 'B1' }], ['get_risk_snapshot']), say('ok')]);
   await runConversation({ provider: m, tools: t, message: 'x' });
   assert.equal(reader.calls.filter((c) => c === 'load').length, 1);
-  const big = createTools({ reader: { ...reader, async events() { return Array.from({ length: 30 }, () => ({ level: 'info', message: 'x'.repeat(400) })); } } });
+  const big = createTools({ reader: { ...reader, async events() { return Array.from({ length: 30 }, () => ({ level: 'info', message: 'рядок журналу '.repeat(30) })); } } });
   const m2 = fakeModel([callTools(['get_bot_events', { bot: 'B1', limit: 30 }]), say('ok')]);
   await runConversation({ provider: m2, tools: big, message: 'x' });
   const tool = m2.sent[1].messages.find((x) => x.role === 'tool');
   assert.ok(tool.content.length <= LIMITS.maxToolResultChars + 60); assert.match(tool.content, /обрізано/);
+});
+
+test('Недовірений текст: ключі й токени маскуються, звичайний текст лишається', () => {
+  assert.equal(untrusted('ключ gsk_abcdefghijklmnop1234567890 відхилено'), 'ключ [приховано] відхилено');
+  assert.ok(!untrusted('Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abcdefghijk').includes('eyJhbGci'));
+  assert.ok(!untrusted('apiKey=A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8').includes('A1b2C3d4E5f6'));
+  assert.equal(untrusted('Order qty too small: ETHUSDT 0.0171'), 'Order qty too small: ETHUSDT 0.0171');
+  assert.equal(untrusted(null), null);
 });

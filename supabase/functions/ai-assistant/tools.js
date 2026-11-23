@@ -17,7 +17,9 @@ import { findIssues } from "./monitor.js";
 const r2 = (x, d = 2) => (Number.isFinite(+x) ? Math.round(+x * 10 ** d) / 10 ** d : null);
 const iso = (t) => (t == null || t === "" ? null : new Date(typeof t === "number" ? t : String(t)).toISOString());
 /* недовірений текст (журнал, помилки біржі): лише як дані, без керувальних символів, обрізаний */
-export const untrusted = (s, max = 300) => (s == null ? null : String(s).replace(/[\u0000-\u001f\u007f]+/g, " ").slice(0, max));
+/* на випадок, якщо біржа чи журнал «ехом» повернули ключ або токен: довгі токеноподібні рядки маскуються до відправки моделі */
+const SECRET_LIKE = /\b(?:sk-|gsk_|eyJ)[A-Za-z0-9_\-.]{12,}|\b[A-Za-z0-9+/_-]{32,}={0,2}(?![A-Za-z0-9])/g;
+export const untrusted = (s, max = 300) => (s == null ? null : String(s).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(SECRET_LIKE, "[приховано]").slice(0, max));
 
 const BOT = { type: "object", properties: { bot: { type: "string", description: "Псевдонім бота (B1, B2…) або пара, напр. SOL/USDT" } }, required: ["bot"], additionalProperties: false };
 const NONE = { type: "object", properties: {}, additionalProperties: false };
