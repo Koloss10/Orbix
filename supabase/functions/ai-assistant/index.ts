@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       const { data: c } = await admin.from("ai_conversations").select("id").eq("id", convId).eq("user_id", uid).maybeSingle();
       if (!c) convId = null;
       else {
-        const { data: rows } = await admin.from("ai_messages").select("role,content").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(LIMITS.maxHistory);
+        const { data: rows } = await admin.from("ai_messages").select("role,content").eq("conversation_id", convId).order("id", { ascending: false }).limit(LIMITS.maxHistory);
         history = trimHistory((rows || []).reverse());
       }
     }
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     try {
       const provider = createProvider({
         baseUrl: env("AI_BASE_URL", "https://api.groq.com/openai/v1"), apiKey: env("AI_API_KEY"), model,
-        maxOutputTokens: Math.round(+env("AI_MAX_OUTPUT_TOKENS", "1200")) || 1200, timeoutMs: 30000, retries: 2,
+        maxOutputTokens: Math.round(+env("AI_MAX_OUTPUT_TOKENS", "900")) || 900, timeoutMs: 30000, retries: 2,
       });
       out = await runConversation({ provider, tools, history, message: p.message, note: contextNote(p.context, alias) });
     } catch (e) {

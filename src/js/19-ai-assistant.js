@@ -15,7 +15,7 @@ return{err:(d&&d.error)||'Orbix AI тимчасово недоступний. Б
 async function aiList(){if(!SB||!CLOUD.u)return;const r=await SB.from('ai_conversations').select('id,title,updated_at,context_type').order('updated_at',{ascending:false}).limit(20);
 if(r.error){AI.list=[];if(/ai_conversations|does not exist|schema cache/.test(r.error.message||''))AI.off='Orbix AI ще не підключено на сервері.';}else AI.list=r.data||[];aiR()}
 async function aiOpenConv(id){if(!SB)return;AI.conv=id;AI.msgs=[];AI.err='';aiR();
-const r=await SB.from('ai_messages').select('role,content,metadata,created_at').eq('conversation_id',id).order('created_at',{ascending:true}).limit(200);
+const r=await SB.from('ai_messages').select('role,content,metadata,created_at').eq('conversation_id',id).order('id',{ascending:true}).limit(200);
 if(r.error){AI.err='Не вдалося завантажити діалог.';}else AI.msgs=r.data||[];aiR()}
 function aiNew(){AI.conv=null;AI.msgs=[];AI.err='';AI.ctx=null;aiR();const t=$('#aiin');t&&t.focus()}
 async function aiDel(id){if(!SB||!confirm('Видалити цей діалог?'))return;const r=await SB.from('ai_conversations').delete().eq('id',id);

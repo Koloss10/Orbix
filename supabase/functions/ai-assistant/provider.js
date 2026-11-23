@@ -43,11 +43,17 @@ export function createProvider(o) {
     if (tools && tools.length) { body.tools = tools; body.tool_choice = toolChoice || "auto"; }
     let last;
     for (let a = 0; a <= retries; a++) {
-      if (a) await sleep(800 * 2 ** (a - 1));
+      if (a && !(last && last.code === "quota")) await sleep(800 * 2 ** (a - 1));
       let r;
       try { r = await once(body); } catch (e) { last = e; continue; }
       if (r.status === 401 || r.status === 403) throw new AIError("auth", "AI-сервіс відхилив ключ");
-      if (r.status === 429) { last = new AIError("quota", "Вичерпано ліміт AI-сервісу — спробуйте пізніше"); continue; }
+      if (r.status === 429) {
+        // ліміт за хвилину: чекаємо, лише якщо сервіс сам каже, що недовго; інакше відмова одразу (не палимо денний ліміт)
+        const wait = +((r.headers && r.headers.get && r.headers.get("retry-after")) || NaN);
+        last = new AIError("quota", "Вичерпано ліміт AI-сервісу — спробуйте за хвилину");
+        if (!(wait >= 0 && wait <= 20) || a >= retries) throw last;
+        await sleep(wait * 1000); continue;
+      }
       if (TRANSIENT.has(r.status)) { last = new AIError("unavailable", `AI-сервіс тимчасово недоступний (${r.status})`); continue; }
       if (!r.ok) throw new AIError("bad_response", `AI-сервіс повернув помилку ${r.status}`);
       return parse(await r.json().catch(() => null));

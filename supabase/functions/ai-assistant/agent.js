@@ -3,10 +3,11 @@
 
 export const LIMITS = {
   maxMessageChars: 2000, // одне питання користувача
-  maxHistory: 16, // попередніх повідомлень діалогу, що йдуть моделі
-  maxHistoryChars: 12000,
-  maxToolSteps: 5, // раундів викликів інструментів на одне питання
-  maxToolResultChars: 9000, // результат одного інструмента
+  // бюджети розраховано на безкоштовний тариф Groq (~8 000 токенів на хвилину на всі кроки одного питання)
+  maxHistory: 8, // попередніх повідомлень діалогу, що йдуть моделі
+  maxHistoryChars: 4000,
+  maxToolSteps: 3, // раундів викликів інструментів на одне питання
+  maxToolResultChars: 6000, // результат одного інструмента
   dailyRequests: 40, // за замовчуванням; секрет AI_DAILY_LIMIT
 };
 const CTX = new Set(["bot", "monitor", "risk", "backtest", "market"]);

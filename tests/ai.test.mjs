@@ -73,7 +73,12 @@ test('AI-адаптер: тимчасова помилка повторюєть�
 
 test('AI-адаптер: перевищення квоти, тайм-аут і недоступність — зрозумілі коди помилок', async () => {
   let q = 0;
-  await assert.rejects(P(async () => { q++; return resp(429, {}); }).chat({ messages: [] }), (e) => e.code === 'quota'); assert.equal(q, 3);
+  await assert.rejects(P(async () => { q++; return resp(429, {}); }).chat({ messages: [] }), (e) => e.code === 'quota'); assert.equal(q, 1);
+  let w = 0, slept = [];
+  const pw = P(async () => (++w < 2 ? { ...resp(429, {}), headers: { get: (h) => (h === 'retry-after' ? '7' : null) } } : resp(200, okBody({ content: 'після паузи' }))), { sleep: async (ms) => { slept.push(ms); } });
+  assert.equal((await pw.chat({ messages: [] })).text, 'після паузи'); assert.deepEqual(slept, [7000]);
+  let z = 0;
+  await assert.rejects(P(async () => { z++; return { ...resp(429, {}), headers: { get: () => '3600' } }; }).chat({ messages: [] }), (e) => e.code === 'quota'); assert.equal(z, 1);
   const hang = (url, init) => new Promise((_, rej) => init.signal.addEventListener('abort', () => rej(Object.assign(new Error('aborted'), { name: 'AbortError' }))));
   await assert.rejects(P(hang, { timeoutMs: 5, retries: 0 }).chat({ messages: [] }), (e) => e.code === 'timeout');
   await assert.rejects(P(async () => { throw new TypeError('network'); }, { retries: 1 }).chat({ messages: [] }), (e) => e.code === 'unavailable');
@@ -115,9 +120,17 @@ test('Інструменти: боти мають псевдоніми, сума
   const t = createTools({ reader: fixture(), now: () => NOW });
   const { bots } = await t.call('list_user_bots');
   assert.deepEqual(bots.map((b) => [b.bot, b.pair]), [['B1', 'SOL/USDT'], ['B2', 'BNB/USDT'], ['B3', 'ETH/USDT']]);
-  const bnb = bots[1].settings;
+  assert.equal(bots[1].sum_usdt, 749); assert.equal(bots[1].lev, 10);
+  const bnb = (await t.call('get_bot_details', { bot: 'B2' })).settings;
   assert.equal(bnb.sum_margin_usdt, 749.01); assert.equal(bnb.full_ladder_notional_usdt, 7490);
   assert.equal(bots[2].mode, 'лише в браузері (сервер не веде)');
+  assert.deepEqual([bots[0].deals, bots[0].model_pnl, bots[0].in_position, bots[0].exchange_pnl], [2, 2.22, true, -0.5]);
+  assert.equal(bots[2].deals, null);
+  const o = await t.call('get_account_overview');
+  assert.deepEqual([o.bots_total, o.running, o.on_exchange, o.open_positions, o.model_pnl_usdt, o.exchange_pnl_usdt], [3, 2, 2, 1, 2.22, -0.5]);
+  assert.deepEqual(o.limits_usdt, { maxPos: 3000, maxTotal: 8000, dayLoss: 150 });
+  const d = await t.call('get_bot_details', { bot: 'B2' });
+  assert.match(d.last_error_untrusted, /place_order/); assert.ok(!('last_error' in d));
   assert.equal(await t.aliasOf(SECRET.bnbId), 'B2');
   assert.equal((await t.call('get_bot_details', { bot: 'sol/usdt' })).bot, 'B1');
   assert.match((await t.call('get_bot_details', { bot: 'B9' })).error, /не знайдено/);
@@ -166,10 +179,10 @@ test('Діалог: модель не отримує пошти, імен, id а
   const reader = fixture(), t = createTools({ reader, now: () => NOW });
   const all = TOOL_DEFS.map((d) => [d.function.name, d.function.name.includes('bot_') || d.function.name === 'get_bot_details' ? { bot: 'B2' } : {}]);
   all.find((x) => x[0] === 'search_orbix_docs')[1] = { query: 'ліміт' };
-  const m = fakeModel([callTools(...all.slice(0, 5)), callTools(...all.slice(5)), callTools(['get_bot_trade_history', { bot: 'B1' }], ['get_bot_events', { bot: 'B1' }]), say('Усе гаразд.')]);
+  const m = fakeModel([callTools(...all.slice(0, 5)), callTools(...all.slice(5), ['get_bot_trade_history', { bot: 'B1' }], ['get_bot_events', { bot: 'B1' }]), say('Усе гаразд.')]);
   const r = await runConversation({ provider: m, tools: t, message: 'Перевір усе', note: contextNote({ type: 'bot' }, await t.aliasOf(SECRET.bnbId)) });
   assert.equal(r.text, 'Усе гаразд.'); assert.equal(r.tools.length, TOOL_DEFS.length + 2);
-  assert.deepEqual(r.usage, { input: 70, output: 14 });
+  assert.deepEqual(r.usage, { input: 50, output: 11 });
   const wire = JSON.stringify(m.sent);
   for (const [k, v] of Object.entries(SECRET)) assert.ok(!wire.includes(v), `до моделі потрапило ${k}`);
   assert.ok(!wire.includes('k-test'));
@@ -190,7 +203,7 @@ test('Prompt injection: текст із журналу й помилок — п�
 
 test('Діалог: кількість раундів інструментів обмежена, далі — відповідь без інструментів', async () => {
   const t = createTools({ reader: fixture(), now: () => NOW });
-  const m = fakeModel([callTools(['list_user_bots']), callTools(['list_user_bots']), callTools(['list_user_bots']), callTools(['list_user_bots']), callTools(['list_user_bots']), say('Підсумок.')]);
+  const m = fakeModel([...Array.from({ length: LIMITS.maxToolSteps }, () => callTools(['list_user_bots'])), say('Підсумок.')]);
   const r = await runConversation({ provider: m, tools: t, message: 'Цикл' });
   assert.equal(m.sent.length, LIMITS.maxToolSteps + 1);
   assert.equal(m.sent.at(-1).tools, undefined);

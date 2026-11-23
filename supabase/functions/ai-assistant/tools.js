@@ -10,6 +10,7 @@
 //   * розрахунки ризику — та сама логіка, що й у runner (risk.js), модель їх не рахує сама.
 import { DEF_LIMITS, dayStart, ladderNotional, limitsOf, realizedSince, riskBlock } from "./risk.js";
 import { searchDocs } from "./docs.js";
+import { DEF, normG } from "./engine.js";
 
 const r2 = (x, d = 2) => (Number.isFinite(+x) ? Math.round(+x * 10 ** d) / 10 ** d : null);
 const iso = (t) => (t == null || t === "" ? null : new Date(typeof t === "number" ? t : String(t)).toISOString());
@@ -34,7 +35,10 @@ export const TOOL_DEFS = [
 
 /* ---------- що саме бачить модель ---------- */
 const ladderSum = (g) => { const n = Math.max(1, Math.round(+g.orders || 1)), m = +g.mult || 1; let u = 0; for (let k = 0; k < n; k++) u += m ** k; return u; };
-const cfgOf = (b) => { const c = b.config && typeof b.config === "object" ? b.config : {}; const g = {}; for (const [k, v] of Object.entries(c)) if (!k.startsWith("_")) g[k] = v; return { c, g }; };
+const cfgOf = (b) => { const c = b.config && typeof b.config === "object" ? b.config : {}; const g = {}; for (const [k, v] of Object.entries(c)) if (!k.startsWith("_")) g[k] = v;
+  /* так само, як runner (botConfig): значення за замовчуванням і нормалізація — інакше драбина й ризик розійдуться */
+  let n; try { n = normG({ ...DEF, ...g }); } catch { n = { ...DEF, ...g }; }
+  return { c, g: n }; };
 const mode = (c) => (c._srv ? (c._tn ? (c._ex === "binance" ? "сервер + Binance Testnet" : "сервер + Bybit Demo") : "сервер, лише модель") : "лише в браузері (сервер не веде)");
 
 function settings(g) {
@@ -47,6 +51,9 @@ function settings(g) {
     full_ladder_notional_usdt: r2(+g.fut ? ladderNotional(g) : (+g.base || 0) * ladderSum(g), 0),
   };
 }
+
+/* стисло для списку: безкоштовний тариф має ~8 000 токенів на хвилину, тож повні налаштування — у get_bot_details */
+const brief = (g) => ({ side: +g.d === -1 ? "Short" : "Long", tf_h: +g.tf || 1, sum_usdt: r2((+g.base || 0) * ladderSum(g), 0), lev: +g.fut ? +g.lev || 1 : 1, orders: +g.orders || 1, tp_pct: r2((+g.tp || 0) * 100, 2), sl_pct: r2((+g.sl || 0) * 100, 2) });
 
 function modelStats(st) {
   const b = st && st.b; if (!b) return null;
@@ -86,7 +93,7 @@ export function createTools({ reader, now = () => Date.now() }) {
     async get_account_overview() {
       const { list, profile } = await data();
       const run = list.filter((x) => x.row.status === "running");
-      const m = list.map((x) => modelStats(x.st)).filter(Boolean), e = list.map((x) => exchangeStats(x.st)).filter(Boolean);
+      const m = list.map((x) => modelStats(x.st && x.st.state)).filter(Boolean), e = list.map((x) => exchangeStats(x.st && x.st.state)).filter(Boolean);
       return {
         bots_total: list.length, running: run.length, on_server: list.filter((x) => x.c._srv).length,
         on_exchange: list.filter((x) => x.c._srv && x.c._tn).length, open_positions: m.filter((s) => s.open_position).length,
@@ -96,11 +103,13 @@ export function createTools({ reader, now = () => Date.now() }) {
     },
     async list_user_bots() {
       const { list } = await data();
-      return { bots: list.map((x) => ({ ...head(x), settings: settings(x.g), model: modelStats(x.st), exchange: exchangeStats(x.st), server_processed_at: x.st ? iso(x.st.updated_at) : null })) };
+      return { bots: list.map((x) => { const m = modelStats(x.st && x.st.state), e = exchangeStats(x.st && x.st.state);
+        return { ...head(x), ...brief(x.g), deals: m ? m.closed_deals : null, model_pnl: m ? m.pnl_usdt : null, in_position: m ? m.open_position : null, exchange_pnl: e ? e.pnl_usdt : null, processed_at: x.st ? iso(x.st.updated_at) : null }; }),
+        note: "Повні налаштування — get_bot_details, позиція — get_bot_state. null — сервер цього бота не веде." };
     },
     async get_bot_details({ bot }) {
       const x = await find(bot); if (x.error) return x;
-      return { ...head(x), settings: settings(x.g), started_at: iso(x.row.started_at), updated_at: iso(x.row.updated_at), last_error: untrusted(x.row.last_error) };
+      return { ...head(x), settings: settings(x.g), started_at: iso(x.row.started_at), updated_at: iso(x.row.updated_at), last_error_untrusted: untrusted(x.row.last_error) };
     },
     async get_bot_state({ bot }) {
       const x = await find(bot); if (x.error) return x;
