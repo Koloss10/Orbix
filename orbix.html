@@ -250,6 +250,66 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 .hql{display:inline-flex;align-items:center;gap:0}
 #srbg{position:fixed;inset:0;background:rgba(5,7,10,.6);z-index:11}#srp{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));width:min(640px,calc(100vw - 16px));max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));overflow:auto;z-index:12;background:var(--pan);border:1px solid var(--ln);border-radius:var(--r);padding:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}.srh{display:flex;gap:8px;position:sticky;top:-12px;background:var(--pan);padding:0 0 8px}.srh input{flex:1;min-width:0}#srr h3{margin:12px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}.sri{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin-bottom:6px;padding:8px 12px}.sri .mu{font-size:12px;font-weight:400;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.chip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc.flash{outline:2px solid var(--ac);outline-offset:2px;transition:outline-color .3s}
 @media (max-width:480px){header{gap:6px}header #sbtn,header #mb{padding:0 9px!important}.chip{font-size:10px;letter-spacing:.03em;padding:4px 8px}.brand{gap:6px;padding-right:0}}
+
+/* ---------- Orbix AI: плаваюча іконка, вікно діалогу, розділ ---------- */
+#ai-st,#ai-sb{position:fixed;left:0;width:0;visibility:hidden;pointer-events:none}
+#ai-st{top:0;height:env(safe-area-inset-top,0px)}#ai-sb{bottom:0;height:env(safe-area-inset-bottom,0px)}
+#ai-fab{position:fixed;left:0;top:0;z-index:8;width:58px;height:58px;padding:0;border:0;border-radius:50%;background:none;cursor:pointer;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transform:translate3d(var(--x,0px),var(--y,0px),0);will-change:transform}
+#ai-fab.snap{transition:transform .28s cubic-bezier(.2,.9,.25,1.15)}
+#ai-fab .ai-in{position:absolute;inset:0;display:block;padding:3px;border-radius:50%;background:radial-gradient(circle at 32% 26%,color-mix(in srgb,var(--ac) 30%,var(--pan2)),var(--pan2) 72%);border:1px solid color-mix(in srgb,var(--ac) 50%,transparent);box-shadow:0 8px 22px -6px color-mix(in srgb,var(--ac) 55%,transparent),0 3px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12);transition:transform .18s,box-shadow .18s}
+.ai-svg{width:100%;height:100%;overflow:visible;display:block}
+#ai-fab:hover .ai-in{transform:scale(1.06)}
+#ai-fab:active .ai-in{transform:scale(.94)}
+#ai-fab.drag .ai-in{transform:scale(1.18);box-shadow:0 14px 30px -6px color-mix(in srgb,var(--ac2) 65%,transparent),0 0 0 4px color-mix(in srgb,var(--ac) 28%,transparent)}
+#ai-fab:focus-visible{outline:2px solid var(--ac);outline-offset:4px}
+.ai-halo{position:absolute;inset:-6px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--ac) 55%,transparent);opacity:0;pointer-events:none;animation:ai-halo 3.8s ease-out infinite}
+#ai-fab.busy .ai-halo{animation-duration:1.1s}
+.ai-spark{transform-box:fill-box;transform-origin:center;animation:ai-tw 3.2s ease-in-out infinite}
+#ai-fab.busy .ai-spark{animation:ai-spin 1.1s linear infinite}
+@keyframes ai-halo{0%{transform:scale(.84);opacity:.7}70%,100%{transform:scale(1.3);opacity:0}}
+@keyframes ai-tw{0%,100%{transform:scale(.92);opacity:.85}50%{transform:scale(1.08);opacity:1}}
+@keyframes ai-spin{to{transform:rotate(360deg)}}
+@keyframes ai-dot{0%,80%,100%{transform:translateY(0);opacity:.45}40%{transform:translateY(-4px);opacity:1}}
+@keyframes ai-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+#ai-tip{position:fixed;left:0;top:0;z-index:8;max-width:200px;padding:8px 12px;border-radius:12px;background:var(--pan);border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);color:var(--tx);font-size:12px;line-height:1.4;box-shadow:0 10px 24px -12px rgba(0,0,0,.8);transform:translate3d(var(--tx,0px),var(--ty,0px),0);pointer-events:none;animation:ai-up .3s}
+#ai-bg{position:fixed;inset:0;z-index:19;background:rgba(5,7,10,.55)}
+#ai-panel{position:fixed;z-index:20;left:0;right:0;bottom:0;height:min(86vh,calc(var(--aivh,100vh) - 10px));display:flex;flex-direction:column;background:color-mix(in srgb,var(--pan2) 96%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--ln);border-bottom:0;border-radius:20px 20px 0 0;box-shadow:0 -12px 40px -12px rgba(0,0,0,.7);overflow:hidden;animation:ai-up .26s cubic-bezier(.2,.9,.25,1)}
+#ai-panel::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;z-index:1;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+@media(min-width:720px){#ai-bg{display:none}#ai-panel{left:auto;right:16px;bottom:16px;width:410px;height:min(680px,calc(var(--aivh,100vh) - 32px));border-radius:20px;border-bottom:1px solid var(--ln)}}
+.ai-c{display:flex;flex-direction:column;min-height:0;height:100%}
+.ai-h{display:flex;align-items:center;gap:8px;padding:14px 12px 10px;border-bottom:1px solid var(--ln);flex:none}
+.ai-av{width:34px;height:34px;flex:none}
+.ai-t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.ai-t b{font:600 15px 'Space Grotesk',Inter,system-ui,sans-serif;letter-spacing:.02em}
+.ai-t .mu{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-h .b.sm{min-width:38px;padding:0 8px}
+.ai-hs{max-height:42%;overflow:auto;padding:8px 12px;border-bottom:1px solid var(--ln);display:flex;flex-direction:column;gap:6px;background:var(--pan2);flex:none}
+.ai-hr{display:flex;gap:6px}
+.ai-ho{flex:1;min-width:0;height:auto;min-height:44px;padding:6px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left}
+.ai-ho b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.ai-ho .mu{font-size:11px}
+.ai-m{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.ai-b{max-width:90%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.ai-b p{margin:0 0 6px}.ai-b p:last-child{margin-bottom:0}
+.ai-b ul{margin:4px 0 6px;padding-left:18px}.ai-b li{margin:2px 0}
+.ai-b code{font:500 12.5px 'JetBrains Mono',ui-monospace,monospace;padding:1px 5px;border-radius:6px;background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.ai-u{align-self:flex-end;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 24%,transparent),color-mix(in srgb,var(--ac2) 22%,transparent));border:1px solid color-mix(in srgb,var(--ac) 35%,transparent);border-bottom-right-radius:5px}
+.ai-a{align-self:flex-start;background:var(--pan);border:1px solid var(--ln);border-bottom-left-radius:5px}
+.ai-e{border-color:color-mix(in srgb,var(--dn) 50%,transparent)}
+.ai-src{margin-top:7px;padding-top:6px;border-top:1px dashed var(--ln);font-size:11.5px}
+.ai-ty{display:flex;gap:5px;padding:13px 15px}
+.ai-ty i{width:7px;height:7px;border-radius:50%;background:var(--ac);animation:ai-dot 1s infinite ease-in-out}
+.ai-ty i:nth-child(2){animation-delay:.15s}.ai-ty i:nth-child(3){animation-delay:.3s}
+.ai-w{margin:auto;max-width:310px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:8px 0}
+.ai-w h2{margin:4px 0 0;font-size:18px}.ai-big{width:86px;height:86px;filter:drop-shadow(0 10px 22px color-mix(in srgb,var(--ac) 40%,transparent))}
+.ai-q{display:flex;gap:8px;overflow-x:auto;padding:2px 12px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:none}
+.ai-q::-webkit-scrollbar{display:none}.ai-q .b{flex:none;white-space:nowrap}.ai-q:empty{display:none}
+.ai-f{display:flex;gap:8px;align-items:flex-end;padding:8px 12px;border-top:1px solid var(--ln);flex:none}
+.ai-f textarea.ai-in2{min-height:44px;max-height:120px;resize:none;padding:11px 12px;line-height:1.35;font:400 16px/1.35 Inter,system-ui,sans-serif}
+.ai-s{width:48px;padding:0;flex:none}
+.ai-n{font-size:11px;padding:0 14px calc(10px + env(safe-area-inset-bottom,0px));text-align:center;flex:none}
+.ai-pg{padding:0;overflow:hidden}.ai-pg .ai-c{height:calc(var(--aivh,100vh) - 250px);min-height:440px}.ai-pg .ai-x{display:none}
+@media(prefers-reduced-motion:reduce){#ai-fab *,.ai-ty i,#ai-panel,#ai-tip{animation:none!important}#ai-fab.snap{transition:none}}
 </style>
 </head>
 <body>
@@ -321,6 +381,8 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 
 <section id="v-mon" class="s" hidden><div id="mon"></div></section>
 
+<section id="v-ai" class="s" hidden></section>
+
 <section id="v-sx" class="s" hidden>
 <div class="card"><h2>Стрес-тест бота</h2><p class="mu" style="margin-bottom:12px">Бот відкриває позицію, після чого ринок різко падає, повільно сповзає, стрибає вгору або стає надмірно волатильним. Видно, скільки ордерів докупається, наскільки просідає капітал і чи є ліквідація.</p><label style="margin-bottom:12px">Бот<select id="sxs"></select></label><button class="b p" id="sxo">Запустити сценарії</button><div id="sxt" style="margin-top:14px"></div></div>
 <div class="card"><h2>Швидкодія платформи</h2><button class="b" id="pfb">Запустити тест швидкодії</button><div id="pft2" style="margin-top:12px"></div></div>
@@ -369,6 +431,11 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 <div id="srp" role="dialog" aria-modal="true" aria-label="Пошук" hidden><div class="srh"><input id="srq" type="search" placeholder="Пошук: бот, пара, розділ, індикатор…" autocomplete="off" aria-label="Що шукати"><button class="b" id="srx" aria-label="Закрити пошук">✕</button></div><div id="srr" aria-live="polite"></div></div>
 <div id="sh" hidden></div>
 <nav id="mn" aria-label="Меню" hidden></nav>
+<div id="ai-st" aria-hidden="true"></div><div id="ai-sb" aria-hidden="true"></div>
+<button id="ai-fab" type="button" hidden aria-haspopup="dialog" aria-label="Orbix AI: відкрити помічника. Утримуйте, щоб перемістити іконку" title="Orbix AI"></button>
+<div id="ai-tip" role="status" hidden>Orbix AI поруч. Торкніться, щоб запитати, утримуйте, щоб перемістити.</div>
+<div id="ai-bg" hidden></div>
+<div id="ai-panel" role="dialog" aria-label="Orbix AI" hidden><div class="ai-c"></div></div>
 <datalist id="pl"></datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -1346,16 +1413,16 @@ im.onerror=()=>{URL.revokeObjectURL(u);$('#avm').textContent='Не вдалос�
 $('#help').innerHTML=[['Бета-тест: як почати','Меню → Профіль → вкажіть пошту й пароль (від 8 символів) → «Зареєструватися». Вхід одразу, листа чекати не треба. Запам’ятайте пароль: під час бета-тесту листи з кодом і «Забули пароль?» не надсилаються. Двофакторний вхід — у Профілі → «Акаунт» → «Безпека». Боти працюють на демо-даних і паперових рахунках; для ордерів на демо-рахунку біржі додайте власні демо-ключі Bybit у Профілі → «Біржі й ризик» (ключі без права виведення). Відгуки й помилки надсилайте через Меню → «Відгук»: ваш ID і розділ додаються самі, пошта — ні.'],['Що бачить адміністратор','Лише загальну статистику: ваш ID, нік, кількість і налаштування ботів (пара, таймфрейм, сигнали, плече) і результати у відсотках. Пошту, паролі, ключі API й суми адміністратор не бачить.'],['Як запустити бота','Оберіть топового бота й натисніть «Запустити», або відкрийте Авто-майстер, вкажіть біржу, пару й суму. Бот працює в режимі paper: ордери не відправляються. Paper-бот торгує лише з моменту запуску, а сигнал перевіряє після закриття кожної свічки свого таймфрейму. Як стратегія торгувала б у минулому — дивіться в бектесті.'],['DCA-сітка','Перший ордер, крок між докупівлями, множник кроку та множник ордера (мартингейл). Середня ціна зміщується з кожною докупівлею, TP рахується від середньої.'],['Захист','Stop-Loss від середньої, Multi-TP, перенесення стопа в беззбиток, trailing. На Futures також видно ціну ліквідації.'],['Ринкові дані','Ціни й свічки беруться з публічного API Binance (резерв — Binance Vision і Bybit), без ключів. Історія кешується в браузері, нові свічки підтягуються кожні 15 секунд. Якщо біржі недоступні, вмикаються демо-дані (позначка «Демо-дані» вгорі).'],['Графіки','Ринок — повний графік TradingView. У налаштуванні бота — великий графік з індикаторами й сіткою ордерів. У ботах і бектестах — компактний графік: штрихові лінії ордерів, TP, SL, ліквідації та значки купівлі (B) і продажу (S).'],['Walk-forward','Авто-майстер перевіряє сам спосіб підбору: параметри підбираються на одному вікні історії, а торгують наступне, якого підбір не бачив, і так кілька кроків поспіль. У топ потрапляють лише пари, де підбір пройшов цю перевірку.'],['Бектести','Бектест іде на реальній годинній історії пари (типово рік, для «3 роки» докачується більше). Минулі результати не гарантують майбутніх: дивіться перевірку поза підбором і стрес-тест.'],['Сповіщення','Звук, вібрація, спливаючі й системні сповіщення в Налаштуваннях. Месенджери в Профілі: Telegram працює прямо з браузера.'],['Акаунт і хмара','Увійдіть у Профілі: боти, бектести, обрані й ім’я збережуться в хмарі Orbix і будуть доступні з телефона та комп’ютера. Без входу все лишається в цьому браузері.'],['Топ Боти й Обрані','На головній «Топ Боти»: до 10 найкращих стратегій Orbix і Авто-майстра, гортайте вбік. Іконка-воронка біля заголовка відкриває фільтри. Зірочка додає бота в «Обрані Боти». Цифри на картках — бектест, а не обіцянка прибутку.'],['Профіль','Відкрийте меню й натисніть на свій нік угорі: там нік, картинка профілю (10 логотипів або власне фото), акаунт, біржі та месенджери.']].map(([q,a])=>`<div class="tr" style="flex-direction:column;gap:4px"><b>${q}</b><span class="mu">${a}</span></div>`).join('');
 
 /* ---------- меню й навігація ---------- */
-const IC={fb:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',adm:'<path d="M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',ov:'<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',bots:'<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01"/>',aw:'<path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M5 19l1-2.5M19 19l-1-2.5"/>',bd:'<path d="M12 5v14M5 12h14"/>',mk:'<path d="M3 17l5-6 4 3 5-7 4 4"/>',bs:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>',jr:'<path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/>',st:'<path d="M4 19V10M10 19V4M16 19v-7M22 19H2"/>',sx:'<path d="M4 14l4-8 4 10 4-6 4 4"/>',mon:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',pf:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>'};
-const MENU=[['ov','Головна'],['bots','Мої боти'],['aw','Авто-майстер'],['bd','Новий бот'],['mk','Ринок і графік'],['bs','Бектести'],['jr','Журнал угод'],['st','Статистика'],['mon','Моніторинг'],['sx','Стрес-тест'],['set','Налаштування'],['pf','Профіль'],['fb','Відгук'],['adm','Адмін'],['help','Довідка']];
+const IC={ai:'<circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-24 12 12)"/><path d="M12 10.3l.55 1.15 1.15.55-1.15.55-.55 1.15-.55-1.15-1.15-.55 1.15-.55z"/>',fb:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',adm:'<path d="M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',ov:'<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',bots:'<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01"/>',aw:'<path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M5 19l1-2.5M19 19l-1-2.5"/>',bd:'<path d="M12 5v14M5 12h14"/>',mk:'<path d="M3 17l5-6 4 3 5-7 4 4"/>',bs:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>',jr:'<path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/>',st:'<path d="M4 19V10M10 19V4M16 19v-7M22 19H2"/>',sx:'<path d="M4 14l4-8 4 10 4-6 4 4"/>',mon:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',pf:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>'};
+const MENU=[['ov','Головна'],['bots','Мої боти'],['aw','Авто-майстер'],['bd','Новий бот'],['mk','Ринок і графік'],['bs','Бектести'],['jr','Журнал угод'],['st','Статистика'],['mon','Моніторинг'],['ai','Orbix AI'],['sx','Стрес-тест'],['set','Налаштування'],['pf','Профіль'],['fb','Відгук'],['adm','Адмін'],['help','Довідка']];
 function mnuR(){const m=$('#mn'),b=BRANDS[SET.brand];const head=VARIANT===2?`<button class="b mi" data-v="pf" style="min-height:64px;margin-bottom:6px" aria-label="Профіль: ${esc(PF.n||'Трейдер')}">${avH(40)}<span><b>${esc(PF.n||'Трейдер')}</b><div class="mu">${CLOUD.u?esc(emMask(CLOUD.u.email))+' · профіль ›':'Увійти в акаунт ›'}</div></span></button>`:`<div style="display:flex;align-items:center;gap:10px;padding:6px 8px 12px"><span style="width:28px;height:28px">${b.svg}</span><b style="font:700 14px 'Space Grotesk',sans-serif;letter-spacing:.14em">${b.n}</b></div>`;
 m.innerHTML=head+MENU.filter(([k])=>(VARIANT!==2||k!=='pf')&&(k!=='adm'||CLOUD.adm)).map(([k,l])=>`<button class="b mi" data-v="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${l}</button>`).join('')+`<p class="mu" style="margin-top:auto;padding:10px 8px 0">${b.n} · paper-режим. ${MD.mode==='live'?'Ціни '+MD.src+' у реальному часі':'Ціни демо'}, ордери не відправляються.</p>`;
 const t=$('#tab');if(VARIANT===2){t.hidden=false;$('#wrap').classList.add('tb');t.innerHTML=[['ov','Головна'],['bots','Боти'],['mk','Ринок'],['top','Топ'],['menu','Меню']].map(([k,l])=>`<button data-v="${k}" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k==='top'?'aw':k==='menu'?'set':k]}</svg>${l}</button>`).join('');t.onclick=e=>{const b=e.target.closest('button');if(!b)return;b.dataset.v==='menu'?mnu(1):go(b.dataset.v)}}}
 function mnu(o){if(o&&$('#srp')&&!$('#srp').hidden)srOpen(0);if(!o&&$('#mn').contains(document.activeElement))$('#mb').focus();$('#mn').hidden=$('#sh').hidden=!o;$('#mb').setAttribute('aria-expanded',!!o);if(o){const f=$('#mn button');f&&f.focus()}}
-const VIEWS=['ov','bots','mk','aw','bd','bs','jr','st','mon','sx','set','pf','fb','adm','help','wiki'];let CUR='ov';
+const VIEWS=['ov','bots','mk','aw','bd','bs','jr','st','mon','ai','sx','set','pf','fb','adm','help','wiki'];let CUR='ov';
 function go(n){if(n!=='bd'&&typeof edEnd==='function')edEnd();if(n==='top'){go('ov');setTimeout(()=>{const e=$('#home-top');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
 if(n==='fb'&&CUR!=='fb')FB.from=CUR;VIEWS.forEach(k=>{const e=$('#v-'+k);if(e)e.hidden=k!==n});CUR=n;$$('.mi').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));$$('#tab button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));mnu(0);scrollTo(0,0);
-if(n==='st')sta();if(n==='mon')monR(1);if(n==='bd')pv();if(n==='bs')bsl();if(n==='pf')pfr();if(n==='sx')sxr();if(n==='set')setR();if(n==='jr')jr();if(n==='mk')mkt();if(n==='bots')lst();if(n==='adm')admR(1);if(n==='fb'){FB.msg='';fbR();fbMine()}if(n==='ov')$$('.chv').forEach(c=>{if(c.offsetParent)c._d()})}
+if(n==='st')sta();if(n==='mon')monR(1);if(n==='ai')aiPage();if(n==='bd')pv();if(n==='bs')bsl();if(n==='pf')pfr();if(n==='sx')sxr();if(n==='set')setR();if(n==='jr')jr();if(n==='mk')mkt();if(n==='bots')lst();if(n==='adm')admR(1);if(n==='fb'){FB.msg='';fbR();fbMine()}if(n==='ov')$$('.chv').forEach(c=>{if(c.offsetParent)c._d()})}
 $('#mb').onclick=()=>mnu($('#mn').hidden);$('#sh').onclick=()=>mnu(0);$('#brand').onclick=()=>go('ov');
 addEventListener('keydown',e=>{if(e.key==='Escape')mnu(0)});
 $('#mn').onclick=e=>{const t=e.target.closest('button');if(t&&t.dataset.v)go(t.dataset.v)};
@@ -1888,6 +1955,156 @@ if(MD.mode==='live'){setInterval(poll,15000);setInterval(()=>{if(CUR==='mk')tkRe
 /* дані пари довантажились після запиту «наперед» — оновити видимий екран */
 function onData(p){upd();if(CUR==='bd')pv();if(CUR==='mk')mkt()}
 
+/* ---------- Orbix AI: помічник (лише читання й рекомендації) ----------
+   Плаваюча іконка на всіх екранах: дотик відкриває діалог, утримання (~0,4 с) вмикає перетягування,
+   після відпускання іконка прилипає до найближчого краю; положення зберігається (ключ zai_pos).
+   Діалог працює через Edge Function `ai-assistant`: ключ AI-провайдера лежить на сервері, помічник бачить лише
+   дані вашого акаунта й нічого не торгує та не змінює. Якщо AI недоступний, решта Orbix працює як завжди.
+   Чат малюється в кількох місцях (вікно з іконки і розділ «Orbix AI»), стан у них спільний. */
+const AIS={open:0,busy:0,conv:null,uid:null,msgs:[],list:null,hist:0,left:null,off:'',force:null,statAt:0};
+const AIK='zai_pos',AIFAB='zai_fab',AIHINT='zai_hint';
+const AIQ=['Аналіз мого портфеля','Стан усіх ботів','Найкращі та найгірші боти','Перевірка ризиків','Результати моїх бектестів'];
+const AICTX={home:'Головна',bot:'Бот',monitor:'Моніторинг',chart:'Ринок',backtest:'Бектести',risk:'Ризики',profile:'Профіль'};
+
+/* фірмовий значок: орбіта з супутником і іскрою (кольори з теми); id градієнта унікальний для кожного екземпляра */
+function aiOrb(id){return`<svg class="ai-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><radialGradient id="${id}" cx="34%" cy="28%" r="85%"><stop offset="0" style="stop-color:#9AF6FF"/><stop offset=".5" style="stop-color:var(--ac)"/><stop offset="1" style="stop-color:var(--ac2)"/></radialGradient></defs>`+
+`<g transform="rotate(-24 32 32)"><ellipse class="ai-ring" cx="32" cy="32" rx="29" ry="10.5" fill="none" stroke="url(#${id})" stroke-width="2.2" stroke-linecap="round"/>`+
+`<circle r="3.4" fill="#fff"><animateMotion dur="4.6s" repeatCount="indefinite" path="M3,32 a29,10.5 0 1,0 58,0 a29,10.5 0 1,0 -58,0"/></circle></g>`+
+`<circle cx="32" cy="32" r="15.5" fill="url(#${id})"/><path class="ai-spark" d="M32 21.5l2.3 8.2 8.2 2.3-8.2 2.3-2.3 8.2-2.3-8.2-8.2-2.3 8.2-2.3z" fill="#06111A"/></svg>`}
+
+/* ---------- розмітка діалогу ---------- */
+const aiHm=()=>`<div class="ai-h"><span class="ai-av">${aiOrb('aig'+Math.random().toString(36).slice(2,7))}</span><div class="ai-t"><b>Orbix AI</b><span class="mu ai-cx"></span></div>`+
+`<button class="b sm" data-ai="hist" aria-label="Історія діалогів" title="Історія">⟲</button><button class="b sm" data-ai="new" aria-label="Новий діалог" title="Новий діалог">＋</button><button class="b sm ai-x" data-ai="close" aria-label="Закрити" title="Закрити">✕</button></div>`+
+`<div class="ai-hs" hidden></div><div class="ai-m" role="log" aria-live="polite"></div><div class="ai-q"></div>`+
+`<form class="ai-f" data-ai="form"><textarea class="ai-in2" rows="1" maxlength="1500" placeholder="Запитайте про ботів…" aria-label="Повідомлення до Orbix AI" enterkeyhint="send"></textarea><button class="b p ai-s" type="submit" aria-label="Надіслати">➤</button></form>`+
+`<p class="mu ai-n">AI лише читає дані й пояснює: не торгує і нічого не змінює. Це не фінансова порада.</p>`;
+const aiHosts=()=>$$('.ai-c');
+function aiMount(h){if(h.dataset.m)return;h.dataset.m='1';h.innerHTML=aiHm();aiR()}
+
+/* простий безпечний «markdown»: **жирний**, `код`, списки; усе інше — звичайний екранований текст */
+function aiMd(t){const inl=s=>s.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>');let h='',ul=0;
+for(const l of esc(t).split('\n')){const m=/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/.exec(l),hd=/^\s*#{1,4}\s+(.*)$/.exec(l);
+if(m){if(!ul){h+='<ul>';ul=1}h+='<li>'+inl(m[1])+'</li>';continue}if(ul){h+='</ul>';ul=0}
+if(hd)h+='<p><b>'+inl(hd[1])+'</b></p>';else if(l.trim())h+='<p>'+inl(l)+'</p>'}
+return h+(ul?'</ul>':'')}
+const aiTime=t=>t?new Date(t).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}):'';
+function aiSrc(m){if(!m.src||!m.src.length)return'';const at=m.src.map(s=>Date.parse(s.as_of)||0).filter(Boolean),old=at.length&&Date.now()-Math.max(...at)>15*6e4;
+return`<div class="ai-src mu">Дані: ${m.src.map(s=>esc(s.label||s.name)).filter((v,i,a)=>a.indexOf(v)===i).join(' · ')}${at.length?' · станом на '+aiTime(Math.max(...at)):''}${old?' (могли застаріти)':''}</div>`}
+
+/* ---------- контекст: звідки відкрито помічника ---------- */
+function aiCtx(){const t={ov:'home',bots:'home',bd:'home',mon:'monitor',mk:'chart',bs:'backtest',pf:'profile'}[CUR]||'home',c={type:t};
+if(CUR==='mk'&&typeof MKP!=='undefined'&&PAIRS[MKP])c.pair=MKP;if(AIS.force)Object.assign(c,AIS.force);return c}
+const aiCtxT=()=>{const c=aiCtx();return AICTX[c.type]+(c.pair?' · '+c.pair:'')};
+
+/* ---------- відмальовування ---------- */
+function aiR(){const ctxT=aiCtxT(),c=aiCtx();
+for(const h of aiHosts()){if(!h.dataset.m)continue;
+const cx=h.querySelector('.ai-cx');if(cx)cx.textContent=AIS.left!=null?ctxT+' · лишилось '+AIS.left+' сьогодні':ctxT;
+const m=h.querySelector('.ai-m'),stick=m.scrollHeight-m.scrollTop-m.clientHeight<80;
+let x='';if(!AIS.msgs.length&&!AIS.busy){x=`<div class="ai-w"><span class="ai-big">${aiOrb('aiw'+Math.random().toString(36).slice(2,6))}</span><h2>Привіт! Я Orbix AI</h2><p class="mu">Читаю дані вашого акаунта Orbix і пояснюю їх: стан ботів, ризики, бектести, помилки бірж. Нічого не торгую й не змінюю.</p>${CLOUD.u?'':'<p class="dn">Щоб я бачив ваші дані, увійдіть в акаунт (Профіль).</p>'}${AIS.off?`<p class="dn">${esc(AIS.off)}</p>`:''}</div>`}
+for(const g of AIS.msgs)x+=g.r==='u'?`<div class="ai-b ai-u">${aiMd(g.t)}</div>`:`<div class="ai-b ai-a${g.err?' ai-e':''}">${aiMd(g.t)}${aiSrc(g)}</div>`;
+if(AIS.busy)x+='<div class="ai-b ai-a ai-ty" aria-label="Orbix AI збирає дані"><i></i><i></i><i></i></div>';
+m.innerHTML=x;if(stick||AIS.busy)m.scrollTop=m.scrollHeight;
+const q=h.querySelector('.ai-q'),Q=[...(c.id?['Аналіз цього бота']:[]),...AIQ];
+q.innerHTML=AIS.msgs.length?'':Q.map(t=>`<button class="b sm" data-ai="q" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+const hs=h.querySelector('.ai-hs');hs.hidden=!AIS.hist;
+if(AIS.hist)hs.innerHTML=AIS.list===null?'<p class="mu">Завантажую…</p>':AIS.list.length?AIS.list.map(v=>`<div class="ai-hr"><button class="b sm ai-ho" data-ai="open" data-id="${esc(v.id)}"><b>${esc(v.title)}</b><span class="mu">${tm(Date.parse(v.updated_at))}</span></button><button class="b sm d" data-ai="del" data-id="${esc(v.id)}" aria-label="Видалити діалог">✕</button></div>`).join(''):'<p class="mu">Збережених діалогів ще немає.</p>';
+const ta=h.querySelector('.ai-in2'),sb=h.querySelector('.ai-s');ta.disabled=sb.disabled=!!AIS.busy;
+const fab=$('#ai-fab');if(fab)fab.classList.toggle('busy',!!AIS.busy)}aiMotion()}
+/* користувачі з «зменшити рух»: супутник на орбіті не анімується */
+const AIRM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function aiMotion(){if(AIRM)$$('.ai-svg').forEach(v=>v.pauseAnimations&&v.pauseAnimations())}
+
+/* ---------- обмін із сервером ---------- */
+async function aiInvoke(body){const r=await SB.functions.invoke('ai-assistant',{body});
+if(r.error){let j=null;try{j=await r.error.context.json()}catch(e){}return{ok:0,status:r.error.context&&r.error.context.status||0,j:j||{message:'Не вдалося зв’язатися з AI. Спробуйте пізніше.'}}}return{ok:1,j:r.data}}
+function aiReset(){AIS.conv=null;AIS.msgs=[];AIS.hist=0;AIS.force=null}
+async function aiSend(text){text=String(text||'').trim();if(!text||AIS.busy)return;
+if(!SB||!CLOUD.u){AIS.msgs.push({r:'u',t:text},{r:'a',t:'Увійдіть в акаунт Orbix (розділ «Профіль»), щоб я міг бачити ваші дані.',err:1});aiR();return}
+if(AIS.uid!==CLOUD.u.id){aiReset();AIS.uid=CLOUD.u.id}
+AIS.msgs.push({r:'u',t:text});AIS.busy=1;aiR();
+try{const r=await aiInvoke({message:text,conversation_id:AIS.conv,context:aiCtx()}),j=r.j||{};
+if(r.ok&&j.reply){AIS.conv=j.conversation_id||AIS.conv;AIS.msgs.push({r:'a',t:j.reply,src:j.sources||[]});AIS.list=null;AIS.off='';
+if(AIS.left!=null)AIS.left=Math.max(0,AIS.left-1);if(j.saved===false)AIS.msgs.push({r:'a',t:'Відповідь не збереглась в історії.',err:1})}
+else{if(j.conversation_id)AIS.conv=j.conversation_id;if(j.error==='ai_disabled'||j.error==='ai_not_configured'||j.error==='ai_not_ready')AIS.off=j.message||'';
+AIS.msgs.push({r:'a',t:j.message||'Не вдалося отримати відповідь.',err:1})}}
+catch(e){AIS.msgs.push({r:'a',t:'Не вдалося зв’язатися з AI. Решта Orbix працює як завжди.',err:1})}
+AIS.busy=0;aiR()}
+async function aiStatus(){if(!SB||!CLOUD.u||Date.now()-AIS.statAt<6e4)return;AIS.statAt=Date.now();
+const r=await aiInvoke({action:'status'}).catch(()=>null);if(!r)return;
+if(r.ok&&r.j&&r.j.ok){AIS.left=r.j.left_today;AIS.off=''}else if(r.j&&r.j.message)AIS.off=r.j.message;aiR()}
+async function aiHistLoad(){if(!SB||!CLOUD.u){AIS.list=[];aiR();return}
+const r=await SB.from('ai_conversations').select('id,title,updated_at').order('updated_at',{ascending:false}).limit(30);AIS.list=r.error?[]:r.data;aiR()}
+async function aiOpenConv(id){if(!SB)return;const r=await SB.from('ai_messages').select('role,content,metadata,created_at').eq('conversation_id',id).order('created_at',{ascending:true}).limit(100);
+if(r.error){toast('Не вдалося відкрити діалог');return}AIS.conv=id;AIS.hist=0;AIS.msgs=r.data.map(m=>({r:m.role==='user'?'u':'a',t:m.content,src:(m.metadata&&m.metadata.sources)||[]}));aiR()}
+async function aiDelConv(id){if(!SB||!confirm('Видалити цей діалог?'))return;const r=await SB.from('ai_conversations').delete().eq('id',id);
+if(r.error){toast('Не вдалося видалити діалог');return}if(AIS.conv===id)aiReset();AIS.hist=1;aiHistLoad()}
+
+/* ---------- вікно діалогу ---------- */
+function aiOpen(o){if(o)AIS.force=o;const p=$('#ai-panel');if(!p)return;if(AIS.uid&&CLOUD.u&&AIS.uid!==CLOUD.u.id)aiReset();
+p.hidden=false;$('#ai-bg').hidden=false;AIS.open=1;aiMount(p.querySelector('.ai-c'));aiFabVis();aiR();aiStatus();
+setTimeout(()=>{const t=p.querySelector('.ai-in2');t&&t.focus()},60)}
+function aiClose(){const p=$('#ai-panel');if(!p)return;p.hidden=true;$('#ai-bg').hidden=true;AIS.open=0;aiFabVis();const f=$('#ai-fab');if(f&&!f.hidden)f.focus({preventScroll:true})}
+function aiPage(){const h=$('#v-ai');if(!h)return;if(!h.dataset.m){h.dataset.m='1';
+h.innerHTML=`<div class="card ai-pg"><div class="ai-c"></div></div><div class="card"><h2>Налаштування Orbix AI</h2><label class="ck"><input type="checkbox" id="ai-fabt"> Плаваюча іконка Orbix AI на всіх екранах</label><div class="row" style="margin-top:8px"><button class="b" id="ai-pos">Повернути іконку на місце</button><button class="b d" id="ai-erase">Видалити всі мої діалоги</button></div>
+<p class="mu" style="margin-top:10px">Діалоги зберігаються 90 діб і доступні лише вам. Ключ AI-провайдера лежить на сервері. Помічник не отримує ключів бірж, пошти й не може торгувати. Безкоштовна квота спільна для всіх, тому є ліміт повідомлень на добу.</p></div>`;
+$('#ai-fabt').onchange=e=>{sv(AIFAB,e.target.checked?1:0);aiFabVis()};
+$('#ai-pos').onclick=()=>{sv(AIK,{s:'r',y:.72});aiPlace(1);toast('Іконку повернуто')};
+$('#ai-erase').onclick=async()=>{if(!SB||!CLOUD.u)return toast('Увійдіть в акаунт.');if(!confirm('Видалити всі ваші діалоги з Orbix AI? Це не можна скасувати.'))return;
+const r=await SB.rpc('ai_erase_my_data');if(r.error)return toast('Не вдалося видалити: '+r.error.message);aiReset();AIS.list=null;aiR();toast('Діалоги видалено')}}
+$('#ai-fabt').checked=ld(AIFAB,1)!==0;aiMount(h.querySelector('.ai-c'));aiFabVis();aiR();aiStatus()}
+
+/* ---------- плаваюча іконка ---------- */
+const AIF={pid:null,drag:0,moved:0,sup:0,t:0,sx:0,sy:0,ox:0,oy:0,x:0,y:0,raf:0};
+const aiPx=id=>{const e=$('#'+id);return e?e.offsetHeight:0};
+/* межі, у яких може стояти іконка: поза шапкою, нижньою панеллю й вирізами екрана */
+function aiBox(){const f=$('#ai-fab'),sz=f.offsetWidth||58,tab=$('#tab'),m=8,top=m+aiPx('ai-st')+(innerWidth<720?4:0),bot=m+aiPx('ai-sb')+(tab&&!tab.hidden?tab.offsetHeight:0);
+return{sz,m,minX:m,maxX:Math.max(m,innerWidth-sz-m),minY:top,maxY:Math.max(top,innerHeight-sz-bot)}}
+function aiSet(x,y){const f=$('#ai-fab');AIF.x=x;AIF.y=y;f.style.setProperty('--x',x+'px');f.style.setProperty('--y',y+'px')}
+function aiPlace(snap){const f=$('#ai-fab');if(!f||AIF.drag)return;const p=ld(AIK,{s:'r',y:.72}),b=aiBox();
+if(snap)f.classList.add('snap');aiSet(p.s==='l'?b.minX:b.maxX,b.minY+Math.min(1,Math.max(0,+p.y||0))*(b.maxY-b.minY));
+if(snap)setTimeout(()=>f.classList.remove('snap'),320)}
+function aiSave(){const b=aiBox(),mid=AIF.x+b.sz/2,s=mid<innerWidth/2?'l':'r';sv(AIK,{s,y:b.maxY>b.minY?(AIF.y-b.minY)/(b.maxY-b.minY):.5});aiPlace(1)}
+function aiFabVis(){const f=$('#ai-fab');if(!f)return;const sp=$('#splash'),lk=$('#lk');
+f.hidden=ld(AIFAB,1)===0||AIS.open||CUR==='ai'||!!(sp&&sp.isConnected)||!!(lk&&!lk.hidden);if(!f.hidden)aiPlace()}
+function aiHint(){if(ld(AIHINT,0)||$('#ai-fab').hidden)return;sv(AIHINT,1);const t=$('#ai-tip');t.hidden=false;
+const b=aiBox(),left=AIF.x<innerWidth/2;t.style.setProperty('--tx',(left?AIF.x+b.sz+8:Math.max(8,AIF.x-210))+'px');t.style.setProperty('--ty',Math.max(8,AIF.y+6)+'px');setTimeout(()=>t.hidden=true,7000)}
+function aiFabInit(){const f=$('#ai-fab');if(!f)return;f.innerHTML=`<i class="ai-halo"></i><span class="ai-in">${aiOrb('aifab')}</span>`;
+const end=()=>{clearTimeout(AIF.t);AIF.pid=null;AIF.drag=0;f.classList.remove('drag')};
+f.addEventListener('contextmenu',e=>e.preventDefault());
+f.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;AIF.pid=e.pointerId;AIF.drag=0;AIF.moved=0;AIF.sx=e.clientX;AIF.sy=e.clientY;
+const r=f.getBoundingClientRect();AIF.ox=e.clientX-r.left;AIF.oy=e.clientY-r.top;try{f.setPointerCapture(e.pointerId)}catch(_){}clearTimeout(AIF.t);
+AIF.t=setTimeout(()=>{AIF.drag=1;f.classList.add('drag');f.classList.remove('snap');navigator.vibrate&&navigator.vibrate(12)},380)});
+f.addEventListener('pointermove',e=>{if(e.pointerId!==AIF.pid)return;
+if(!AIF.drag){if(Math.hypot(e.clientX-AIF.sx,e.clientY-AIF.sy)>10){clearTimeout(AIF.t);AIF.moved=1}return}
+e.preventDefault();const b=aiBox(),x=Math.min(b.maxX,Math.max(b.minX,e.clientX-AIF.ox)),y=Math.min(b.maxY,Math.max(b.minY,e.clientY-AIF.oy));
+cancelAnimationFrame(AIF.raf);AIF.raf=requestAnimationFrame(()=>aiSet(x,y));AIF.x=x;AIF.y=y});
+const up=e=>{if(e.pointerId!==AIF.pid)return;const was=AIF.drag;end();if(was){AIF.sup=1;setTimeout(()=>AIF.sup=0,350);aiSave()}else if(AIF.moved){AIF.sup=1;setTimeout(()=>AIF.sup=0,350)}};
+f.addEventListener('pointerup',up);f.addEventListener('pointercancel',e=>{if(e.pointerId===AIF.pid){const was=AIF.drag;end();if(was)aiSave()}});
+f.addEventListener('click',()=>{if(AIF.sup){AIF.sup=0;return}aiOpen()});
+/* з клавіатури: Shift + стрілки переміщують іконку */
+f.addEventListener('keydown',e=>{if(!e.shiftKey||!/^Arrow/.test(e.key))return;e.preventDefault();const b=aiBox(),st=48,p=ld(AIK,{s:'r',y:.72}),y=b.minY+(+p.y||0)*(b.maxY-b.minY);
+if(e.key==='ArrowLeft')p.s='l';else if(e.key==='ArrowRight')p.s='r';else{const ny=Math.min(b.maxY,Math.max(b.minY,y+(e.key==='ArrowDown'?st:e.key==='ArrowUp'?-st:0)));p.y=b.maxY>b.minY?(ny-b.minY)/(b.maxY-b.minY):.5}sv(AIK,p);aiPlace(1)});
+addEventListener('resize',()=>{aiPlace();aiVV()});addEventListener('orientationchange',()=>setTimeout(aiPlace,200));
+aiFabVis();aiPlace()}
+/* екранна клавіатура: висота вікна діалогу = видима область */
+function aiVV(){const v=window.visualViewport;document.documentElement.style.setProperty('--aivh',(v?v.height:innerHeight)+'px')}
+
+/* ---------- події ---------- */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ai]');if(!b)return;const a=b.dataset.ai;
+if(a==='q')aiSend(b.dataset.t);else if(a==='new'){aiReset();aiR()}else if(a==='close')aiClose();
+else if(a==='hist'){AIS.hist=AIS.hist?0:1;if(AIS.hist){AIS.list=null;aiHistLoad()}aiR()}
+else if(a==='open')aiOpenConv(b.dataset.id);else if(a==='del')aiDelConv(b.dataset.id)});
+document.addEventListener('submit',e=>{const f=e.target.closest('[data-ai="form"]');if(!f)return;e.preventDefault();const t=f.querySelector('textarea'),v=t.value;t.value='';t.style.height='';aiSend(v)});
+document.addEventListener('keydown',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('ai-in2')&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();t.form.requestSubmit()}
+if(e.key==='Escape'&&AIS.open)aiClose()});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('ai-in2')){t.style.height='auto';t.style.height=Math.min(120,t.scrollHeight)+'px'}});
+$('#ai-bg').onclick=aiClose;
+/* вихід з акаунта: чужі діалоги на екрані не лишаються */
+setInterval(()=>{if(AIS.uid&&(!CLOUD.u||CLOUD.u.id!==AIS.uid)){aiReset();AIS.uid=CLOUD.u?CLOUD.u.id:null;AIS.list=null;AIS.left=null;AIS.statAt=0;aiR()}aiFabVis();if(Date.now()-AIT0>2500&&!ld(AIHINT,0)&&!$('#ai-fab').hidden)aiHint()},2000);
+/* зовнішній виклик: OrbixAI.open({type:'bot',id:'…'}) — для кнопок «Запитати AI» на картках */
+window.OrbixAI={open:o=>aiOpen(o&&typeof o==='object'?o:null),close:aiClose};
+const AIT0=Date.now();aiVV();aiFabInit();aiMotion();
 </script>
 </body>
 </html>

@@ -76,6 +76,8 @@
 
 <section id="v-mon" class="s" hidden><div id="mon"></div></section>
 
+<section id="v-ai" class="s" hidden></section>
+
 <section id="v-sx" class="s" hidden>
 <div class="card"><h2>Стрес-тест бота</h2><p class="mu" style="margin-bottom:12px">Бот відкриває позицію, після чого ринок різко падає, повільно сповзає, стрибає вгору або стає надмірно волатильним. Видно, скільки ордерів докупається, наскільки просідає капітал і чи є ліквідація.</p><label style="margin-bottom:12px">Бот<select id="sxs"></select></label><button class="b p" id="sxo">Запустити сценарії</button><div id="sxt" style="margin-top:14px"></div></div>
 <div class="card"><h2>Швидкодія платформи</h2><button class="b" id="pfb">Запустити тест швидкодії</button><div id="pft2" style="margin-top:12px"></div></div>
@@ -124,6 +126,11 @@
 <div id="srp" role="dialog" aria-modal="true" aria-label="Пошук" hidden><div class="srh"><input id="srq" type="search" placeholder="Пошук: бот, пара, розділ, індикатор…" autocomplete="off" aria-label="Що шукати"><button class="b" id="srx" aria-label="Закрити пошук">✕</button></div><div id="srr" aria-live="polite"></div></div>
 <div id="sh" hidden></div>
 <nav id="mn" aria-label="Меню" hidden></nav>
+<div id="ai-st" aria-hidden="true"></div><div id="ai-sb" aria-hidden="true"></div>
+<button id="ai-fab" type="button" hidden aria-haspopup="dialog" aria-label="Orbix AI: відкрити помічника. Утримуйте, щоб перемістити іконку" title="Orbix AI"></button>
+<div id="ai-tip" role="status" hidden>Orbix AI поруч. Торкніться, щоб запитати, утримуйте, щоб перемістити.</div>
+<div id="ai-bg" hidden></div>
+<div id="ai-panel" role="dialog" aria-label="Orbix AI" hidden><div class="ai-c"></div></div>
 <datalist id="pl"></datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
