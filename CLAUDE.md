@@ -52,6 +52,7 @@ npm run verify   # check + test
 - `auth`: адреса повернення = `location.origin + location.pathname`. Після зміни адреси сайту (наприклад, перейменування репозиторію) її треба додати в Supabase → Authentication → URL Configuration.
 
 ## Документи
+- `docs/HANDOFF.md` — передача стану: що йде, що чекає на 25.11, що далі. Починати нову сесію з нього.
 - `docs/readiness-report.md` — звіт про готовність і поточні обмеження.
 - `docs/engine-audit.md` — аудит рушія й усі знайдені розбіжності.
 - `docs/exchange-review.md` — порівняння роботи з біржами з Hummingbot і Freqtrade, прогалини за пріоритетом.
