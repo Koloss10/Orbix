@@ -99,7 +99,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
   const sp = []; { let from = cs[hist].t - 1; for (const [a, b] of pauses) { sp.push([from, cs[a].t]); from = cs[b].t; } sp.push([from, null]); }
   const spans = pauses.length ? sp : null;
   // ліміти ризику, як у runner: перевірка перед кожним прогоном моделі; dayOpens — входи, відкриті, коли збиток доби за даними біржі вже досяг ліміту
-  let skipped = 0, blocked = 0, badOpen = '';
+  let skipped = 0, blocked = 0, badOpen = '', maxOwn = 0;
   const riskAt = (at) => (limits ? riskBlock({ limits, self: { g, state: stored }, now: at }) : null);
   const exDay = (at) => ex.S.closed.reduce((a, x) => a + (x.t >= dayStart(at) && x.t <= at ? x.pnl : 0), 0);
   const checkOpens = (r, at) => { if (limits && limits.dayLoss && r.events.some((e) => e.kind === 'open') && exDay(at) <= -limits.dayLoss - 1e-9) badOpen ||= `вхід о ${new Date(at).toISOString()} при збитку доби ${exDay(at).toFixed(2)}`; skipped += r.skipped || 0; };
@@ -147,6 +147,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
     trades += r.events.filter((e) => e.kind === 'open').length;
     if (stored.fl?.mis?.on) { alarms++; alarm ||= `свічка ${i}: ${stored.fl.mis.t}`; }
     const mp = stored.b?.pos || null;
+    maxOwn = Math.max(maxOwn, own(ex).length);
     if (!mp && !stored.pend?.length) {
       assert.equal(ex.S.pos, null, `свічка ${i}: модель без позиції, а на біржі позиція ${ex.S.pos && ex.S.pos.amt}`);
       assert.equal(own(ex).length, 0, `свічка ${i}: модель без позиції, а на біржі лишились ордери бота`);
@@ -166,7 +167,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
   // облік результатів на біржі (Demo проти моделі): кожне закриття на біржі записано один раз, нічого не загублено
   const xr = stored.xr, want = ex.S.closed.filter((x) => x.t >= xr.from).slice(-50).map((x) => x.id), got = xr.l.map((x) => x.id);
   const xrBad = new Set(got).size !== got.length ? 'повторний запис закриття' : want.join() !== got.join() ? `закриття на біржі ${want.length}, записано ${got.length}` : '';
-  return { g, ex, logs, notes, alarms, alarm, trades, errs, maxGap, stored, crashes, beBad, ladBad, xrBad, xr, ghostLive, skipped, blocked, badOpen };
+  return { g, ex, logs, notes, alarms, alarm, trades, errs, maxGap, stored, crashes, beBad, ladBad, xrBad, xr, ghostLive, skipped, blocked, badOpen, maxOwn };
 }
 
 for (const [name, cfg] of [
@@ -228,6 +229,23 @@ test('Симуляція з денним лімітом збитку: після
     }
   }
   assert.equal(hit, 3, `ліміт мав спрацювати в усіх трьох сценаріях (спрацював у ${hit})`);
+});
+
+test('Симуляція з частковим виставленням ордерів: на біржі не більше live докупівель, драбина поповнюється, без дублів і тривог', async () => {
+  let topped = 0;
+  for (const [seed, d, live, opt] of [[7, 1, 1, {}], [11, -1, 1, {}], [23, 1, 2, {}], [7, 1, 1, { flaky: 0.08 }], [11, 1, 1, { pauses: Array.from({ length: 8 }, (_, k) => [140 + k * 50, 146 + k * 50]) }]]) {
+    const full = await simulate({ d }, { seed, ...opt });
+    const s = await simulate({ d, live }, { seed, ...opt });
+    assert.ok(s.trades >= 3, `seed ${seed}: угод ${s.trades}`);
+    assert.equal(s.trades, full.trades, `seed ${seed}: модель торгує так само, як без часткового виставлення`);
+    assert.ok(s.maxOwn <= live, `seed ${seed}: на біржі ${s.maxOwn} ордерів бота при live = ${live}`);
+    assert.ok(full.maxOwn > live, `seed ${seed}: без часткового виставлення стоїть уся драбина (${full.maxOwn})`);
+    assert.equal(s.ex.S.dup, 0, `seed ${seed}: повторний orderLinkId`); assert.deepEqual(s.errs.filter((m) => !/timeout|недоступн|збій/i.test(m)), [], `seed ${seed}: помилки`);
+    const ids = s.ex.S.orders.filter((o) => o.status === 'Filled' && o.link).map((o) => o.link); assert.equal(new Set(ids).size, ids.length, `seed ${seed}: два виконання з одним ідентифікатором`);
+    assert.equal(s.alarms, 0, `seed ${seed}: тривога звірки — ${s.alarm}`); assert.equal(s.ladBad, '', `seed ${seed}: ${s.ladBad}`); assert.equal(s.ghostLive, 0); assert.equal(s.xrBad, '');
+    topped += s.logs.filter(([, m]) => /докладено \d+ лімітн/.test(m)).length;
+  }
+  assert.ok(topped >= 5, `драбину поповнено лише ${topped} раз(и)`);
 });
 
 test('Симуляція з паузами: після зняття з паузи драбина повертається, модель і біржа не розходяться', async () => {

@@ -1,7 +1,7 @@
 // Виконання угод серверного бота на демо-біржі: ордери на біржі й захист від повторів (фейкова біржа).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionsFor, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
+import { actionsFor, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, topUp, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
 import { botConfig } from '../supabase/functions/runner/core.js';
 import { Bot } from '../supabase/functions/runner/engine.js';
 
@@ -634,4 +634,95 @@ test('Ліміт ризику: про пропущений вхід — одне
   await handleBot({ bot: { id: BOT, state: st }, g, r: { state: { b: { pos: null }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: false, native: false, ex: null, now: T,
     save: async (x) => { st = JSON.parse(JSON.stringify(x)); return true; }, log: async () => {}, notify: async () => {} });
   assert.equal(st.fl.rl, undefined);
+});
+
+/* ---------- часткове виставлення ордерів (g.live) ---------- */
+const gl = { ...g, live: 1 }, ctxL = { ...ctx, g: gl };
+const openL = () => actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0];
+const links = async (ex) => (await ex.openOrders()).map((o) => o.link);
+
+test('Часткове виставлення: при вході на біржі лише live найближчих докупівель', async () => {
+  const ex = fakeEx(), fl = {};
+  const m = await execute(ex, openL(), { ...ctxL, fl });
+  assert.deepEqual(await links(ex), [fl.lb + 'd1']); assert.equal(fl.lt, 1);
+  assert.match(m, /1 лімітн\. докупівель \(з 3; решта — по одній після виконання\)/);
+  const ex2 = fakeEx(), fl2 = {};
+  await execute(ex2, openL(), { ...ctx, g: { ...g, live: 2 }, fl: fl2 });
+  assert.deepEqual(await links(ex2), [fl2.lb + 'd1', fl2.lb + 'd2']); assert.equal(fl2.lt, 2);
+  const ex3 = fakeEx(), fl3 = {};                                  // live = 0 — уся драбина, як раніше
+  await execute(ex3, openL(), { ...ctx, fl: fl3 });
+  assert.equal((await links(ex3)).length, 3); assert.equal(fl3.lt, undefined);
+});
+
+test('Часткове виставлення: виконалась докупівля — ставиться наступна, без дублів; повторний запуск нічого не додає', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 1 } }), null, 'модель ще не докуповувала — нічого не додається');
+  ex.hit(L[0].price);                                              // рівень 1 виконано на біржі, модель: n = 2
+  assert.match(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), /докладено 1 лімітн\. докупівель \(на біржі до рівня 2 з 3\)/);
+  assert.deepEqual(await links(ex), [fl.lb + 'd2']);
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), null, 'повтор — нічого');
+  ex.hit(L[1].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 3 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'd3']); assert.equal(fl.lt, 3);
+  ex.hit(L[2].price);
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 4 } }), null, 'драбину вичерпано');
+  const ids = ex.S.orders.map((o) => o.link); assert.equal(new Set(ids).size, ids.length, 'ідентифікатори не повторюються');
+  assert.equal(ex.S.orders.filter((o) => o.side === 'BUY' && o.status === 'Filled').length, 4, 'вхід і три докупівлі — по одній');
+});
+
+test('Часткове виставлення: ціна проскочила кілька рівнів — біржа наздоганяє модель; після TP1 нічого не ставиться', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  ex.hit(L[1].price);                                              // за свічку ціна пройшла рівні 1 і 2; на біржі був лише 1-й
+  await topUp(ex, { ...ctxL, fl, mp: { n: 3 } });                  // модель зарахувала обидва
+  assert.deepEqual(ex.S.orders.filter((o) => o.status === 'New').map((o) => o.link), [fl.lb + 'd2', fl.lb + 'd3']);
+  ex.hit(L[1].price);                                              // ліміт рівня 2 вище ринку (Long) — виконується одразу
+  assert.equal(ex.S.orders.find((o) => o.link === fl.lb + 'd2').status, 'Filled');
+  const ex2 = fakeEx(), fl2 = {};
+  await execute(ex2, openL(), { ...ctxL, fl: fl2 }); ex2.hit(L[0].price);
+  assert.equal(await topUp(ex2, { ...ctxL, fl: fl2, mp: { n: 2, t1: 1 } }), null, 'після TP1 модель не докуповує');
+});
+
+test('Часткове виставлення: збій біржі — статус невідомий, ордер не надсилається і повторюється наступного запуску', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl }); ex.hit(L[0].price);
+  const bl = ex.byLink; ex.byLink = async () => { throw new Error('timeout'); };
+  assert.match(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), /не вдалося: 2: timeout, повторю/);
+  assert.equal(fl.lt, 1); assert.equal((await links(ex)).length, 0, 'нового ордера немає');
+  ex.byLink = bl;
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'd2']);
+});
+
+test('Часткове виставлення: пауза — відновлюються лише live рівнів нового покоління, далі докладаються з тим самим поколінням', async () => {
+  const ex = fakeEx(), fl = {}, L = ladder(g, 2.5, F);
+  await execute(ex, openL(), { ...ctxL, fl });
+  await park(ex, { symbol: 'TONUSDT', botId: BOT });
+  assert.match(await restore(ex, { ...ctxL, fl, mp: { n: 1 } }), /відновлено 1 лімітн/);
+  assert.deepEqual(await links(ex), [fl.lb + 'e1x1']); assert.equal(fl.lt, 1);
+  ex.hit(L[0].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2 } });
+  assert.deepEqual(await links(ex), [fl.lb + 'e1x2']);
+});
+
+test('Часткове виставлення: угода, відкрита без нього (немає fl.lt), — драбину вважаємо виставленою, нічого не додаємо', async () => {
+  const ex = fakeEx(), fl = {};
+  await execute(ex, openL(), { ...ctx, fl });                      // відкрито з усією драбиною
+  assert.equal(await topUp(ex, { ...ctxL, fl, mp: { n: 2 } }), null);
+  assert.equal(fl.lt, 3); assert.equal(count(ex, 'limit'), 3);
+});
+
+test('handleBot: часткове виставлення докладає ордер у звичайному запуску; угоду закрито — fl.lt прибрано', async () => {
+  const ex = fakeEx(), saved = [], logs = [], L = ladder(g, 2.5, F);
+  const go = (state, pos) => handleBot({ bot: { id: BOT, state }, g: gl, r: { state: { b: { pos }, lt: T }, events: [] }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: T,
+    save: async (s) => { saved.push(JSON.parse(JSON.stringify(s))); return true; }, log: async (_l, m) => logs.push(m), notify: async () => {} });
+  const fl = {}; await execute(ex, openL(), { ...ctxL, fl });
+  ex.hit(L[0].price);
+  await go({ fl, pend: [] }, { q: 24 + L[0].qty, n: 2, first: 2.5, f: [{ t: T }, { t: T + 1 }] });
+  assert.ok(logs.some((m) => /докладено 1 лімітн/.test(m)), logs.join(' | '));
+  assert.equal(saved.at(-1).fl.lt, 2);
+  ex.S.pos = null; ex.S.orders = [];
+  await go(saved.at(-1), null);
+  assert.equal(saved.at(-1).fl.lt, undefined);
 });
