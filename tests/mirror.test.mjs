@@ -1,7 +1,7 @@
 // Виконання угод серверного бота на демо-біржі: ордери на біржі й захист від повторів (фейкова біржа).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionsFor, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, topUp, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
+import { actionsFor, closeByExchange, exchangeExit, execute, guard, handleBot, ladder, linkBase, linkId, onReconcile, park, protect, reconcile, restore, snapshot, sync, topUp, MAX_TRIES, RUN_GAP, XR_KEEP } from '../supabase/functions/runner/mirror.js';
 import { botConfig } from '../supabase/functions/runner/core.js';
 import { Bot } from '../supabase/functions/runner/engine.js';
 
@@ -725,4 +725,83 @@ test('handleBot: часткове виставлення докладає орд
   ex.S.pos = null; ex.S.orders = [];
   await go(saved.at(-1), null);
   assert.equal(saved.at(-1).fl.lt, undefined);
+});
+
+/* ---------- «біржа головна»: біржа закрила позицію — модель закриває угоду за ціною біржі ---------- */
+function xcHarness(gg) {
+  const ex = fakeEx(), saved = [], logs = [], notes = [];
+  ex.S.closed = []; ex.closedPnl = async (_s, start) => ex.S.closed.filter((x) => x.t >= start);
+  const open = () => { const b = new Bot(gg, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true); return b.pos; };
+  const go = (state, pos, events = [], t, extra = {}) => handleBot({ bot: { id: BOT, state }, g: gg, r: { state: { b: { pos, tr: [], cd: 0, cum: 0 }, lt: t }, events }, symbol: 'TONUSDT', mirror: true, native: true, ex, now: t,
+    save: async (x) => { saved.push(JSON.parse(JSON.stringify(x))); return true; }, log: async (l, m) => logs.push([l, m]), notify: async (m) => notes.push(m), ...extra });
+  return { ex, saved, logs, notes, open, go };
+}
+const E0 = T + 864e5; // вхід на біржі — закриття свічки входу
+
+test('Біржа головна: біржа закрила позицію за TP — модель закриває угоду за ціною біржі, а не чекає свічок', async () => {
+  const { ex, saved, logs, notes, open, go } = xcHarness(g);
+  const pos = open();
+  await go(null, pos, [{ kind: 'open', notional: 60, price: 2.5, t: E0 }], E0);
+  let st = saved.at(-1);
+  ex.S.pos = null; await go(st, pos, [], E0 + 5 * 60e3); st = saved.at(-1);
+  assert.equal(st.fl.xc, 1); assert.ok(st.b.pos, 'запису про закриття ще немає — модель угоду тримає');
+  ex.S.closed.push({ id: 'c1', t: E0 + 3600e3, pnl: 0.6, q: 24, px: 2.53 });
+  await go(st, pos, [], E0 + 10 * 60e3); st = saved.at(-1);
+  assert.equal(st.b.pos, null, 'угоду моделі закрито');
+  assert.equal(st.b.tr.length, 1); assert.equal(st.b.tr[0].xc, 1);
+  const want = pos.real + 1 * (24 * 2.53 - pos.cost) - (g.ftk != null ? g.ftk : g.fee) * 24 * 2.53;
+  assert.ok(Math.abs(st.b.tr[0].pnl - want) < 1e-9, `PnL моделі ${st.b.tr[0].pnl} ≠ ${want}`);
+  assert.ok(Math.abs(st.b.cum - want) < 1e-9); assert.ok(Math.abs(st.equity - want) < 1e-9);
+  assert.equal(st.b.tr[0].f.at(-1).p, 2.53); assert.equal(st.b.cd, Math.floor((E0 + 3600e3) / 864e5) + g.cd + 1);
+  assert.equal(st.fl.xc, undefined); assert.equal(st.fl.tid, undefined); assert.equal(st.fl.mis, undefined);
+  assert.ok(logs.some(([l, m]) => l === 'info' && /закрито за ціною біржі 2.53/.test(m)));
+  assert.ok(notes.some((m) => /закрито за ціною біржі/.test(m)));
+  // наступний запуск: модель без угоди, нових ордерів на біржу немає
+  const n = ex.S.calls.length; await go(st, null, [], E0 + 15 * 60e3);
+  assert.equal(ex.S.calls.filter((c) => c.startsWith('market') || c === 'limit').length, ex.S.calls.slice(0, n).filter((c) => c.startsWith('market') || c === 'limit').length);
+  assert.equal(saved.at(-1).b.pos, null);
+});
+
+test('Біржа головна: Short — PnL моделі за ціною біржі з правильним знаком; докупівлі, що чекали в черзі, скасовано', async () => {
+  const gs = botConfig({ ...g, d: -1 });
+  const { ex, saved, open, go } = xcHarness(gs);
+  const pos = open();
+  await go(null, pos, [{ kind: 'open', notional: 60, price: 2.5, t: E0 }], E0);
+  let st = saved.at(-1);
+  ex.S.pos = null; await go(st, pos, [], E0 + 5 * 60e3); st = saved.at(-1);
+  st = { ...st, pend: [{ kind: 'dca', t: E0, n: 2, price: 2.6, notional: 30 }] };
+  ex.S.closed.push({ id: 's1', t: E0 + 7200e3, pnl: 1.1, q: 24, px: 2.4 });
+  await go(st, pos, [], E0 + 10 * 60e3); st = saved.at(-1);
+  assert.equal(st.b.pos, null);
+  const want = pos.real + (-1) * (24 * 2.4 - pos.cost) - (gs.ftk != null ? gs.ftk : gs.fee) * 24 * 2.4;
+  assert.ok(want > 0 && Math.abs(st.b.tr[0].pnl - want) < 1e-9, `Short PnL ${st.b.tr[0].pnl} ≠ ${want}`);
+  assert.equal(st.pend.filter((a) => a.kind === 'dca').length, 0, 'докупівлю закритої угоди не надсилати');
+});
+
+test('Біржа головна: закриття попередньої угоди (до входу в цю) за ціну не береться', async () => {
+  const { ex, saved, open, go } = xcHarness(g);
+  const pos = open();
+  await go(null, pos, [{ kind: 'open', notional: 60, price: 2.5, t: E0 }], E0);
+  let st = saved.at(-1);
+  ex.S.pos = null; await go(st, pos, [], E0 + 5 * 60e3); st = saved.at(-1);
+  ex.S.closed.push({ id: 'old', t: E0 - 1800e3, pnl: 3, q: 20, px: 2.9 }); // xr.from = E0, тож запис відсіюється ще й обліком
+  st.xr.l.push({ id: 'old2', t: E0 - 1800e3, pnl: 3, q: 20, px: 2.9 });
+  await go(st, pos, [], E0 + 10 * 60e3); st = saved.at(-1);
+  assert.ok(st.b.pos, 'за відсутності закриття цієї угоди модель тримає позицію до своєї свічки'); assert.equal(st.b.tr.length, 0);
+  assert.equal(st.fl.xc, 1);
+  assert.equal(exchangeExit({ l: [{ t: E0 - 1, px: 2.9 }] }, pos, g), null);
+  assert.equal(exchangeExit({ l: [{ t: E0 + 1, px: 2.7 }, { t: E0 + 9, px: 2.8 }] }, pos, g).px, 2.8, 'останнє закриття угоди');
+});
+
+test('Біржа головна: без позиції біржі вручну (fl.xc немає) модель угоду не чіпає; closeByExchange не змінює вхідний стан', async () => {
+  const { ex, saved, open, go } = xcHarness(g);
+  const pos = open();
+  await go(null, pos, [{ kind: 'open', notional: 60, price: 2.5, t: E0 }], E0);
+  let st = saved.at(-1);
+  ex.S.closed.push({ id: 'c9', t: E0 + 3600e3, pnl: 1, q: 24, px: 2.6 });
+  st.xr.due = 3; // запис є, але позиція на біржі лишилась: модель нічого не закриває
+  await go(st, pos, [], E0 + 10 * 60e3); st = saved.at(-1);
+  assert.ok(st.b.pos && st.b.tr.length === 0);
+  const b = { pos, tr: [], cd: 0, cum: 0 }, snap = JSON.stringify(b);
+  closeByExchange(b, g, { px: 2.6, t: E0 + 1 }); assert.equal(JSON.stringify(b), snap);
 });

@@ -14,6 +14,7 @@
 // (з перевіркою, що інший запуск не змінив його), і лише потім ідуть на біржу.
 import { lv, rnd } from "./engine.js";
 import { eventText } from "./core.js";
+import { tfMs } from "./engine.js";
 import { floorStep } from "./sign.js";
 import { dayStart } from "./risk.js";
 
@@ -235,6 +236,23 @@ export function reconcile(mp, xp, g) {
 export const MIS_RUNS = 2;
 export const RUN_GAP = 12 * 60e3; // запуски йдуть кожні 5 хв; більший проміжок — лічильник починається знову
 export const clearMis = (fl) => { delete fl.mis; delete fl.had; delete fl.xc; delete fl.tid; };
+/* «Біржа головна»: якщо біржа вже закрила позицію бота (TP/SL/трейлінг, fl.xc), модель не чекає власного виходу за свічками,
+   а закриває свою угоду за фактичною ціною закриття на біржі (state.xr.l[].px). Тоді картка, статистика й журнал показують те,
+   що сталося на біржі. Закриття шукається серед записів біржі після входу в угоду (вхід на біржі — закриття свічки входу). */
+export function exchangeExit(xr, mp, g) {
+  const t0 = mp && mp.f && mp.f[0] && mp.f[0].t;
+  if (!xr || !Array.isArray(xr.l) || !(t0 > 0)) return null;
+  const from = t0 + tfMs(g.tf || 1);
+  const L = xr.l.filter((x) => x.t > from && x.px > 0).sort((a, b) => a.t - b.t);
+  return L.length ? L[L.length - 1] : null;
+}
+/* закрити позицію моделі за ціною px у момент t: той самий розрахунок, що й вихід рушія (v. Bot.step), зі збереженням угоди в b.tr */
+export function closeByExchange(b, g, { px, t }) {
+  const p = b.pos, d = g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
+  const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
+  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, xc: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
+  return { ...b, pos: null, tr, cum: b.cum + pnl, cd: i + g.cd + 1 };
+}
 /* угода моделі, до якої належать прапорці звірки */
 const tidOf = (mp) => (mp ? (mp.f && mp.f[0] && mp.f[0].t) || mp.first || 1 : null);
 export async function onReconcile({ fl, mp, out, g, log, notify, now = Date.now() }) {
@@ -442,6 +460,22 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   }
   // закриття за даними біржі; помилка не критична — повторю наступного запуску, але не більше 3 разів
   if (st.xr && st.xr.due) { try { await results(ex, { symbol, xr: st.xr }); } catch (e) { if (--st.xr.due <= 0) delete st.xr.due; } }
-  if (changed || JSON.stringify(fl) !== fl0 || xsOf() !== xs0) await save({ ...st, pend: left, fl });
+  // біржа головна: позицію закрила біржа, а модель ще тримає угоду — закрити її за ціною біржі (наступним запуском, якщо запису ще немає)
+  let xcDone = false;
+  if (fl.xc && st.xr && st.b && st.b.pos && fl.tid === tidOf(st.b.pos)) {
+    const rec = exchangeExit(st.xr, st.b.pos, g);
+    if (rec) {
+      st.b = closeByExchange(st.b, g, { px: rec.px, t: rec.t });
+      st.equity = st.b.cum;
+      clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt;
+      const gone = left.filter((a) => a.kind === "dca" || a.kind === "part").length;
+      if (gone) left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+      const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+      const m = `Біржа закрила позицію (TP/SL/трейлінг) — угоду моделі закрито за ціною біржі ${rec.px}, PnL моделі ${f2(l.pnl)} USDT${gone ? "; незавершені докупівлі скасовано" : ""}`;
+      await log("info", m, { kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t }); await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+      xcDone = true;
+    }
+  }
+  if (changed || xcDone || JSON.stringify(fl) !== fl0 || xsOf() !== xs0) await save({ ...st, pend: left, fl });
   return { saved: true, left: left.length };
 }

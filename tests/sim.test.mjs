@@ -159,7 +159,9 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
       // поки модель може докуповувати, на біржі стоїть драбина (хіба що біржа вже виконала всі рівні)
       if (!mp.t1 && mp.n < g.orders && stored.fl?.e0 > 0) {
         const full = Math.abs(ex.S.pos.amt) >= ladder(g, stored.fl.e0, F).reduce((a, x) => a + x.qty, 0) * 0.98;
-        if (!full && !own(ex).length) ladBad ||= `свічка ${i}: модель на рівні ${mp.n} з ${g.orders}, а лімітних докупівель на біржі немає`;
+        // збій біржі під час докладання рівня (flaky): рівень докладе наступний запуск, тож порожня драбина тимчасова
+        const retrying = logs.slice(-4).some(([, m]) => /докладено \d+ лімітн.*не вдалося.*повторю/.test(m));
+        if (!full && !own(ex).length && !retrying) ladBad ||= `свічка ${i}: модель на рівні ${mp.n} з ${g.orders}, а лімітних докупівель на біржі немає`;
       }
     }
   }
