@@ -53,6 +53,8 @@ npm run verify   # check + test
 ## Документи
 - `docs/readiness-report.md` — звіт про готовність і поточні обмеження.
 - `docs/engine-audit.md` — аудит рушія й усі знайдені розбіжності.
+- `docs/exchange-review.md` — порівняння роботи з біржами з Hummingbot і Freqtrade, прогалини за пріоритетом.
+- `docs/veles-comparison.md` — функції Orbix у порівнянні з Veles (за публічною довідкою), план за пріоритетом.
 - `archive/` — старі версії (Zorya, старі гілки, знімки Orbix) і правила відкату. Збирання й CI його не чіпають.
 
 ## Поточний етап
@@ -67,3 +69,31 @@ npm run verify   # check + test
   - Того ж оновлення — правило «біржа головна» (погоджено з користувачем 19.11): якщо біржа закрила позицію бота за TP, SL чи трейлінгом (звірка бачить `xc`: у моделі позиція є, на біржі немає, ордерів бота немає), модель закриває свою угоду за ціною закриття на біржі (з `xr`), а не чекає власного виходу за свічками. Так картка, статистика й журнал показують те, що сталося на біржі. Знахідка тесту: ETH 4 год — біржа закрила трейлінгом 19.11 о 01:34 за 1771,61 (відкат усередині 4-годинної свічки), модель тримала угоду далі. Потрібні тести в `mirror.test.mjs` / `sim.test.mjs` (закриття біржею → модель закрита за ціною біржі, без нових ордерів) і мутаційна перевірка.
   - Того ж оновлення — часткова фіксація TP (Multi-TP) на біржі лімітним reduce-only ордером на рівні TP1 заздалегідь (переставляти після докупівель), а не ринком після закриття свічки: знахідка тесту 20.11 — SOL на біржі −4,77 USDT за добу проти +1,03 у моделі (`mirror.js`, дія `part`). Тести в `sim.test.mjs` (ціна торкнулась TP1 і відкотилась у межах свічки → на біржі виконано за TP1).
   - Того ж оновлення — ціни моделі з біржі бота: для ботів із «Тестнет» `runner` бере свічки тієї біржі, на якій бот торгує (Bybit linear або Binance USDⓈ-M), а не завжди Binance (`market()` у `runner/index.ts`); дію закриття ринком не виконувати, поки на біржі стоїть TP чи SL бота (за правилом «біржа головна» модель чекає виконання біржі). Знахідка тесту 21.11: XMR — модель закрила за TP за свічкою Binance (+2,18), на Bybit TP не спрацював, позицію закрито ринком (−0,97).
+
+## Додаткові правила й агенти (everything-claude-code)
+Загальні настанови з [everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT, `.claude/ECC-LICENSE`). **Правила цього файлу (вище) мають пріоритет**: мова комітів і PR — українська, межі Demo/Testnet, згенеровані файли, заборона змін `runner`/`exchange` під час етапу C тощо.
+
+@.claude/ecc-rules/common/code-review.md
+@.claude/ecc-rules/common/coding-style.md
+@.claude/ecc-rules/common/development-workflow.md
+@.claude/ecc-rules/common/git-workflow.md
+@.claude/ecc-rules/common/patterns.md
+@.claude/ecc-rules/common/performance.md
+@.claude/ecc-rules/common/security.md
+@.claude/ecc-rules/common/testing.md
+@.claude/ecc-rules/typescript/coding-style.md
+@.claude/ecc-rules/typescript/patterns.md
+@.claude/ecc-rules/typescript/security.md
+@.claude/ecc-rules/typescript/testing.md
+@.claude/ecc-rules/web/coding-style.md
+@.claude/ecc-rules/web/design-quality.md
+@.claude/ecc-rules/web/patterns.md
+@.claude/ecc-rules/web/performance.md
+@.claude/ecc-rules/web/security.md
+@.claude/ecc-rules/web/testing.md
+
+Агенти (`.claude/agents/`): planner, architect, code-reviewer, typescript-reviewer (JS/TS), database-reviewer (Postgres/Supabase), security-reviewer, tdd-guide, build-error-resolver, refactor-cleaner, doc-updater, silent-failure-hunter, performance-optimizer.
+Команди: `/plan`, `/code-review`, `/build-fix`, `/refactor-clean`, `/test-coverage`, `/update-docs`, `/feature-dev`.
+Скіли: `exchange-api` (довідка по API Bybit Demo і Binance Testnet — завантажувати перед змінами в коді бірж), `supabase` і `supabase-postgres-best-practices` (офіційні від Supabase, MIT; міграції в Orbix — як описано вище, через `apply_migration`), `security-review` (поряд із власним `orbix-deploy`).
+
+Хуки (`.claude/settings.json`): заборона ручного редагування згенерованих файлів; перед завершенням відповіді — `npm run check`.

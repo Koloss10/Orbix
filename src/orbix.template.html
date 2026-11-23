@@ -25,6 +25,7 @@
 <button class="b" id="mb" aria-label="Меню" aria-expanded="false" style="padding:0 12px"><svg viewBox="0 0 24 24" style="width:22px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 </header>
 
+<main id="main">
 <section id="v-ov" class="s">
 <div id="hero"></div>
 <div class="card" id="home-top"><div class="hd"><h2>Топ Боти</h2><button class="b ib" id="tfb" aria-label="Фільтри топ-ботів" aria-expanded="false" aria-controls="tfp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button><button class="b ib" id="topr" aria-label="Перерахувати топ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div><p class="mu" id="tops" style="margin-bottom:10px"></p>
@@ -43,7 +44,7 @@
 
 <section id="v-mk" class="s" hidden>
 <div class="card"><h2>Ринок</h2><input class="srch" id="mq" type="search" placeholder="Знайти пару, напр. ETH" autocomplete="off" aria-label="Знайти пару" aria-controls="mkl"><div class="row" id="mkm" style="margin-bottom:8px"><button class="b sm tg" data-mm="F">Ф'ючерси USDⓈ-M</button><button class="b sm tg" data-mm="S">Спот</button></div><p class="mu" id="mks" style="margin-bottom:8px"></p><div id="mkc"></div><div class="row" style="margin-top:10px"><button class="b p" id="mkb">Створити бота на цій парі</button><button class="b" id="mka">Авто-майстер для пари</button></div></div>
-<div class="card"><h2>Пари</h2><div class="pft" id="mkt" role="tablist" aria-label="Список пар"><button class="b sm tg" role="tab" data-mt="all">Усі</button><button class="b sm tg" role="tab" data-mt="up">Ростуть</button><button class="b sm tg" role="tab" data-mt="dn">Падають</button><button class="b sm tg" role="tab" data-mt="fav">★ Обрані</button></div><div id="mkl"></div></div>
+<div class="card"><h2>Пари</h2><div class="pft" id="mkt" role="group" aria-label="Список пар"><button class="b sm tg" data-mt="all">Усі</button><button class="b sm tg" data-mt="up">Ростуть</button><button class="b sm tg" data-mt="dn">Падають</button><button class="b sm tg" data-mt="fav">★ Обрані</button></div><div id="mkl"></div></div>
 </section>
 
 <section id="v-aw" class="s" hidden>
@@ -52,23 +53,24 @@
 </section>
 
 <section id="v-bd" class="s" hidden>
-<div class="card"><h2>Налаштування бота</h2>
+<div class="card"><h2 id="fgt">Налаштування бота</h2>
+<p class="rndw" id="edh" hidden></p>
 <div class="row" style="margin-bottom:12px"><button class="b" data-m="0">Консервативний</button><button class="b" data-m="1">Помірний</button><button class="b" data-m="2">Агресивний</button></div>
 <div id="fg"></div>
 <p class="mu" id="flh" style="margin-bottom:12px"></p>
 <p id="frw" class="rndw" hidden></p>
-<div class="row"><button class="b p" id="bt">Запустити бектест</button><button class="b" id="ad">Додати paper-бота</button><button class="b" id="sxb">Стрес-тест</button></div></div>
+<div class="row"><button class="b p" id="bt">Запустити бектест</button><button class="b" id="ad">Додати paper-бота</button><button class="b p" id="esv" hidden>Зберегти зміни</button><button class="b" id="ecn" hidden>Скасувати редагування</button><button class="b" id="sxb">Стрес-тест</button><button class="b" id="bshare" title="Посилання з налаштуваннями бота">Поділитися</button></div></div>
 <div class="card"><h2>Графік і сітка ордерів</h2><div id="gv"></div><p class="mu" id="gs" style="margin-top:8px"></p></div>
 <div class="card"><h2>Результат бектесту</h2><div id="res"><p class="mu">Задайте параметри й запустіть бектест на історії обраної пари.</p></div></div>
 </section>
 
 <section id="v-bs" class="s" hidden><div class="card"><h2>Історія бектестів</h2><div id="bsh"></div></div></section>
 
-<section id="v-jr" class="s" hidden><div class="card"><h2>Журнал угод</h2><div class="fl" id="jfl"></div><div class="sc"><table id="jt"></table></div></div></section>
+<section id="v-jr" class="s" hidden><div class="card"><h2>Журнал угод</h2><div class="fl" id="jfl"></div><div class="sc" tabindex="0" role="region" aria-label="Таблиця, гортайте вбік"><table id="jt"></table></div></div></section>
 
 <section id="v-st" class="s" hidden>
 <div class="k" id="sk"></div>
-<div class="card"><h2>Статистика ботів</h2><div class="sc"><table id="stt"></table></div></div>
+<div class="card"><h2>Статистика ботів</h2><div class="sc" tabindex="0" role="region" aria-label="Таблиця, гортайте вбік"><table id="stt"></table></div></div>
 <div class="card"><h2>PnL за ботами</h2><div id="sb"></div></div>
 </section>
 
@@ -112,6 +114,7 @@
 <section id="v-help" class="s" hidden>
 <div class="card"><h2>Довідка</h2><div id="help"></div></div>
 </section>
+</main>
 </div>
 
 <nav id="tab" aria-label="Розділи" hidden></nav>
