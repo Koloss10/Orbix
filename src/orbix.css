@@ -260,3 +260,35 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 .srl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:860px){.aig{grid-template-columns:1fr}.aimg{max-width:94%}}
 @media (prefers-reduced-motion:reduce){.aiw{animation:none}}
+
+/* ---------- Orbix AI: плаваюча кнопка й вікно ---------- */
+#aifab{position:fixed;left:0;top:0;z-index:7;width:56px;height:56px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ac) 55%,transparent);padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+color:var(--ac);background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--ac) 30%,var(--pan2)),var(--pan2) 70%);
+box-shadow:0 10px 28px -10px color-mix(in srgb,var(--ac) 80%,transparent),0 0 0 6px color-mix(in srgb,var(--ac) 8%,transparent),inset 0 1px 0 rgba(255,255,255,.12);
+transition:box-shadow .2s,scale .15s;will-change:transform}
+#aifab[hidden]{display:none}
+#aifab svg{width:100%;height:100%;display:block;overflow:visible}
+#aifab .aifr{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.7}
+#aifab .aifs{fill:var(--pan2);opacity:.9}
+#aifab .aifo{transform-origin:24px 24px;animation:aifo 6s linear infinite}#aifab .aifo circle{fill:var(--ac2,var(--ac))}
+@keyframes aifo{to{transform:rotate(360deg)}}
+#aifab:hover{box-shadow:0 12px 32px -8px color-mix(in srgb,var(--ac) 90%,transparent),0 0 0 8px color-mix(in srgb,var(--ac) 12%,transparent)}
+#aifab:focus-visible{outline:2px solid var(--ac);outline-offset:4px}
+#aifab:active{scale:.95}
+#aifab.drag{cursor:grabbing;scale:1.08;box-shadow:0 18px 40px -10px color-mix(in srgb,var(--ac) 95%,transparent),0 0 0 10px color-mix(in srgb,var(--ac) 14%,transparent)}
+#aifab.snap{transition:transform .24s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s}
+#aifab.on{border-color:var(--ac)}
+#aipop{position:fixed;z-index:12;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(400px,calc(100vw - 32px));height:min(620px,calc(100vh - 110px));display:flex;flex-direction:column;
+background:color-mix(in srgb,var(--pan2) 96%,transparent);border:1px solid var(--ln);border-radius:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.65);backdrop-filter:blur(14px);overflow:hidden;animation:aipin .18s ease-out}
+#aipop.l{right:auto;left:16px}
+#aipop[hidden]{display:none}
+@keyframes aipin{from{opacity:0;transform:translateY(12px) scale(.98)}}
+.aiph{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ln)}.aiph b{font:600 15px 'Space Grotesk',Inter,sans-serif}.aiph .chip{margin-left:0;margin-right:auto}
+#aipb{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 12px 12px}
+.aig.pop{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;width:100%}.aig.pop .aim{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;width:100%}.aig.pop .aiq,.aig.pop .ail,.aig.pop .aif{min-width:0;max-width:100%}.aig.pop .card{background:none;border:0;padding:0;box-shadow:none}.aig.pop .aih h2,.aig.pop .aiint{display:none}.aig.pop .aih{justify-content:flex-end}
+.aig.pop .aiq{flex-wrap:nowrap;overflow-x:auto;margin:8px 0 10px;padding-bottom:4px;scrollbar-width:thin}.aig.pop .aiq .b{flex:none}
+.aig.pop .ail{flex:1;min-height:110px;max-height:none}.aig.pop .aih{margin:0}
+.aig.pop .aic{margin-top:10px;max-height:32%;overflow-y:auto;flex:none}.aig.pop .aic summary{cursor:pointer;color:var(--mu);font-size:13px;min-height:32px}
+.w.tb~#aipop{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+@media (max-width:600px){#aipop,#aipop.l{left:8px;right:8px;width:auto;height:min(78vh,640px)}}
+@media (prefers-reduced-motion:reduce){#aifab .aifo,#aipop{animation:none}#aifab.snap{transition:none}}
