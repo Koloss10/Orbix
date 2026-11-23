@@ -103,26 +103,8 @@
 <div class="card" data-pt="a"><h2>Безпека</h2><div id="sec"></div></div>
 </section>
 
-<section id="v-ai" class="s" hidden>
-<div class="card ai-head"><div><h2>Orbix AI</h2><p class="mu">Інтелектуальний помічник платформи · доступ лише до читання</p></div><span class="ai-safe">READ ONLY</span></div>
-<div class="card ai-controls">
-<label>Діалог<select id="ai-conversation"><option value="">Новий діалог</option></select></label>
-<button class="b" id="ai-new" type="button">＋ Новий діалог</button>
-</div>
-<div id="ai-login-note" class="card" hidden><b>Потрібен вхід</b><p class="mu">Увійди в акаунт Orbix, щоб AI міг аналізувати твої дані.</p></div>
-<div id="ai-chat" class="card ai-chat" aria-live="polite" aria-label="Історія розмови"></div>
-<div class="card">
-<div class="ai-quick" id="ai-quick">
-<button class="b sm" data-ai-prompt="Проаналізуй загальний стан моїх ботів. Вкажи проблеми та ризики.">Стан ботів</button>
-<button class="b sm" data-ai-prompt="Порівняй моїх ботів за доступними результатами та поясни, хто працює краще.">Порівняння ботів</button>
-<button class="b sm" data-ai-prompt="Проаналізуй останні події та помилки моїх ботів.">Останні помилки</button>
-<button class="b sm" data-ai-prompt="Поясни доступні результати моїх останніх бектестів.">Бектести</button>
-</div>
-<div class="ai-compose"><textarea id="ai-composer" rows="2" maxlength="4000" placeholder="Запитай про ботів, ризики або результати бектестів…" aria-label="Повідомлення Orbix AI"></textarea><button class="b p" id="ai-send" type="button">Надіслати</button></div>
-<p class="mu" id="ai-status" role="status">AI працює лише після налаштування серверного ключа.</p>
-<p class="mu ai-privacy">Для відповіді AI отримує знімок даних твого акаунта: ботів, станів, подій і бектестів. Біржові ключі не передаються. Не надсилай паролі чи секрети.</p>
-</div>
-</section>
+<section id="v-ai" class="s" hidden><div id="aix"></div></section>
+
 <section id="v-fb" class="s" hidden><div id="fbx"></div></section>
 
 <section id="v-adm" class="s" hidden><div id="adm"></div></section>
