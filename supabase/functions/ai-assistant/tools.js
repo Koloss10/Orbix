@@ -11,6 +11,8 @@
 import { DEF_LIMITS, dayStart, ladderNotional, limitsOf, realizedSince, riskBlock } from "./risk.js";
 import { searchDocs } from "./docs.js";
 import { DEF, normG } from "./engine.js";
+import { marketSnapshot, PAIR_RE } from "./market.js";
+import { findIssues } from "./monitor.js";
 
 const r2 = (x, d = 2) => (Number.isFinite(+x) ? Math.round(+x * 10 ** d) / 10 ** d : null);
 const iso = (t) => (t == null || t === "" ? null : new Date(typeof t === "number" ? t : String(t)).toISOString());
@@ -31,6 +33,13 @@ export const TOOL_DEFS = [
   fn("get_risk_snapshot", "Ризики, пораховані логікою Orbix: ліміти профілю, повна драбина кожного бота, зайнята експозиція, збиток за добу, чи заблоковано нові угоди.", NONE),
   fn("get_backtest_results", "Останні збережені бектести: пара, період, прибуток, просадка, кількість угод, win rate, profit factor.", { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 20 } }, additionalProperties: false }),
   fn("search_orbix_docs", "Пошук у довідці Orbix: як працюють налаштування й функції платформи.", { type: "object", properties: { query: { type: "string", maxLength: 200 } }, required: ["query"], additionalProperties: false }),
+];
+
+/* етап 2 (вмикається секретом AI_STAGE=2 після перевірки етапу 1): ринок і пошук проблем ботів */
+export const STAGE2_DEFS = [
+  fn("get_market_snapshot", "Ринковий знімок пари за публічними даними: ціна, зміна за 24 год, RSI, EMA20/50, ATR, режим ринку (тренд/боковик), аномалії, фандінг і mark price, ризики для Long і Short. Розраховано правилами Orbix.",
+    { type: "object", properties: { pair: { type: "string", description: "Пара, напр. SOL/USDT" }, timeframe_h: { type: "integer", enum: [1, 4, 12, 24] } }, required: ["pair"], additionalProperties: false }),
+  fn("find_bot_issues", "Перевірка всіх ботів правилами Orbix: давно не оброблявся сервером, пауза з відкритою позицією, сітка чи SL далі за ліквідацію, просадка, розбіжність моделі й біржі, черга біржі, помилки за 24 год, блок лімітом ризику.", NONE),
 ];
 
 /* ---------- що саме бачить модель ---------- */
@@ -70,7 +79,7 @@ function exchangeStats(st) {
  * @param {{ reader: { load(): Promise<any>, events(id:string, n:number): Promise<any[]>, backtests(n:number): Promise<any[]> },
  *           now?: () => number }} o
  */
-export function createTools({ reader, now = () => Date.now() }) {
+export function createTools({ reader, now = () => Date.now(), stage = 1, fetchImpl = null }) {
   let cache = null;
   const data = async () => {
     if (cache) return cache;
@@ -171,6 +180,23 @@ export function createTools({ reader, now = () => Date.now() }) {
     },
     async search_orbix_docs({ query }) { return { results: searchDocs(String(query || "").slice(0, 200)) }; },
   };
+  if (stage >= 2) {
+    const mk = new Map();
+    impl.get_market_snapshot = async ({ pair, timeframe_h }) => {
+      const p = String(pair || "").trim().toUpperCase().replace(/[-_ ]/g, "/").replace(/^([A-Z0-9]+)USDT$/, "$1/USDT");
+      if (!PAIR_RE.test(p)) return { error: "Потрібна ф'ючерсна пара до USDT, напр. SOL/USDT." };
+      const tf = [1, 4, 12, 24].includes(+timeframe_h) ? +timeframe_h : 1, key = p + tf;
+      if (mk.size >= 4 && !mk.has(key)) return { error: "За одне питання — не більше 4 ринкових знімків." };
+      if (!mk.has(key)) mk.set(key, marketSnapshot(fetchImpl || fetch, p, tf, now()).catch(() => ({ pair: p, error: "Ринкові дані зараз недоступні (Binance і Bybit не відповіли)." })));
+      return mk.get(key);
+    };
+    impl.find_bot_issues = async () => {
+      const { list, profile } = await data(), t = now();
+      const ev = reader.recentEvents ? await reader.recentEvents(new Date(t - 864e5).toISOString(), 300) : [];
+      const res = findIssues({ list, limits: profile ? limitsOf(profile) : { ...DEF_LIMITS }, events: ev || [], now: t });
+      return { ...res, issues: res.issues.map((i) => ({ ...i, last_untrusted: i.last_untrusted == null ? undefined : untrusted(i.last_untrusted, 200) })) };
+    };
+  }
 
   /** виклик інструмента: невідомі назви й помилки читання повертаються як { error }, а не падають */
   async function call(name, args) {
@@ -181,5 +207,5 @@ export function createTools({ reader, now = () => Date.now() }) {
   /** псевдонім бота за його id (для контексту «відкрито з картки бота») */
   async function aliasOf(id) { const { list } = await data(); const x = list.find((y) => y.id === id); return x ? x.alias : null; }
   const dataAt = () => (cache ? iso(cache.at) : null);
-  return { defs: TOOL_DEFS, call, aliasOf, dataAt };
+  return { defs: stage >= 2 ? [...TOOL_DEFS, ...STAGE2_DEFS] : TOOL_DEFS, call, aliasOf, dataAt };
 }

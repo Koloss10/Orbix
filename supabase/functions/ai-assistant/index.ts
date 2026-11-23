@@ -6,7 +6,8 @@
 //    користувача, тож RLS і 2FA бази відсікають чуже. 5. Збереження повідомлень і обліку (service_role).
 // Секрети (лише в Edge Function Secrets, у браузер не повертаються):
 //   AI_API_KEY (обов'язковий), AI_BASE_URL (за замовчуванням Groq), AI_DEFAULT_MODEL, AI_MAX_OUTPUT_TOKENS,
-//   AI_DAILY_LIMIT, AI_ENABLED ("false" вимикає помічника; торгівля від нього не залежить).
+//   AI_DAILY_LIMIT, AI_ENABLED ("false" вимикає помічника; торгівля від нього не залежить),
+//   AI_STAGE ("2" — інструменти етапу 2: ринковий знімок і пошук проблем ботів).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { createProvider, AIError } from "./provider.js";
 import { createTools } from "./tools.js";
@@ -72,13 +73,19 @@ Deno.serve(async (req) => {
         if (error) throw new Error("читання журналу");
         return data;
       },
+      async recentEvents(since: string, n: number) {
+        const { data, error } = await asUser.from("bot_events").select("bot_id,level,message,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(n);
+        if (error) throw new Error("читання журналу");
+        return data;
+      },
       async backtests(n: number) {
         const { data, error } = await asUser.from("backtests").select("symbol,timeframe,period_start,period_end,status,results,config,created_at").order("created_at", { ascending: false }).limit(n);
         if (error) throw new Error("читання бектестів");
         return data;
       },
     };
-    const tools = createTools({ reader });
+    const stage = Math.round(+env("AI_STAGE", "1")) || 1; // 2 — ринок і пошук проблем (після перевірки етапу 1)
+    const tools = createTools({ reader, stage });
     const alias = p.context?.type === "bot" && p.context.id ? await tools.aliasOf(p.context.id).catch(() => null) : null;
 
     const model = env("AI_DEFAULT_MODEL", "openai/gpt-oss-120b");
