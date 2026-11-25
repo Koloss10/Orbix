@@ -283,6 +283,9 @@ function amBase(c,g){const lev=g.lev,U=ladder(g),mnN=minN(c),base=c.amt>0?c.amt/
 function amRun(o,g,a,b){const dep=o.c.amt>0?o.c.amt:2*g.base*ladder(g),s=summ(run(o.cs.slice(a,b),o.e.slice(a,b),g,o.off+a*g.tf,0,dep),dep);return s}
 /* на навчанні (половина періоду) щонайменше 10 угод: інакше на перевірці (30 %) їх майже не буде */
 function amEval(o,g){const s=amRun(o,g,0,o.t1);return s.n<10?null:{g,s,sc:amSc(s)}}
+/* стійкість: темп і на навчанні, і на відборі (гірший з двох); відбір у мінусі чи з 1–2 угодами — кандидат відкидається.
+   Фільтри оцінюються саме так: їхня користь — у зміні ринку, якої навчання може не містити */
+function amRob(o){const h=o.t1>>1,a=amRun(o,o.g,0,h),b=amRun(o,o.g,h,o.t1),v=amRun(o,o.g,o.t1,o.tr),T=o.g.tf;o.v=v;o.ok=v.n>=3&&v.pnl>0&&a.pnl>0&&b.pnl>0;o.rob=!o.ok?-1e9+amSc(v):Math.min(amSc(a)/(h*T),amSc(b)/((o.t1-h)*T),amSc(v)/((o.tr-o.t1)*T))*1e3}
 function amMut(R,g,c,LV){const k=pick(R,Object.keys(AMG).concat(LV.length>1?['lev']:[])),L=k==='lev'?LV:AMG[k],i=L.indexOf(g[k]),j=i<0?R()*L.length|0:Math.max(0,Math.min(L.length-1,i+(R()<.5?-1:1)));
 const n={...g,[k]:L[j]};n.base=amBase(c,n);return n.base?n:null}
 function amFlt(g){const V=[],H=g.tf<4?4:g.tf<24?24:g.tf<168?168:0;if(H)V.push({htf:H,hte:50});V.push({wk:2.5,wn:0,wb:.6},{ak:2},{lk:2},{xs:g.sg[0]});return V}
@@ -293,8 +296,7 @@ for(let j=0;j<8;j++){const g={...g0,orders:3+(R()*6|0),mult:pick(R,AMG.mult),lev
 const r=amEval(o,g);if(r&&(!best||r.sc>best.sc))best=r}if(best)cand.push({...o,...best})}}
 cand.sort((a,b)=>b.sc-a.sc);const top=cand.slice(0,12);
 for(const o of top){for(let j=0;j<14;j++){const g=amMut(R,o.g,c,LV);if(!g)continue;const r=amEval(o,g);if(r&&r.sc>o.sc){o.g=g;o.s=r.s;o.sc=r.sc}}
-for(const f of amFlt(o.g)){const g={...o.g,...f},e=entry(o.A,g).slice(-o.k),q={...o,e},r=amEval(q,g);if(r&&r.sc>o.sc+2){o.g=g;o.e=e;o.s=r.s;o.sc=r.sc}}
-const v=amRun(o,o.g,o.t1,o.tr),lt=o.t1*o.g.tf,lv=(o.tr-o.t1)*o.g.tf;o.v=v;o.ok=v.n>=3&&v.pnl>0;o.rob=!o.ok?-1e9+amSc(v):Math.min(amSc(o.s)/lt,amSc(v)/lv)*1e3}
+amRob(o);for(const f of amFlt(o.g)){const g={...o.g,...f},e=entry(o.A,g).slice(-o.k),q={...o,e},r=amEval(q,g);if(!r)continue;Object.assign(q,r);amRob(q);if(q.rob>o.rob+1){o.g=g;o.e=e;o.s=r.s;o.sc=r.sc;o.v=q.v;o.ok=q.ok;o.rob=q.rob}}}
 top.sort((a,b)=>b.rob-a.rob);const good=top.filter(o=>o.ok),seen={},out=[];for(const o of good.length?good:top.slice(0,1)){const key=o.g.name+o.g.tf+o.g.d;if(seen[key])continue;seen[key]=1;out.push({g:o.g,cs:o.cs,e:o.e,tr:o.tr,off:o.off,sc:o.rob});if(out.length==3)break}return out}
 function evalC(o,c){const g=o.g,M=g.base*ladder(g),d0=c.amt>0?c.amt:2*M,Rf=run(o.cs,o.e,g,o.off,1,d0),Rt=run(o.cs.slice(o.tr),o.e.slice(o.tr),g,o.off+o.tr*g.tf,0,d0),sx=stress(g),worst=Math.min(...sx.map(x=>x.mn)),sf0=summ(Rf,d0),reserve=Math.max(1.5*-sf0.dd,-worst),need=M+reserve,dep=c.amt>0?c.amt:need,sf=summ(Rf,dep),st=summ(Rt,dep);
 return{g,sf,st,sx,M,dep,reserve,need,fund:PAIRS[g.pair].f}}
