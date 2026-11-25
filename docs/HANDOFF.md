@@ -4,7 +4,7 @@
 
 ## Коротко
 - Платформа DCA-ботів Orbix: інтерфейс `orbix.html` (GitHub Pages) і серверні функції Supabase (`runner`, `exchange`, `tg-notify`, `tg-card`, `ai-assistant`). Лише Bybit Demo і Binance Futures Testnet.
-- Сервер зараз: `runner` v18 (лічильник версій Supabase — 19), `exchange` v8, `ai-assistant` (Supabase 3, етап 2 увімкнено), `tg-card` v1. Проєкт Supabase `krmnaypaitruhqgaxkfw`.
+- Сервер зараз: `runner` v19 (лічильник версій Supabase — 21; викладено кнопкою GitHub Actions «Deploy Supabase function»), `exchange` v8, `ai-assistant` (Supabase 3, етап 2 увімкнено), `tg-card` v1. Проєкт Supabase `krmnaypaitruhqgaxkfw`.
 - Останній злитий у `main` PR — #69 (картки сигналів у Telegram). Тести: 187 зелених (`npm run verify`).
 
 ## Етап C завершено (25.11)
@@ -14,6 +14,12 @@
 ## Що далі зараз
 - Orbix AI: етап 1 — 25.11 (PR #65, #68), перевірено наживо. Етап 2 увімкнено 25.11: секрет `AI_STAGE=2` (вносить власник у Supabase → Edge Functions → Secrets; запис секретів через інструмент MCP тимчасово вимкнено Supabase). Того ж дня виправлено: діалоги не зберігалися (у рядку питання `metadata` ставав `null`, стовпець `not null`) — `ai-assistant` перевикладено (Supabase 3, усі 9 файлів побайтно збігаються). Наступні етапи 3–5 — за `docs/orbix-ai.md`.
 - v18 — викладено 25.11 (PR #69): картки сигналів у Telegram. Міграція `tg_card_prefs` застосована; `tg-card` v1 (`verify_jwt false`, автентифікація в коді); `runner` v18 (Supabase 19, усі 8 файлів побайтно збігаються з `main`; запуск розкладу 11:00 UTC — 200, 13 з 13 ботів, без `error`/`warn`). Лишилося перевірити наживо: «Надіслати пробну картку» (Профіль → Telegram) і перша справжня картка на подію бота.
+
+## v19 — ручне керування угодою (25.11)
+- Кнопки в меню «⋯» картки серверного бота: «Закрити за ринком», «Скасувати угоду», «Пауза до кінця угоди» / «Відновити нові угоди». Таблиця `public.bot_commands` (міграція `20261125160000_bot_commands`), тригер будить `runner` для бота за кілька секунд. Логіка — `runner/commands.js`, дії біржі `mclose`/`mcancel` у `mirror.js`.
+- Перевірено: тести (+9, мутаційна перевірка 6 поломок), Playwright iPhone 13 / 360 px, звірка 9 файлів `runner`, розклад 14:55 UTC — 200, 13/13, без `error`/`warn`. Лишилося перевірити наживо першу команду на Bybit Demo.
+- Друга черга: «Докупити зараз» (потрібне переставлення решти лімітних докупівель на біржі).
+- Викладання функцій тепер через GitHub Actions (`deploy-function.yml`, секрет `SUPABASE_ACCESS_TOKEN` — токен із правом лише на Edge Functions, діє до ~листопада 2027; продовжити до спливу).
 
 ## Бета-тест з друзями (з 18.11)
 У Supabase вимкнено «Confirm email». Листи доходять лише членам команди проєкту. Перед релізом: власний SMTP (Brevo тощо) і повернути «Confirm email».
