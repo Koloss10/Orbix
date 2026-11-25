@@ -38,7 +38,9 @@ test('рівні картки: виконані й майбутні докупі
   assert.equal(L.entry, A[ie].c);
   assert.equal(L.dca.length, 4);
   assert.ok(L.dca.every((x) => !x.done) && L.dca[0].p < L.entry);
-  assert.ok(Math.abs(L.tp / L.avg - 1.018) < 1e-9 && Math.abs(L.sl / L.avg - 0.9) < 1e-9);
+  assert.ok(Math.abs(L.tp / L.avg - 1.018) < 1e-9);
+  // SL — кінцевий: після всіх досяжних докупівель (нижче останньої), а не від середньої на момент входу
+  assert.ok(L.sl < L.dca[3].p && L.sl < L.avg * 0.9, `SL ${L.sl} має бути нижче останньої докупівлі ${L.dca[3].p}`);
   assert.ok(L.liq > 0 && L.liq < L.sl);
   const lv = levels({ lines: L }, THEMES.dark);
   assert.deepEqual(lv.map((x) => x.key), ['entry', 'dca1', 'dca2', 'dca3', 'dca4', 'tp', 'sl', 'liq']);
@@ -49,9 +51,9 @@ test('картка: заголовок, лінії, логіка, результ
   const spec = cardSpec({ g, ev: { kind: 'open', price: A[ie].c, t: A[ie].t + 36e5 }, pos: b.pos, candles: A.slice(0, ie + 1), reasons: entryReasons(A.slice(0, ie + 1), g), exchange: 'Bybit Demo' });
   const svg = cardSvg(spec);
   assert.match(svg, /^<svg[^>]+width="1000"/);
-  for (const t of ['DOT/USDT', 'LONG 3×', 'Відкрито позицію', 'Логіка відкриття', 'Вхід ', 'DCA 1 ', 'TP ', 'SL ']) assert.ok(svg.includes(t), t);
+  for (const t of ['DOT/USDT', 'LONG 3×', 'Відкрито позицію', 'Логіка відкриття', 'Ордер 1 ', 'Ордер 2 ', 'TP ', 'SL ']) assert.ok(svg.includes(t), t);
   const off = cardSvg({ ...spec, parts: { logic: false, tpsl: false } });
-  assert.ok(!off.includes('Логіка відкриття') && !off.includes('>TP ') && off.includes('DCA 1 '));
+  assert.ok(!off.includes('Логіка відкриття') && !off.includes('>TP ') && off.includes('Ордер 2 '));
   const noChart = cardSvg({ ...spec, parts: { chart: false } });
   assert.ok(!noChart.includes('<rect x="') || noChart.length < svg.length / 2);
 });
@@ -66,7 +68,7 @@ test('картка закриття: вид за трейлінгом, ліні�
   assert.ok(Math.abs(spec.result.pct - (tr.pnl / sum) * 100) < 1e-9);
   assert.ok(cardSvg(spec).includes('Результат угоди'));
   assert.equal(cardSpec({ g: { ...g, trail: 0 }, ev: { kind: 'close', pnl: 1 }, candles: A }).event.kind, 'tp');
-  assert.equal(cardSpec({ g, ev: { kind: 'dca', n: 3 }, candles: A }).event.title, 'Докупівля 2 з 4');
+  assert.equal(cardSpec({ g, ev: { kind: 'dca', n: 3 }, candles: A }).event.title, 'Докупівля: ордер 3 з 5');
 });
 
 test('тексти з даних екрануються, довгі рядки переносяться, далекі рівні — позначкою на краю', () => {

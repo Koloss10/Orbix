@@ -59,13 +59,32 @@ export function ladder(g, px, F) {
    ts — відстань трейлінгу в ціні (частка g.trail від рівня активації).
    З частковою фіксацією TP веде сервер (на біржі лише SL); mp — позиція моделі: після TP1 з беззбитком (g.be)
    стоп переноситься туди ж, куди й у рушії (mp.be). */
-export function protect(g, avg, F, mp = null) {
+export function protect(g, avg, F, mp = null, stopAt = 0) {
   const d = g.d, tk = F && F.tick, part = g.s1 > 0, has = g.tp > 0 && !part;
   const lvl = has ? rnd(avg * (1 + d * g.tp), tk, d > 0 ? "ceil" : "floor") : 0;
   const sl = mp && mp.t1 && mp.be > 0 ? rnd(mp.be, tk, d > 0 ? "floor" : "ceil")
-    : g.sl > 0 ? rnd(avg * (1 - d * g.sl), tk, d > 0 ? "floor" : "ceil") : 0;
+    : g.sl > 0 ? rnd(stopAt > 0 ? stopAt : avg * (1 - d * g.sl), tk, d > 0 ? "floor" : "ceil") : 0;
   if (has && g.trail > 0) return { tp: 0, sl, ap: lvl, ts: Math.max(rnd(lvl * g.trail, tk, "ceil"), tk || 0) };
   return { tp: lvl, sl, ap: 0, ts: 0 };
+}
+/* Стоп, на якому реально зупиниться модель. SL рахується від середньої ціни, а середня зсувається з кожною
+   докупівлею: модель докуповує, поки наступний рівень лежить вище за поточний SL (і ліквідацію), і лише потім
+   виходить за стопом. Лімітні докупівлі бота стоять на біржі й виконуються всередині свічки, тож ціна, що йде до
+   стопу, неминуче проходить їх раніше. Тому на біржі одразу ставиться кінцевий стоп — після останньої досяжної
+   докупівлі (rest — лімітні ордери бота, що стоять зараз). Інакше стоп біржі, який сервер оновлює раз на 5 хв,
+   при різкому русі закрив би позицію раніше, ніж модель, і останні докупівлі не встигли б. */
+export function slStop(g, { q, avg }, rest = []) {
+  if (!(g.sl > 0) || !(q > 0) || !(avg > 0)) return 0;
+  const d = g.d, L = +g.fut ? g.lev || 1 : 1;
+  let cost = q * avg;
+  const R = rest.filter((o) => o.price > 0 && o.qty > 0).sort((a, b) => (d > 0 ? b.price - a.price : a.price - b.price));
+  for (const o of R) {
+    const a = cost / q, slp = a * (1 - d * g.sl), lqp = L > 1 ? a * (1 - d * Math.max(1 / L - 0.005, 0)) : 0;
+    const lim = lqp && (d > 0 ? lqp > slp : lqp < slp) ? lqp : slp;
+    if (d > 0 ? o.price <= lim : o.price >= lim) break; // цей рівень за стопом — модель вийде раніше
+    q += o.qty; cost += o.qty * o.price;
+  }
+  return (cost / q) * (1 - d * g.sl);
 }
 const lev = (g) => Math.min(20, Math.max(1, Math.round(g.lev || 1)));
 /* Часткове виставлення (g.live > 0): на біржі одночасно стоять лише live найближчих лімітних докупівель.
@@ -103,7 +122,14 @@ const protText = (w) => `${w.tp ? ` · TP ${w.tp}` : ""}${w.ts ? ` · трейл
 /* Привести захист позиції на біржі до потрібного (рідний режим). Повертає текст для журналу або null, якщо змін немає.
    fl — прапорці бота, що зберігаються в стані (nots: біржа не прийняла трейлінг — лишаємо SL, TP веде сервер). */
 export async function guard(ex, { g, symbol, botId, fl = {}, mp = null }, p, F) {
-  const d = g.d, want = protect(g, p.entry, F, mp), m = +p.mark || 0, lvl = want.tp || want.ap;
+  const d = g.d;
+  // кінцевий стоп з урахуванням лімітних докупівель бота, що стоять на біржі (крім беззбитку після TP1)
+  let stopAt = 0;
+  if (g.sl > 0 && !(mp && mp.t1 && mp.be > 0) && typeof ex.openOrders === "function") {
+    const rest = (await mineOf(ex, symbol, botId)).filter((o) => !o.reduceOnly && (d > 0 ? /^buy$/i : /^sell$/i).test(String(o.side))).map((o) => ({ price: +o.price, qty: +o.qty }));
+    stopAt = slStop(g, { q: Math.abs(+p.amt), avg: +p.entry }, rest);
+  }
+  const want = protect(g, p.entry, F, mp, stopAt), m = +p.mark || 0, lvl = want.tp || want.ap;
   const closeNow = async (why) => {
     await cancelMine(ex, symbol, botId);
     const o = await ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", Math.abs(p.amt), true);

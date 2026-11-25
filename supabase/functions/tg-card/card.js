@@ -44,8 +44,8 @@ export function wrap(s, max) {
 export function levels(spec, C) {
   const L = spec.lines || {}, out = [], parts = spec.parts;
   if (on(parts, "orders")) {
-    if (L.entry > 0) out.push({ key: "entry", label: "Вхід", p: L.entry, color: C.entry, dash: "", w: 2 });
-    for (const x of L.dca || []) if (x.p > 0) out.push({ key: "dca" + x.k, label: `DCA ${x.k}`, p: x.p, color: C.dca, dash: x.done ? "" : "7 5", w: x.done ? 1.6 : 1.3, done: !!x.done });
+    if (L.entry > 0) out.push({ key: "entry", label: "Ордер 1", p: L.entry, color: C.entry, dash: "", w: 2 });
+    for (const x of L.dca || []) if (x.p > 0) out.push({ key: "dca" + x.k, label: `Ордер ${x.k + 1}`, p: x.p, color: C.dca, dash: x.done ? "" : "7 5", w: x.done ? 1.6 : 1.3, done: !!x.done });
     if (L.avg > 0 && Math.abs(L.avg - (L.entry || 0)) > 1e-12) out.push({ key: "avg", label: "Середня", p: L.avg, color: C.avg, dash: "3 3", w: 1.4 });
   }
   if (on(parts, "tpsl")) {
