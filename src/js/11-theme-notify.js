@@ -26,9 +26,9 @@ let FEED=ld('zfeed',[]);
 function feedR(){const el=$('#feed');if(el)el.innerHTML=FEED.length?FEED.slice(0,12).map(e=>`<div><time>${e.t}</time><span>${esc(e.m)}</span></div>`).join(''):'<p class="mu">Подій ще немає.</p>'}
 let MS=ld('zms',{tg:{on:0,token:'',chat:'',tpl:'normal'},wa:{on:0,to:'',tpl:'normal'},vb:{on:0,to:'',tpl:'normal'},sg:{on:0,to:'',tpl:'normal'}});
 const MSN={tg:'Telegram'},EVN={open:'Відкрито позицію',dca:'DCA-ордер',close:'Угоду закрито',sl:'Stop-Loss або ліквідація',err:'Помилка'};
-function msgText(ev,x,tpl,d){const g=x.g,p=x.b.pos,b=BRANDS[SET.brand].n,hd=`${b}: ${ttl(x)} на ${x.ex}`;
+function msgText(ev,x,tpl,d){const p=x.b.pos,g=gOf(x.g,p||(d&&d.dd?{d:d.dd}:null)),b=BRANDS[SET.brand].n,hd=`${b}: ${ttl(x)} на ${x.ex}`;
 const line={open:`відкрито позицію по ${px(d.price||0)}`,dca:`DCA-ордер ${p?p.n:d.n} з ${g.orders} по ${px(d.price||0)}`,close:`угоду закрито, PnL ${f(d.pnl)} USDT`,sl:`${d.liq?'ліквідація':'спрацював Stop-Loss'}, PnL ${f(d.pnl)} USDT`,err:`помилка: ${d.text||''}`}[ev];
-if(tpl==='short')return `${g.pair} ${dir(g)}: ${line}`;
+if(tpl==='short')return `${g.pair} ${dir(x.g,p)}: ${line}`;
 let s=`${hd}\n${line}`;if(tpl==='normal')return s+(p?`\nОрдерів ${p.n} з ${g.orders}, середня ${px(p.cost/p.q)}`:'');
 const avg=p?p.cost/p.q:(d.price||lastC(dk(g)).c);return s+`\nСередня ціна ${px(avg)}, TP ${px(avg*(1+g.d*g.tp))}, SL ${px(avg*(1-g.d*g.sl))}\nОрдерів ${p?p.n:'—'} з ${g.orders}, маржа сітки ${n2(g.base*ladder(g),0)} USDT\nУгод у бота ${x.b.tr.length}, реалізований PnL ${f(x.b.cum)} USDT\n${now()}`}
 /* Telegram: надсилає сервер (Edge Function tg-notify), токен — у Supabase Vault, у браузер не повертається */

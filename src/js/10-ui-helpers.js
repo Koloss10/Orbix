@@ -14,7 +14,7 @@ const tfl=k=>(TFS.find(x=>x[0]===k)||[0,k+' год'])[1],perl=k=>(PER.find(x=>x[
 const K=(l,v,k='')=>`<div class="card"><div class="mu">${l}</div><div class="num ${k}">${v}</div></div>`;
 const KV=(a,b)=>`<div class="tr"><span>${a}</span><span class="mono">${b}</span></div>`;
 const SW=(l,on,d,sub='')=>`<div class="sw"><div>${l}${sub?`<div class="mu">${sub}</div>`:''}</div><button class="b tg" aria-pressed="${!!on}" data-sw="${d}">${on?'Увімкнено':'Вимкнено'}</button></div>`;
-const dir=g=>g.d<0?'Short':'Long';
+const dir=(g,p)=>!g.d?(p&&p.d?'Нейтр. · '+(p.d<0?'Short':'Long'):'Нейтральний'):g.d<0?'Short':'Long';
 const ttl=x=>`${x.g.pair}, ${dir(x.g)}, ${tfl(x.g.tf)}${x.g.lev>1?', '+x.g.lev+'×':''}`;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let cx=ld('zex',['Binance','Bybit','OKX']);

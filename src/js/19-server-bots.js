@@ -55,7 +55,7 @@ const bad=st||x.srvXe||(m&&m.on)||ev.err;
 /* Demo проти моделі: закриття на біржі (PnL за даними Bybit) і угоди моделі з того самого моменту; прослизання входу (+ — гірше за модель) */
 /* обидві сторони рахуються від першого входу, записаного в облік: угода, відкрита раніше, не потрапляє ні в біржу, ні в модель */
 let cmp='';const xr=x.srvXr;if(xr&&x.tn){const s0=xr.en.length?xr.en[0].t:null;if(s0==null)cmp=ROW('Demo проти моделі','облік почнеться з наступного входу');else{
-const W=tfMs(x.g.tf||1),mt=x.b.tr.filter(t=>t.f&&t.f[0]&&t.f[0].t+W>=s0),xl=xr.l.filter(r=>r.t>=s0),mpl=mt.reduce((a,t)=>a+t.pnl,0),xpl=xl.reduce((a,t)=>a+t.pnl,0),sl=xr.en.map(e=>x.g.d*(e.x-e.m)/e.m*100),sa=sl.reduce((a,v)=>a+v,0)/sl.length;
+const W=tfMs(x.g.tf||1),mt=x.b.tr.filter(t=>t.f&&t.f[0]&&t.f[0].t+W>=s0),xl=xr.l.filter(r=>r.t>=s0),mpl=mt.reduce((a,t)=>a+t.pnl,0),xpl=xl.reduce((a,t)=>a+t.pnl,0),sl=xr.en.map(e=>(e.d||x.g.d||1)*(e.x-e.m)/e.m*100),sa=sl.reduce((a,v)=>a+v,0)/sl.length;
 const d0=new Date(s0).toLocaleString('uk-UA',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 cmp=ROW(`PnL на Demo з ${d0}`,`<span class="${cls(xpl)}">${f(xpl)}</span> · закриттів: ${xl.length}`)+ROW(`PnL моделі з ${d0}`,`<span class="${cls(mpl)}">${f(mpl)}</span> · угод: ${mt.length}`)+ROW('Прослизання входу',`${f(sa,3)}&nbsp;% · входів: ${sl.length}`,sa>.1?'dn':'')}}
 return`<div class="bc ${bad?'off':'on'}" style="${bad?'--st:var(--dn);opacity:1':''}"><div class="bh"><b>${x.g.pair}</b><span class="mu">${dir(x.g)} · ${tfl(x.g.tf)} · ${x.g.lev}× · ${x.tn?exn:'без біржі'}</span><span class="st" style="margin-left:auto">${bad?'Увага':on?'Працює':'Пауза'}</span></div>

@@ -4,7 +4,7 @@ let SB=null;try{if(window.supabase&&window.supabase.createClient)SB=window.supab
 const CLOUD={u:null,known:new Set(),ok:0,err:''};
 const TFC={1:'1h',4:'4h',12:'12h',24:'1d',168:'1w'},RISK={low:'низький',medium:'середній',high:'високий'};
 const cloudFail=e=>{CLOUD.err=(e&&e.message)||String(e);accR()};
-const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,...(x.vw&&x.vw!=='ladder'?{_vw:x.vw}:{}),_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',...(x.gh&&x.gh.length?{_gh:x.gh}:{})},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
+const brow=x=>({user_id:CLOUD.u.id,name:ttl(x),strategy_type:'dca',exchange:x.ex,symbol:x.g.pair,timeframe:TFC[x.g.tf]||x.g.tf+'h',side:!x.g.d?'neutral':x.g.d<0?'short':'long',mode:'paper',status:x.on?'running':'paused',base_order_size:x.g.base,max_budget:x.g.base*ladder(x.g),config:{...x.g,...(x.vw&&x.vw!=='ladder'?{_vw:x.vw}:{}),_t0:x.t0,_sp:x.sp,_tn:!!x.tn,_srv:!!x.srv,_ex:x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',...(x.gh&&x.gh.length?{_gh:x.gh}:{})},started_at:new Date(x.t0).toISOString(),preset_id:x.pid||null});
 let csT=null,csQ=Promise.resolve();
 function cloudQ(){if(!CLOUD.u)return;clearTimeout(csT);csT=setTimeout(()=>{csQ=csQ.then(cloudSave)},400)}
 async function cloudSave(onlyNew){if(!CLOUD.u||!SB)return;try{

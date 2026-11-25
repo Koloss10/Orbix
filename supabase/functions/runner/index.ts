@@ -204,8 +204,9 @@ Deno.serve(async (req) => {
             const W = tfMs(g.tf || 1), A = m.candles.filter((c: C) => c.t + W <= (ev.t || Date.now()));
             const st: any = r.state?.b || {}, pos = ev.kind === "open" || ev.kind === "dca" ? st.pos : null;
             const trade = ev.trade || (["close", "sl", "liq"].includes(ev.kind) ? st.tr?.[st.tr.length - 1] : null);
-            const reasons = ev.kind === "open" && pf.parts.logic ? entryReasons(A, g) : [];
-            const spec = cardSpec({ g, ev, pos, trade, candles: A, reasons, exchange: mirror ? (exName === "binance" ? "Binance Testnet" : "Bybit Demo") : "модель Orbix",
+            const gx = g.d ? g : { ...g, d: ev.d || st.pos?.d || 1 }; // нейтральний бот — напрям угоди
+            const reasons = ev.kind === "open" && pf.parts.logic ? entryReasons(A, gx) : [];
+            const spec = cardSpec({ g: gx, ev, pos, trade, candles: A, reasons, exchange: mirror ? (exName === "binance" ? "Binance Testnet" : "Bybit Demo") : "модель Orbix",
               theme: themeFor(pf), n: pf.candles, parts: pf.parts });
             const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/tg-card`, { method: "POST",
               headers: { "content-type": "application/json", "x-runner-secret": runnerSecret },

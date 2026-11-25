@@ -4,7 +4,7 @@
    поточної середньої; SL на картці — кінцевий, після останньої досяжної докупівлі (як стоп на біржі, mirror.js slStop). */
 const VWS=[['ladder','Драбина'],['board','Табло'],['chart','Графік-фон']];
 const vwOk=v=>VWS.some(([k])=>k===v)?v:'ladder';
-function dealPlan(g,p,px){const d=g.d<0?-1:1,L=g.lev||1,ft=g.ftk!=null?g.ftk:g.fee||0,bf=p.bf||1,avg=p.cost/p.q;
+function dealPlan(g,p,px){const d=dOf(g,p)<0?-1:1;g=gOf(g,p);const L=g.lev||1,ft=g.ftk!=null?g.ftk:g.fee||0,bf=p.bf||1,avg=p.cost/p.q;
 const pnl0=p.real+d*(p.q*px-p.cost)-ft*p.q*px,pnl=Math.abs(pnl0)<.005?0:pnl0,margin=p.cost/L;
 const done=(p.f||[]).filter(e=>e.k==='e').map((e,i)=>({k:i+1,p:e.p}));
 const lim=a=>{const s=a*(1-d*g.sl),q=L>1?a*(1-d*Math.max(1/L-.005,0)):0;return q&&(d>0?q>s:q<s)?q:s};

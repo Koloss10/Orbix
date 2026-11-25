@@ -49,12 +49,12 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
     if (en && !p0 && !entryOk) { en = false; skipped++; } // ліміт ризику: нову угоду не відкривати
     b.step(Math.floor(c.t / W), c, en, undefined, e.x && e.x[i]);
     const v = b.eqv(c); pk = Math.max(pk, v); dd = Math.min(dd, v - pk);
-    const p = b.pos;
-    if (b.tr.length > n0) { const l = b.tr[b.tr.length - 1]; events.push({ kind: l.liq ? "liq" : l.sl ? "sl" : "close", pnl: l.pnl, price: l.f[l.f.length - 1].p, t: ct, ...(l.xs ? { xs: 1 } : {}) }); }
-    else if (!p0 && p) events.push({ kind: "open", notional: p.cost, price: c.c, t: ct, ...(p.bf > 1 ? { bf: p.bf } : {}) }); // bf — множник реінвесту (драбина на біржі)
-    else if (p0 && p && p.n > o0) events.push({ kind: "dca", notional: p.cost - c0, price: p.last, n: p.n, t: ct });
+    const p = b.pos, nd = g.d ? {} : { d: (p || p0)?.d || 1 }; // нейтральний бот: напрям угоди в кожній події
+    if (b.tr.length > n0) { const l = b.tr[b.tr.length - 1]; events.push({ kind: l.liq ? "liq" : l.sl ? "sl" : "close", pnl: l.pnl, price: l.f[l.f.length - 1].p, t: ct, ...(l.xs ? { xs: 1 } : {}) , ...nd }); }
+    else if (!p0 && p) events.push({ kind: "open", notional: p.cost, price: c.c, t: ct, ...(p.bf > 1 ? { bf: p.bf } : {}) , ...nd }); // bf — множник реінвесту (драбина на біржі)
+    else if (p0 && p && p.n > o0) events.push({ kind: "dca", notional: p.cost - c0, price: p.last, n: p.n, t: ct , ...nd });
     // часткова фіксація TP (g.s1): модель зменшила позицію — цю частку треба закрити й на біржі
-    else if (p0 && p && !h0 && p.t1 && q0 > 0) events.push({ kind: "part", share: 1 - p.q / q0, price: p.f[p.f.length - 1].p, t: ct });
+    else if (p0 && p && !h0 && p.t1 && q0 > 0) events.push({ kind: "part", share: 1 - p.q / q0, price: p.f[p.f.length - 1].p, t: ct , ...nd });
   }
   const tr = b.tr.slice(-keepTrades);
   return { state: { b: { pos: b.pos, tr, cd: b.cd, cum: b.cum, nd: b.nd }, pk, dd, lt, equity: A.length ? b.eqv(A[A.length - 1]) : b.cum }, events, skipped };
@@ -62,7 +62,7 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
 
 /* текст події для журналу й Telegram */
 export function eventText(ev, g) {
-  const pair = g.pair + (g.d < 0 ? " Short" : " Long");
+  const pair = g.pair + ((ev.d || g.d) < 0 ? " Short" : " Long");
   const f = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
   if (ev.kind === "open") return `Orbix (сервер): ${pair} — відкрито позицію по ${ev.price}`;
   if (ev.kind === "dca") return `Orbix (сервер): ${pair} — докупівля №${ev.n} по ${ev.price}`;
