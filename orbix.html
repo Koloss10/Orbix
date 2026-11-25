@@ -994,7 +994,7 @@ return`<p class="mu" style="margin:0">Фандінг: ${p?`угода <b class="
 function bcard(x){const p=x.b.pos,v=bv(x),s=x.b.tr,w=s.filter(t=>t.pnl>0).length;
 return`<div class="bc ${x.on?'on':'off'}" data-bot="${x.id}"><div class="bh"><b>${x.g.pair}</b><span class="mu">${dir(x.g)} · ${tfl(x.g.tf)} · ${x.g.lev}× · ${x.ex} · з ${tm(x.t0)}</span><span class="st" style="margin-left:auto">${x.on?'Працює':'Пауза'}</span></div>${!s.length&&!p?`<p class="mu bwait">${x.on?'Чекає на сигнал':'На паузі'} · перевірка після закриття свічки ${tfl(x.g.tf)}</p>`:''}${x.trunc?'<p class="mu" style="margin:0">Історії бракує, щоб відтворити бота з самого запуску: показано з найранішої доступної свічки.</p>':''}
 ${srvLine(x)}${p&&p.ta&&+x.g.trail>0&&p.peak>0?`<p class="mu" style="margin:0">Тейк-профіт досягнуто — працює трейлінг: угода закриється, коли ціна відкотиться на ${n2(x.g.trail*100,2).replace(/,?0+$/,'')} % від ${x.g.d>0?'максимуму':'мінімуму'} ${n2(p.peak,p.peak<1?5:2)} (≈ ${n2(p.peak*(1-x.g.d*x.g.trail),p.peak<1?5:2)}).</p>${trHint(x,p)}`:''}${fdLine(x,p)}${x.tn?((ex,r)=>r&&(r.worst>=.1||r.zero)?`<p class="rndw" style="margin:0">${rndText(r,ex,1)}</p>`:'')(x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',rndInfo(x.g,x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit')):''}<div class="bm"><div>PnL з відкритою<b class="${cls(v)}">${f(v)}</b></div><div>Угод / win<b>${s.length} / ${s.length?Math.round(w/s.length*100):0}%</b></div><div>Позиція<b>${p?p.n+' з '+x.g.orders+' орд.':'немає'}</b></div><div>Просадка<b class="${cls(x.dd)}">${f(x.dd,0)}</b></div></div>
-<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button><button class="b sm" data-a="ed" data-id="${x.id}">Редагувати</button>${x.srv&&x.rid?`<button class="b sm" data-a="ai" data-id="${x.id}">Запитати AI</button>`:''}${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden><button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
+<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button><button class="b sm" data-a="ed" data-id="${x.id}">Редагувати</button>${x.srv&&x.rid?`<button class="b sm" data-a="ai" data-id="${x.id}">Запитати AI</button>`:''}${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden>${typeof srvCmdBtns==='function'?srvCmdBtns(x):''}<button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
 function lstTo(el,list){if(!el)return;const on=list.filter(x=>x.on),off=list.filter(x=>!x.on);el.innerHTML=list.length?(on.length?`<h3>Працюють · ${on.length}</h3>`+on.map(bcard).join(''):'')+(off.length?`<h3>На паузі · ${off.length}</h3>`+off.map(bcard).join(''):''):'<p class="mu">Ботів ще немає. Запустіть топового бота, скористайтеся Авто-майстром або створіть свого.</p>'}
 function lst(){lstTo($('#bl'),bots);const q=($('#bq')&&$('#bq').value||'').trim().toUpperCase();lstTo($('#bl2'),q?bots.filter(x=>x.g.pair.includes(q)):bots);upd()}
 const jrn=x=>x.b.tr.length?x.b.tr.slice(-10).reverse().map(t=>`<div class="tr"><span>${tm(t.ts)}, ордерів ${t.n}${t.liq?', ліквідація':t.sl?', SL':''}</span><span class="mono ${cls(t.pnl)}">${f(t.pnl)}</span></div>`).join(''):'<p class="mu">Угод ще немає.</p>';
@@ -1043,6 +1043,7 @@ if(a==='g'){const g=t.closest('.bc').querySelector('.gr');g.hidden=!g.hidden;if(
 if(a==='j'){const j=t.closest('.bc').querySelectorAll('.gr')[1];j.hidden=!j.hidden;j.innerHTML=jrn(x);return}
 if(a==='c'){if(typeof edEnd==='function')edEnd();fill(x.g,x.ex);go('bd');return}
 if(a==='ed'){edStart(x);return}
+if(a==='cmd'){srvCmd(x,t.dataset.k);return}
 if(a==='ai'){aiOpen({type:'bot',id:x.rid},`Проаналізуй бота ${x.g.pair}: стан, позицію, ризики й останні події. Чи все гаразд?`);return}
 if(a==='srv'||a==='tn')x.demo=0; // користувач узяв демо-бота в роботу — тепер це звичайний бот
 if(a==='srv'){srvToggle(x);return}
@@ -1898,14 +1899,15 @@ toast(x.srv?'Бот '+x.g.pair+' переходить на сервер (до 5 
 async function srvLoad(){if(!SB||!CLOUD.u||SRV.busy)return;const L=bots.filter(x=>x.srv&&x.rid);if(!L.length)return;SRV.busy=1;try{
 const ids=L.map(x=>x.rid),s=await SB.from('bot_state').select('bot_id,state,updated_at').in('bot_id',ids);
 if(!s.error)for(const r of s.data||[]){const x=L.find(y=>y.rid===r.bot_id),st=r.state||{};if(!x||!st.b)continue;
-const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0}
+const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0;x.srvSa=!!(st.fl&&st.fl.sa);x.srvMc=!!(st.fl&&st.fl.mc)}
 const e=await SB.from('bot_events').select('id,bot_id,level,message,created_at').in('bot_id',ids).order('created_at',{ascending:false}).limit(30);
 if(!e.error){let add=0;for(const r of (e.data||[]).slice().reverse()){if(SRV.seen.has(r.id))continue;SRV.seen.add(r.id);FEED.unshift({t:new Date(r.created_at).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),m:'☁ '+r.message});add++}
 if(add){FEED=FEED.slice(0,60);sv('zfeed',FEED);feedR()}}
 lst();upd();if(CUR==='mon')monR()}catch(er){}finally{SRV.busy=0}}
 const srvMisL=x=>{const m=x.srvMis;if(!x.tn||!m||!m.t||(m.k!=='xc'&&!m.on))return'';return`<p class="${m.k==='xc'?'mu':'dn'}" style="margin:0">${m.k==='xc'?'ℹ':'⚠'} Звірка з біржею: ${esc(m.t)}${m.k==='orphan'?' — перевірте позицію в Bybit Demo':''}</p>`};
 const srvRlL=x=>x.srv&&x.tn&&x.srvRl&&x.srvRl.t?`<p class="dn" style="margin:0">⏸ Нові угоди призупинено лімітом ризику: ${esc(x.srvRl.t)}</p>`:'';
-const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
+const srvSaL=x=>x.srv&&x.srvSa?`<p class="dn" style="margin:0">⏸ Пауза до кінця угоди: нових угод бот не відкриватиме${x.b.pos?', поточну доведе до кінця':''}. Відновити — «⋯» → «Відновити нові угоди».</p>`:'';
+const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+srvSaL(x)+(x.srvMc?`<p class="mu" style="margin:0">⏳ Угода закривається за ринком…</p>`:'')+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
 
 /* ---------- Моніторинг серверних ботів ----------
    Для кожного бота «Сервер 24/7»: коли сервер востаннє його обробляв, позиція моделі, стан на демо-біржі
@@ -1950,6 +1952,27 @@ el.innerHTML=`<div class="k">${K('Ботів на сервері',`${run.length}
 ${[...L].sort((a,b)=>(b.on-a.on)||a.g.pair.localeCompare(b.g.pair)).map(monBot).join('')}</div>`;
 $('#monr').onclick=()=>{MON.at=0;monR(1)}}
 setInterval(()=>{if(document.hidden)return;srvLoad();if(CUR==='mon'&&Date.now()-MON.at>60e3)monEv().then(()=>monR())},60000);
+
+/* ---------- Ручні команди серверного бота (меню «⋯» на картці) ----------
+   Браузер лише записує команду в public.bot_commands; сервер (runner) виконує її за кілька секунд
+   у тому ж порядку, що й сигнали: спершу стан, потім біржа. Знімаються лише ордери цього бота. */
+const CMDQ={
+  close:p=>`Закрити угоду ${p} за ринком зараз?\n\nСервер зніме лімітні докупівлі бота й закриє позицію ринковим ордером. Після цього бот, як завжди, шукатиме новий вхід.`,
+  cancel:p=>`Скасувати угоду ${p}?\n\nБот перестане її вести: зніме свої лімітні докупівлі, а позиція ЛИШИТЬСЯ на біржі — закрийте її вручну на біржі. Нова угода бота на цій парі додалася б до неї, тож краще закрити позицію до наступного входу.`,
+  stop_after:p=>`Пауза до кінця угоди ${p}?\n\nПоточну угоду бот доведе до кінця (TP, SL, докупівлі), а нових не відкриватиме, доки ви не натиснете «Відновити нові угоди».`,
+  resume:null};
+const CMDN={close:'Закрити за ринком',cancel:'Скасувати угоду',stop_after:'Пауза до кінця угоди',resume:'Відновити нові угоди'};
+function srvCmdBtns(x){if(!x.srv||!x.rid||!x.on||!x.srvSt||!CLOUD.u)return'';const p=x.b&&x.b.pos,B=(k,c='')=>`<button class="b sm ${c}" data-a="cmd" data-k="${k}" data-id="${x.id}">${CMDN[k]}</button>`;
+return(p?B('close','d')+B('cancel'):'')+(x.srvSa?B('resume','p'):B('stop_after'))}
+async function srvCmd(x,k){if(!CMDN[k]||!SB||!CLOUD.u||!x.rid)return;if(CMDQ[k]&&!confirm(CMDQ[k](x.g.pair)))return;
+try{const r=await SB.from('bot_commands').insert({bot_id:x.rid,kind:k}).select('id').single();
+if(r.error){if(r.error.code==='23505')return toast('Попередня команда для '+x.g.pair+' ще виконується — зачекайте кілька секунд.');throw new Error(r.error.message)}
+toast(CMDN[k]+': команду надіслано на сервер ('+x.g.pair+'). Виконання — за кілька секунд.');srvCmdWait(x,r.data.id,0)}
+catch(e){toast('Не вдалося надіслати команду: '+e.message)}}
+/* дочекатися результату команди (до ~2 хв) і показати його */
+async function srvCmdWait(x,id,n){await new Promise(r=>setTimeout(r,n?10000:6000));try{const r=await SB.from('bot_commands').select('status,result').eq('id',id).single();
+if(!r.error&&r.data&&r.data.status!=='new'){toast(x.g.pair+': '+(r.data.status==='done'?'✓ ':'Не виконано: ')+(r.data.result||'готово'));srvLoad();return}}catch(e){}
+if(n<12)srvCmdWait(x,id,n+1);else toast(x.g.pair+': сервер ще не виконав команду — він підхопить її під час найближчого запуску (до 5 хв).')}
 /* ---------- Тестнет Binance Futures: ключі на сервері, справжні ордери на тестових грошах ----------
    Ключі API зберігаються в Supabase Vault (RPC ex_save / ex_delete), ордери надсилає Edge Function `exchange`,
    жорстко прив'язана до testnet.binancefuture.com. Браузер ключів не бачить. */

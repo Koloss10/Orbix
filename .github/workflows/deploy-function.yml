@@ -49,4 +49,4 @@ jobs:
           esac
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Немає секрету SUPABASE_ACCESS_TOKEN"; exit 1; }
           echo "Викладаю $FN з $(git rev-parse --short HEAD), файли:"; ls -1 "supabase/functions/$FN"
-          supabase functions deploy "$FN" --project-ref "$PROJECT_REF" --use-api $JWT
+          supabase functions deploy "$FN" --project-ref "$PROJECT_REF" --use-api --yes $JWT
