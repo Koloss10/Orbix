@@ -34,7 +34,7 @@ function fakeEx({ px = 2.5, native = true } = {}) {
       S.calls.push('limit'); S.orders.push({ link, side, qty, price, status: 'New' }); return { id: S.orders.length, qty, price, link };
     },
     async byLink(_s, link) { const o = S.orders.find((x) => x.link === link); return o ? { id: 1, qty: o.qty, price: o.price, status: o.status, link } : null; },
-    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, price: o.price, qty: o.qty })); },
+    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, side: o.side === 'BUY' ? 'Buy' : 'Sell', price: o.price, qty: o.qty })); },
     async cancel(_s, link) { S.calls.push('cancel'); const o = S.orders.find((x) => x.link === link && x.status === 'New'); if (o) o.status = 'Cancelled'; },
     async cancelAll() { S.calls.push('cancelAll'); for (const o of S.orders) if (o.status === 'New') o.status = 'Cancelled'; },
     async tradingStop(_s, { tp, sl, ts = 0, ap = 0 }) { S.calls.push('tradingStop'); if (ts && S.rejectTs) throw new Error('trailing stop distance invalid'); if (S.pos) { S.pos.tp = tp; S.pos.sl = sl; S.pos.ts = ts; S.pos.ap = ap; } },

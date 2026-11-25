@@ -2,6 +2,7 @@
 // Чиста логіка без мережі (тестується в Node: tests/card.test.mjs). Причини входу — з тих самих індикаторів
 // і фільтрів, що й вхід рушія (engine.js), тож пояснення збігається з тим, чому модель справді увійшла.
 // Тексти — за шаблонами, без AI.
+import { slStop } from "./mirror.js";
 import { SIG, ema, rsi, bbands, cci, stoch, macdH, whale, liq, act, casc, htf, lv, tfMs } from "./engine.js";
 
 const cl = (A) => A.map((x) => x.c);
@@ -56,7 +57,9 @@ export function cardLines(g, pos) {
   if (!pos || !(pos.first > 0)) return {};
   const R = lv(g, pos.first, null), avg = pos.q > 0 ? pos.cost / pos.q : R.avg, d = g.d;
   const dca = R.L.slice(1).map((x, j) => ({ k: j + 1, p: x.p, done: j + 1 < (pos.n || 1) }));
-  const tp = g.s1 > 0 ? 0 : g.tp > 0 ? avg * (1 + d * g.tp) : 0, sl = pos.t1 && pos.be ? pos.be : g.sl > 0 ? avg * (1 - d * g.sl) : 0;
+  // SL — там, де модель реально зупиниться: після останньої досяжної докупівлі (так само стоїть і на біржі, mirror.js slStop)
+  const rest = pos.t1 ? [] : dca.filter((x) => !x.done).map((x) => ({ price: x.p, qty: R.L[x.k].s / x.p }));
+  const tp = g.s1 > 0 ? 0 : g.tp > 0 ? avg * (1 + d * g.tp) : 0, sl = pos.t1 && pos.be ? pos.be : g.sl > 0 ? slStop(g, { q: pos.q > 0 ? pos.q : R.L[0].s / R.L[0].p, avg }, rest) : 0;
   const L = +g.fut ? g.lev || 1 : 1, liqP = L > 1 ? avg * (1 - d * Math.max(1 / L - 0.005, 0)) : 0;
   return { entry: pos.first, avg, dca, tp, sl, liq: liqP };
 }
@@ -65,7 +68,8 @@ export function cardLines(g, pos) {
 export function cardSpec({ g, ev, pos, candles, reasons = [], exchange, theme = "dark", n = 80, parts = null, trade = null }) {
   const W = tfMs(g.tf || 1), cs = (candles || []).slice(-n).map((c) => ({ t: c.t, o: c.o, h: c.h, l: c.l, c: c.c }));
   const kind = ev.kind === "close" ? (trade && trade.xc ? "xclose" : g.trail > 0 ? "trail" : "tp") : ev.kind;
-  const title = kind === "dca" ? `Докупівля ${ev.n - 1} з ${g.orders - 1}` : undefined;
+  // нумерація як у налаштуваннях бота: вхід — ордер 1, докупівлі — ордери 2…orders
+  const title = kind === "dca" ? `Докупівля: ордер ${ev.n} з ${g.orders}` : undefined;
   const lines = pos ? cardLines(g, pos) : {};
   if (["tp", "trail", "sl", "liq", "xclose"].includes(kind) && ev.price > 0) lines.exit = ev.price;
   const marks = [];

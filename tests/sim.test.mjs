@@ -66,7 +66,7 @@ function simEx() {
     },
     async limit(_s, side, qty, price, link) { order(link, { side, qty, price, status: 'New' }); return { id: S.orders.length, qty, price, link }; },
     async byLink(_s, link) { const o = S.orders.find((x) => x.link === link); return o ? { id: 1, qty: o.qty, price: o.price, status: o.status, link } : null; },
-    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, price: o.price, qty: o.qty })); },
+    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, side: o.side === 'BUY' ? 'Buy' : 'Sell', price: o.price, qty: o.qty })); },
     async cancel(_s, link) { const o = S.orders.find((x) => x.link === link && x.status === 'New'); if (o) o.status = 'Cancelled'; },
     async cancelAll() { for (const o of S.orders) if (o.status === 'New') o.status = 'Cancelled'; },
     async tradingStop(_s, { tp, sl, ts = 0, ap = 0 }) { const p = S.pos; if (!p) { const e = new Error('position is zero'); e.code = 10001; throw e; } Object.assign(p, { tp, sl, ts, ap }); if (!ts) { p.act = 0; } },
@@ -354,4 +354,47 @@ test('Кілька ботів одночасно на одному рахунк�
   assert.ok(exOf.DOT.S.orders.every((o) => !o.link || o.link.startsWith(pre(dot.id))));
   assert.equal(exOf.TON.S.dup + exOf.DOT.S.dup, 0);
   assert.equal(dup.st.fl.mis, undefined, 'у дубліката немає звірки — і немає хибної тривоги');
+});
+
+/* Знахідка 25.11 (XMR): стоп на біржі рахувався від середньої ціни на момент останньої звірки і оновлювався
+   раз на 5 хв. При різкому падінні крізь кілька докупівель за ці хвилини біржа закрила б позицію за старим,
+   вищим стопом, хоча модель (SL від середньої, що зсувається з кожною докупівлею) ще докуповувала б.
+   Тепер на біржі одразу стоїть кінцевий стоп — після останньої досяжної докупівлі. */
+import { Bot } from '../supabase/functions/runner/engine.js';
+import { slStop } from '../supabase/functions/runner/mirror.js';
+async function openedOnSim(cfg) {
+  const g = botConfig({ pair: 'SIM/USDT', tf: 1, fut: 1, lev: 1, orders: 5, base: 20, step: 0.015, smul: 1, mult: 1.3, tp: 0.01, sl: 0.05, d: 1, ...cfg });
+  const ex = simEx(); ex.S.px = 2.5; ex.S.slip = 0; ex.S.t = T0;
+  const b = new Bot(g, null, null); b.step(Math.floor(T0 / H), { t: T0, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  let st = null; const now = T0 + H + 3e5;
+  await handleBot({ bot: { id: BOT, state: null }, g, r: { state: { b: { pos: b.pos, tr: [], cd: 0, cum: 0 }, lt: T0 + H }, events: [{ kind: 'open', notional: b.pos.cost, price: 2.5, t: T0 + H }] },
+    symbol: 'SIMUSDT', mirror: true, native: true, ex, now, save: async (x) => { st = JSON.parse(JSON.stringify(x)); return true; }, log: async () => {}, notify: async () => {} });
+  return { g, ex, st };
+}
+
+test('Кінцевий стоп на біржі: різке падіння крізь усі докупівлі за одну мить не закриває позицію раніше, ніж модель', async () => {
+  for (const d of [1, -1]) {
+    const { g, ex } = await openedOnSim({ d });
+    const lv = ladder(g, 2.5, F), last = lv[lv.length - 1].price;
+    assert.equal(lv.length, 4);
+    assert.ok(d > 0 ? ex.S.pos.sl < last : ex.S.pos.sl > last, `SL ${ex.S.pos.sl} має бути за останньою докупівлею ${last}`);
+    const crash = d > 0 ? Math.max(ex.S.pos.sl * 1.002, last * 0.999) : Math.min(ex.S.pos.sl * 0.998, last * 1.001);
+    ex.at(crash);
+    assert.ok(ex.S.pos, `${d > 0 ? 'Long' : 'Short'}: біржа не закрила позицію за старим стопом`);
+    assert.equal(ex.S.orders.filter((o) => o.status === 'New').length, 0, 'усі докупівлі виконались');
+    // модель на тій самій свічці: усі докупівлі, без виходу
+    const b = new Bot(g, null, null); b.step(0, { t: T0, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+    b.step(1, { t: T0 + H, o: 2.5, h: d > 0 ? 2.5 : crash, l: d > 0 ? crash : 2.5, c: crash }, false);
+    assert.ok(b.pos && b.pos.n === 5 && b.tr.length === 0, 'модель теж тримає позицію з усіма докупівлями');
+  }
+});
+
+test('Кінцевий стоп: рівень за поточним стопом модель не докуповує — стоп на ньому й зупиняється', () => {
+  const g = botConfig({ pair: 'SIM/USDT', fut: 1, lev: 1, d: 1, sl: 0.02, orders: 4, step: 0.015, mult: 1, base: 10 });
+  const rest = [{ price: 2.4625, qty: 4 }, { price: 2.4256, qty: 4 }, { price: 2.3892, qty: 4 }];
+  const s = slStop(g, { q: 4, avg: 2.5 }, rest);
+  // після першої докупівлі середня ≈2.48125, SL ≈2.4316 > 2.4256 — далі модель не докуповує
+  assert.ok(Math.abs(s - ((2.5 + 2.4625) / 2) * 0.98) < 1e-9, String(s));
+  assert.equal(slStop(g, { q: 4, avg: 2.5 }, []), 2.5 * 0.98, 'без ордерів на біржі — звичайний стоп від середньої');
+  assert.equal(slStop({ ...g, sl: 0 }, { q: 4, avg: 2.5 }, rest), 0);
 });
