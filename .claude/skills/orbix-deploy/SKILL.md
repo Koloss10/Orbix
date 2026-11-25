@@ -45,6 +45,7 @@ npm test         # усі тести
 - `tg-notify/*` → `tg-notify`.
 
 ## 4. Розгортання
+- **Основний спосіб (з 25.11):** GitHub Actions «Deploy Supabase function» (`.github/workflows/deploy-function.yml`). Запуск: `gh api repos/Koloss10/Orbix/actions/workflows/deploy-function.yml/dispatches -f ref=<гілка> -f inputs[function]=<runner|exchange|ai-assistant|tg-card>`, потім дочекатися завершення (`actions/runs`). Офіційний CLI викладає всю теку функції; секрет `SUPABASE_ACCESS_TOKEN` у репозиторії. Ручний `deploy_edge_function` — лише для малих функцій: `runner` уже завеликий для одного виклику.
 - `deploy_edge_function` завжди отримує **всі** файли функції, а не лише змінені, бо файл, якого немає у виклику, зникає з функції.
 - Вміст файлів бери з актуальних локальних файлів (`cat`) дослівно.
 - `entrypoint_path: index.ts`, `verify_jwt` як у списку вище.
