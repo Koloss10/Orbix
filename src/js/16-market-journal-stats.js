@@ -32,7 +32,7 @@ let JF={bot:0,res:0};
 function jr(){$('#jfl').innerHTML=sel('jf-b','Бот',[[0,'Усі боти'],...bots.map(x=>[x.id,ttl(x)])],JF.bot)+sel('jf-r','Результат',[[0,'Усі'],[1,'Прибуткові'],[-1,'Збиткові'],[2,'Stop-Loss і ліквідації']],JF.res);
 $('#jfl').onchange=()=>{JF={bot:+$('#jf-b').value,res:+$('#jf-r').value};jr()};
 const rows=[];bots.forEach(x=>{if(JF.bot&&x.id!==JF.bot)return;x.b.tr.forEach(t=>{if(JF.res===1&&t.pnl<=0)return;if(JF.res===-1&&t.pnl>0)return;if(JF.res===2&&!t.sl&&!t.liq)return;rows.push({x,t})})});rows.sort((a,b)=>(b.t.ts||0)-(a.t.ts||0));
-$('#jt').innerHTML='<tr><th>Час</th><th>Бот</th><th>Ордерів</th><th>Вихід</th><th>Фандінг</th><th>PnL</th></tr>'+(rows.length?rows.slice(0,200).map(({x,t})=>`<tr><td class="mono">${tm(t.ts)}</td><td>${x.g.pair} ${dir(x.g)}</td><td>${t.n}</td><td>${t.liq?'ліквідація':t.sl?'SL':'TP'}</td><td class="mono ${x.g.fut?cls(fdOf(t)):''}">${x.g.fut?f(fdOf(t)):'—'}</td><td class="mono ${cls(t.pnl)}">${f(t.pnl)}</td></tr>`).join(''):'<tr><td colspan="6" class="mu">Угод ще немає.</td></tr>')}
+$('#jt').innerHTML='<tr><th>Час</th><th>Бот</th><th>Ордерів</th><th>Вихід</th><th>Фандінг</th><th>PnL</th></tr>'+(rows.length?rows.slice(0,200).map(({x,t})=>`<tr><td class="mono">${tm(t.ts)}</td><td>${x.g.pair} ${dir(x.g)}</td><td>${t.n}</td><td>${t.man?'вручну':t.cx?'скасовано':t.xs?'сигнал':t.liq?'ліквідація':t.sl?'SL':'TP'}</td><td class="mono ${x.g.fut?cls(fdOf(t)):''}">${x.g.fut?f(fdOf(t)):'—'}</td><td class="mono ${cls(t.pnl)}">${f(t.pnl)}</td></tr>`).join(''):'<tr><td colspan="6" class="mu">Угод ще немає.</td></tr>')}
 
 /* ---------- стрес-тест ---------- */
 let SXG=null;

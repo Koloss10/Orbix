@@ -73,3 +73,49 @@ test('Сигнали Keltner і «% зміни ціни»', () => {
   const B = Array.from({ length: 30 }, (_, i) => C(i, 100, 101, 99, 100)); B.push(C(30, 100, 106, 100, 105));
   assert.equal(E.SIG.pc(B, g).at(-1), -1);
 });
+
+// ---------- вихід за сигналом ----------
+// 40 рівних свічок по 100, 24 свічки падіння до 95 (сигнал «% зміни ціни» Long: −3 % за 24 свічки),
+// потім 30 свічок відновлення до 100 (сигнал Short: +3 % за 24 свічки → вихід Long)
+const pcSeries = () => { const A = []; for (let i = 0; i < 40; i++) A.push(C(i, 100, 100, 100, 100));
+  for (let i = 0; i < 24; i++) { const c = 100 - 5 * (i + 1) / 24; A.push(C(40 + i, c, c, c, c)); }
+  for (let i = 0; i < 30; i++) { const c = 95 + 5 * (i + 1) / 30; A.push(C(64 + i, c, c, c, c)); } return A; };
+const gx = (o) => G({ sg: ['pc'], k: 1, xs: 'pc', tp: 0.5, sl: 0.5, ...o });
+
+test('Вихід за сигналом: Long закривається за ринком на закритті свічки, коли «% зміни» дає протилежний сигнал', () => {
+  const A = pcSeries(), g = gx({ ftk: 0.0005, fmk: 0.0002 }), e = E.entry(A, g), R = E.run(A, e, g, 0, 0, 0), t = R.b.tr[0]; // тейкер 0.05 %, мейкер 0.02 %
+  assert.ok(e.x && e.x.length === A.length, 'масив виходів є');
+  assert.equal(R.b.tr.length, 1); assert.equal(t.xs, 1); assert.ok(!t.sl && !t.liq);
+  const ent = t.f[0].p, ex = t.f.at(-1).p, q = 100 / ent, ts = t.ts, i = A.findIndex((r) => r.t === ts);
+  near(ex, A[i].c, 1e-9, 'вихід за ціною закриття'); assert.ok(A[i].c / A[i - 24].c - 1 >= 0.03, 'на цій свічці сигнал Short');
+  const i0 = A.findIndex((r) => r.t === t.f[0].t), first = A.findIndex((r, j) => j > i0 && e.x[j] && r.c >= ent);
+  assert.equal(i, first, 'вийшов на першій свічці після входу з сигналом і прибутком');
+  near(t.pnl, q * ex - 100 - 0.0005 * 100 - 0.0005 * q * ex, 1e-9, 'PnL: комісії входу й виходу — тейкер');
+  assert.equal(R.b.pos, null);
+});
+
+test('Вихід за сигналом: мін. прибуток більший за досяжний — позиція лишається', () => {
+  const A = pcSeries(), g = gx({ xmin: 0.5 }), R = E.run(A, E.entry(A, g), g, 0, 0, 0);
+  assert.equal(R.b.tr.length, 0); assert.ok(R.b.pos);
+});
+
+test('Вихід за сигналом: без індикатора, з невідомою назвою й службовим ключем — не діє', () => {
+  const A = pcSeries();
+  for (const xs of ['', 'нема', 'constructor', '__proto__']) {
+    const g = gx({ xs }), e = E.entry(A, g); assert.equal(e.x, undefined, `xs=${xs}`);
+    assert.equal(E.run(A, e, g, 0, 0, 0).b.tr.length, 0);
+  }
+});
+
+test('Масив виходів переживає e.slice() (бектест і walk-forward працюють зі зрізами)', () => {
+  const A = pcSeries(), g = gx(), e = E.entry(A, g), s = e.slice(10), s2 = s.slice(5, 40);
+  assert.equal(s.length, A.length - 10); assert.deepEqual(s.x, e.x.slice(10)); assert.equal(s2.x.length, 35); assert.deepEqual(s2.x, e.x.slice(15, 50));
+  const full = E.run(A, e, g, 0, 0, 0), part = E.run(A.slice(10), s, g, 0, 0, 0);
+  assert.equal(part.b.tr.length, full.b.tr.length); assert.equal(part.b.tr[0].xs, 1);
+});
+
+test('Вихід за сигналом: Short закривається протилежним сигналом (Long-сигнал падіння)', () => {
+  // дзеркальний ряд: зростання → Short-вхід, потім падіння ≥ 3 % за 24 свічки → вихід
+  const A = pcSeries().map((r, i) => C(i, 200 - r.o, 200 - r.l, 200 - r.h, 200 - r.c)), g = gx({ d: -1 }), R = E.run(A, E.entry(A, g), g, 0, 0, 0);
+  assert.equal(R.b.tr.length, 1); assert.equal(R.b.tr[0].xs, 1);
+});

@@ -950,3 +950,15 @@ test('Реінвест: драбина докупівель на біржі у �
   const again = r1.ex.S.orders.filter((o) => o.status === 'New').map((o) => o.qty);
   assert.deepEqual(again, r1.q);
 });
+
+test('Реінвест і часткове виставлення: докладена сходинка — у масштабі угоди моделі (bf)', async () => {
+  const ex = fakeEx(), fl = {}, bf = 1.5, gb = { ...gl, base: gl.base * bf };
+  const a = actionsFor([{ kind: 'open', notional: 90, price: 2.5, t: T, bf }], BOT, true)[0];
+  await execute(ex, a, { ...ctxL, fl });
+  const L = ladder(gb, 2.5, F), L0 = ladder(gl, 2.5, F);
+  assert.equal(ex.S.orders.find((o) => o.link === fl.lb + 'd1').qty, L[0].qty);
+  ex.hit(L[0].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2, bf } });
+  const d2 = ex.S.orders.find((o) => o.link === fl.lb + 'd2');
+  assert.equal(d2.qty, L[1].qty); assert.ok(d2.qty > L0[1].qty, 'не в базовому масштабі');
+});

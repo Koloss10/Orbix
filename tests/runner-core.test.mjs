@@ -130,3 +130,24 @@ test('Реінвест: подія входу несе множник bf, кол
   assert.equal(opens[0].bf, undefined, 'перша угода — без прибутку, без множника');
   assert.ok(opens.some((e) => e.bf > 1), 'після прибуткових угод множник > 1');
 });
+
+test('Вихід за сигналом на сервері: подія close з прапорцем xs і текстом', () => {
+  const cs = series(900), start = 400, g0 = { ...g, tp: 0.2 }, gs = { ...g0, xs: 'rsi' }; // TP далеко: сигнал RSI виходу настає раніше за тейк-профіт
+  let st = processBot({ g: gs, state: null, candles: cs.slice(0, start), now: cs[start - 1].t + H }).state, evs = [];
+  for (let i = start + 1; i <= cs.length; i++) { const r = processBot({ g: gs, state: st, candles: cs.slice(Math.max(0, i - 300), i), now: cs[i - 1].t + H }); evs.push(...r.events); st = r.state; }
+  const ex = evs.filter((e) => e.kind === 'close' && e.xs === 1);
+  assert.ok(ex.length > 0, 'є закриття за сигналом'); assert.match(eventText(ex[0], gs), /за сигналом виходу/);
+  const base = evs.filter((e) => e.kind === 'close' && !e.xs).length, ref = [];
+  let s2 = processBot({ g: g0, state: null, candles: cs.slice(0, start), now: cs[start - 1].t + H }).state;
+  for (let i = start + 1; i <= cs.length; i++) { const r = processBot({ g: g0, state: s2, candles: cs.slice(Math.max(0, i - 300), i), now: cs[i - 1].t + H }); ref.push(...r.events); s2 = r.state; }
+  assert.equal(ref.filter((e) => e.xs).length, 0, 'без xs прапорця немає');
+});
+
+test('Зупинка після N угод: збережений стан без лічильника nd (бот до оновлення) рахує вже закриті угоди', () => {
+  const cs = series(900), start = 400, gm = { ...g, maxd: 2 };
+  const tr = [{ ts: 1, pnl: 1, n: 1, f: [{ t: 1, p: 1, k: 'e' }, { t: 2, p: 1, k: 'x' }] }, { ts: 2, pnl: 1, n: 1, f: [{ t: 1, p: 1, k: 'e' }, { t: 2, p: 1, k: 'x' }] }];
+  const st = { b: { pos: null, tr, cd: 0, cum: 2 }, pk: 0, dd: 0, lt: cs[start - 1].t + H };
+  let r = { state: st }, opens = 0;
+  for (let i = start + 1; i <= cs.length; i++) { r = processBot({ g: gm, state: r.state, candles: cs.slice(Math.max(0, i - 300), i), now: cs[i - 1].t + H }); opens += r.events.filter((e) => e.kind === 'open').length; }
+  assert.equal(opens, 0, 'ліміт 2 угод уже досягнуто'); assert.equal(r.state.b.nd, 2);
+});
