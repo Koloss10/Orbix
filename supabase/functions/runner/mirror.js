@@ -274,7 +274,7 @@ export async function onReconcile({ fl, mp, out, g, log, notify, now = Date.now(
     const hint = d.k === "orphan" ? " Бот нею не керує: перевірте позицію в Bybit Demo і за потреби закрийте її там." : d.k === "nopos" ? " Нові ордери за цією угодою на біржу не надсилатимуться; бот продовжить після її закриття в моделі." : " Перевірте позицію в Bybit Demo.";
     const m = `Звірка з біржею: ${d.t}.${hint}`;
     await log("warn", m);
-    await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+    await notify(`Orbix (сервер): ${g.pair} — ${m}`, "other");
   }
   return fl.mis;
 }
@@ -376,8 +376,10 @@ export async function results(ex, { symbol, xr }) {
  *       ex — адаптер біржі або null (немає ключів); mirror — чи дублювати угоди; native — рідний режим Bybit.
  * risk — ліміти ризику для ботів, що торгують на біржі: { blk: null | { k, t } (runner/risk.js) }; r.skipped — скільки
  *       сигналів входу модель пропустила через ліміт. fl.rl — діюче обмеження (для картки й моніторингу).
+ * notify(text, cat) — cat: вид події рушія (open, dca, close, sl, liq, part), xclose, risk, error або other (фільтр подій у налаштуваннях).
+ * card(ev) — необов'язково: надіслати картку сигналу замість тексту; true — надіслано (текст тоді не потрібен).
  */
-export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, risk = null, now = Date.now() }) {
+export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, card = null, risk = null, now = Date.now() }) {
   const pend = [...(Array.isArray(bot.state?.pend) ? bot.state.pend : []), ...(mirror ? actionsFor(r.events, bot.id, native) : [])];
   const fl = { ...(bot.state?.fl || {}) }, fl0 = JSON.stringify(fl);
   if (fl.parked && native) fl.rs = 1; // бот знято з паузи — відновити драбину на біржі (повторюється, доки не вдасться)
@@ -403,9 +405,9 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   for (const ev of r.events) {
     const text = eventText(ev, g);
     await log(ev.kind === "liq" || ev.kind === "sl" ? "warn" : "info", text, ev);
-    await notify(text);
+    if (!(card && (await card(ev, text)))) await notify(text, ev.kind);
   }
-  for (const [lvl, m, tg] of rlMsg) { await log(lvl, m); if (tg) await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+  for (const [lvl, m, tg] of rlMsg) { await log(lvl, m); if (tg) await notify(`Orbix (сервер): ${g.pair} — ${m}`, "risk"); }
   if (!mirror) return { saved: true };
   if (!ex) {
     if (pend.length) await log("error", "Ключі біржі не підключено — угоди не продубльовано");
@@ -426,7 +428,7 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       const b = { ...a, tries: (a.tries || 0) + 1 };
       changed = true;
       exErr(e.message);
-      if (b.tries >= MAX_TRIES) { const m = `Біржа: дію «${a.kind}» знято після ${MAX_TRIES} спроб — ${e.message}`; await log("error", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+      if (b.tries >= MAX_TRIES) { const m = `Біржа: дію «${a.kind}» знято після ${MAX_TRIES} спроб — ${e.message}`; await log("error", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`, "error"); }
       else { await log("error", `Біржа: ${e.message} (спроба ${b.tries} з ${MAX_TRIES}, повторю)`); left.push(b); stop = true; }
     }
   }
@@ -445,11 +447,11 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
           await cancelMine(ex, symbol, bot.id);
           const o = await ex.market(symbol, gp.amt > 0 ? "SELL" : "BUY", Math.abs(gp.amt), true);
           const m = `Bybit Demo: угоду вже закрила біржа, але після цього виконалась залишкова лімітна докупівля — зайву позицію ${Math.abs(gp.amt)} закрито ринком${o.price > 0 ? ` за ${o.price}` : ""}`;
-          await log("warn", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+          await log("warn", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`, "other");
         }
       }
       const m = await sync(ex, { g, symbol, botId: bot.id, fl, out, mp });
-      if (m) { await log("info", m); if (/закрито (біржею|ринком)|не прийняла/.test(m)) await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+      if (m) { await log("info", m); if (/закрито (біржею|ринком)|не прийняла/.test(m)) await notify(`Orbix (сервер): ${g.pair} — ${m}`, /не прийняла/.test(m) ? "error" : "close"); }
       await onReconcile({ fl, mp, out, g, log, notify, now });
       const pv = bot.state?.xs, cur = out.pos;
       st.xs = snapshot(out); delete st.xe; // звірка пройшла — біржа відповідає
@@ -472,7 +474,9 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       if (gone) left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
       const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
       const m = `Біржа закрила позицію (TP/SL/трейлінг) — угоду моделі закрито за ціною біржі ${rec.px}, PnL моделі ${f2(l.pnl)} USDT${gone ? "; незавершені докупівлі скасовано" : ""}`;
-      await log("info", m, { kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t }); await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+      await log("info", m, { kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t });
+      const tx = `Orbix (сервер): ${g.pair} — ${m}`;
+      if (!(card && (await card({ kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t, trade: l }, tx)))) await notify(tx, "xclose");
       xcDone = true;
     }
   }

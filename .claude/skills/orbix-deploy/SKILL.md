@@ -11,8 +11,10 @@ description: Викласти зміни Orbix: тести й збірка, ро
 - Репозиторій `Koloss10/Orbix` (раніше `Koloss10/-zorya-trading-bots`; старі git-адреси GitHub перенаправляє), сайт https://koloss10.github.io/Orbix/, робоча гілка `claude/trading-bots-platform-nk0qa3`, злиття в `main` лише через PR.
 - Проєкт Supabase `krmnaypaitruhqgaxkfw`.
 - Функції:
-  - `runner`: `verify_jwt: false`, захист через `x-runner-secret`. Файли `index.ts, mirror.js, core.js, risk.js, engine.js, exchanges.ts, sign.js` (7).
+  - `runner`: `verify_jwt: false`, захист через `x-runner-secret`. Файли `index.ts, mirror.js, core.js, risk.js, signal.js, engine.js, exchanges.ts, sign.js` (8).
   - `exchange`: `verify_jwt: true`, потрібна MFA. Файли `index.ts, exchanges.ts, sign.js`.
+  - `tg-card`: `verify_jwt: false` (автентифікація в коді). Файли `index.ts, card.js`.
+  - `ai-assistant`: `verify_jwt: true`. Файли `index.ts, agent.js, provider.js, tools.js, docs.js, market.js, monitor.js, risk.js, engine.js` (9).
   - `tg-notify`: `index.ts`. Поточний `verify_jwt` дізнайся через `list_edge_functions` і залиш таким самим.
 - Розклад `orbix-runner` (pg_cron, кожні 5 хв) викликає `runner` через pg_net.
 

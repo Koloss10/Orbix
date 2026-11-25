@@ -76,3 +76,28 @@ export function cardSpec({ g, ev, pos, candles, reasons = [], exchange, theme = 
   return { theme, pair: g.pair, side: g.d < 0 ? -1 : 1, tf: g.tf || 1, lev: +g.fut ? g.lev || 1 : 1, exchange, time: ev.t || Date.now(),
     event: { kind, title }, candles: cs, lines, marks, reasons: kind === "open" ? reasons : [], result, parts };
 }
+
+/* ---------- налаштування карток (public.tg_card_prefs) ---------- */
+export const CARD_DEF = { enabled: true, events: { open: true, dca: true, close: true, risk: true, error: true, other: true },
+  parts: { chart: true, orders: true, tpsl: true, logic: true, result: true }, theme: "dark", candles: 80, bots_off: [] };
+/** рядок таблиці (або null — користувач ще нічого не налаштовував) → повні налаштування */
+export function cardPrefs(row) {
+  const r = row && typeof row === "object" ? row : {};
+  const pick = (o, d) => Object.fromEntries(Object.keys(d).map((k) => [k, o && typeof o[k] === "boolean" ? o[k] : d[k]]));
+  return { enabled: r.enabled !== false, events: pick(r.events, CARD_DEF.events), parts: pick(r.parts, CARD_DEF.parts),
+    theme: ["dark", "light", "auto"].includes(r.theme) ? r.theme : "dark", candles: [40, 80, 150].includes(+r.candles) ? +r.candles : 80,
+    bots_off: Array.isArray(r.bots_off) ? r.bots_off.map(String) : [] };
+}
+/** категорія повідомлення для фільтра подій: вид події рушія або категорія з mirror.js */
+export const catOf = (kind) => (["open", "dca"].includes(kind) ? kind : ["close", "sl", "liq", "part", "xclose"].includes(kind) ? "close" : ["risk", "error"].includes(kind) ? kind : "other");
+/** чи надсилати повідомлення цієї категорії взагалі */
+export const wantMsg = (p, kind) => p.events[catOf(kind)] !== false;
+/** чи надсилати картинкою (інакше — текстом): картки вимкнено, бот у винятках або подія без графіка */
+export const wantCard = (p, botId, kind) => p.enabled && !p.bots_off.includes(String(botId)) && ["open", "dca", "close", "sl", "liq", "xclose"].includes(kind);
+/** тема: «авто» — світла вдень за Києвом (07:00–19:00, UTC+2), темна вночі */
+export const themeFor = (p, now = Date.now()) => (p.theme !== "auto" ? p.theme : ((new Date(now).getUTCHours() + 2) % 24 >= 7 && (new Date(now).getUTCHours() + 2) % 24 < 19 ? "light" : "dark"));
+/** підпис під карткою (≤ 1024 символів у Telegram): текст події + коротка логіка */
+export function cardCaption(text, reasons = []) {
+  const t = [text, ...reasons.slice(0, 4).map((r) => "• " + r)].join("\n");
+  return t.length > 1000 ? t.slice(0, 997) + "…" : t;
+}

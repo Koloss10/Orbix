@@ -25,13 +25,13 @@ npm run verify   # check + test
 - `supabase/functions/{exchange,runner}/{exchanges.ts,sign.js}` ← `supabase/functions/_shared/`
 - `supabase/functions/ai-assistant/{engine.js,risk.js}` ← `runner/engine.js`, `runner/risk.js` (Orbix AI рахує ризик тією самою логікою)
 
-Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`, `ai-assistant/{index.ts,agent.js,provider.js,tools.js,docs.js}`.
+Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `runner/signal.js`, `tg-card/*`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`, `ai-assistant/{index.ts,agent.js,provider.js,tools.js,docs.js}`.
 
 ## Процес
 - Робота в гілці, злиття в `main` лише через PR після зеленого CI «Validate Orbix» (`.github/workflows/validate.yml`), злиття з `expectedHeadSha`, потім fast-forward робочої гілки до `main`.
 - Викладання на сервер — скіл **`orbix-deploy`** (`.claude/skills/orbix-deploy/`).
   - Проєкт Supabase `krmnaypaitruhqgaxkfw`.
-  - `runner`: `verify_jwt false`. `exchange`: `verify_jwt true`.
+  - `runner`: `verify_jwt false`. `exchange`: `verify_jwt true`. `tg-card`: `verify_jwt false` (автентифікація в коді: секрет розкладу або JWT користувача).
   - У `deploy_edge_function` завжди передаються **всі** файли функції. Після розгортання — `verify.py` і перевірка запуску розкладу (200, усі боти оброблено, без `error`).
 - Міграції: новий файл `supabase/migrations/<YYYYMMDDHHMMSS>_<назва>.sql`, застосування через `apply_migration`. Наявні міграції не змінювати.
 - Стабільний реліз: рядок у таблиці релізів `archive/README.md` (коміт злиття, версії `runner`/`exchange`). Теги з хмарної сесії не пушаться (дозволена лише робоча гілка).
@@ -47,6 +47,7 @@ npm run verify   # check + test
 - Якщо `byLink` упав, статус ордера невідомий: новий ордер не надсилати, дію лишити в черзі (`once` у `mirror.js`).
 - Стан бота зберігається з перевіркою версії (CAS) **до** будь-яких дій на біржі.
 - Ліміти ризику (`profiles.risk_*`, `runner/risk.js`) пригнічують вхід у самій моделі (`processBot`, `entryOk`), а не лише на біржі: так модель і біржа не розходяться. Без профілю діють ліміти за замовчуванням (`DEF_LIMITS`).
+- Картки сигналів у Telegram (v18): `runner` будує опис картки (`signal.js`: причини входу з тих самих індикаторів рушія, рівні, налаштування `public.tg_card_prefs`) і передає його `tg-card` із секретом розкладу; `tg-card` малює PNG (`card.js` → resvg) і надсилає. Не вийшло — `runner` надсилає текст. Сповіщення мають категорії (`notify(text, cat)` у `mirror.js`) для фільтра подій.
 - Адмін-статистика: `public.admin_stats()` (лише для `private.admins`, з 2FA-сесією) віддає кількості, налаштування ботів і результати у %, **без пошти, ключів і сум** — так і лишати. ID акаунта — `profiles.public_no` (не змінюється, тригер `profiles_keep_public_no`).
 - Листи Auth (реєстрація, коди): вбудована пошта Supabase шле лише членам команди проєкту; для інших людей потрібен власний SMTP (Supabase → Authentication → Emails → SMTP).
 - `auth`: адреса повернення = `location.origin + location.pathname`. Після зміни адреси сайту (наприклад, перейменування репозиторію) її треба додати в Supabase → Authentication → URL Configuration.

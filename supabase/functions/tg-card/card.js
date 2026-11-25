@@ -57,12 +57,12 @@ export function levels(spec, C) {
   return out;
 }
 
-/** діапазон цін: свічки + рівні, але не ширше за 3 розмахи свічок (далекі рівні — позначки на краю) */
+/** діапазон цін: свічки + рівні, але не ширше за 1,5 розмаху свічок (далекі рівні — позначки на краю) */
 export function priceRange(candles, lv) {
   let lo = Infinity, hi = -Infinity;
   for (const c of candles) { if (c.l < lo) lo = c.l; if (c.h > hi) hi = c.h; }
   if (!Number.isFinite(lo)) { lo = Math.min(...lv.map((x) => x.p)); hi = Math.max(...lv.map((x) => x.p)); }
-  const span = Math.max(hi - lo, hi * 0.002), cap = span * 3;
+  const span = Math.max(hi - lo, hi * 0.002), cap = span * 1.5;
   let a = lo, b = hi;
   for (const x of lv) { if (x.p < a && lo - x.p <= cap) a = x.p; if (x.p > b && x.p - hi <= cap) b = x.p; }
   const pad = (b - a) * 0.06;
@@ -84,7 +84,7 @@ export function cardSvg(spec) {
   // заголовок: пара, напрям, таймфрейм, подія
   const side = spec.side < 0 ? "SHORT" : "LONG", sc = spec.side < 0 ? C.dn : C.up;
   o.push(`<text x="24" y="40" font-size="28" font-weight="bold" fill="${C.text}">${esc(spec.pair)}</text>`);
-  const pw = String(spec.pair || "").length * 19.5 + 36, badge = side + (spec.lev > 1 ? " " + spec.lev + "×" : "");
+  const pw = String(spec.pair || "").length * 20.5 + 36, badge = side + (spec.lev > 1 ? " " + spec.lev + "×" : "");
   o.push(`<rect x="${pw}" y="17" width="${badge.length * 11 + 22}" height="30" rx="6" fill="${sc}"/>`);
   o.push(`<text x="${pw + 11}" y="38" font-size="16" font-weight="bold" fill="#ffffff">${esc(badge)}</text>`);
   o.push(`<text x="24" y="66" font-size="15" fill="${C.mute}">${esc(tfLbl(spec.tf))} · ${esc(spec.exchange || "Orbix")} · ${esc(timeLbl(spec.time || Date.now()))}</text>`);
@@ -142,7 +142,7 @@ function drawChart(o, spec, C, top, h) {
   for (const L of inside) {
     o.push(`<line x1="${x0}" y1="${L.ly}" x2="${x1}" y2="${L.ly}" stroke="${L.color}" stroke-width="${L.w}"${L.dash ? ` stroke-dasharray="${L.dash}"` : ""}/>`);
     if (Math.abs(L.cy - L.ly) > 3) o.push(`<line x1="${x1}" y1="${L.ly}" x2="${x1 + 4}" y2="${L.cy}" stroke="${L.color}" stroke-width="1.2"/>`);
-    const lbl = `${L.label} ${fmtPrice(L.p)}`, long = lbl.length > 17;
+    const lbl = `${L.label} ${fmtPrice(L.p)}`, long = lbl.length > 15;
     o.push(`<rect x="${x1 + 4}" y="${L.cy - 10}" width="${W - x1 - 24}" height="20" rx="4" fill="${L.color}"/>`);
     o.push(`<text x="${x1 + 10}" y="${L.cy + 4}" font-size="11.5" font-weight="bold" fill="${C.chip}">${esc(long ? L.label : lbl)}</text>`);
     if (long) o.push(`<text x="${x1 - 6}" y="${L.ly - 5}" font-size="11.5" fill="${L.color}" text-anchor="end">${fmtPrice(L.p)}</text>`);
@@ -162,4 +162,21 @@ function drawChart(o, spec, C, top, h) {
     o.push(`<path d="M ${mx} ${my + 4 * d} l -7 ${11 * d} l 14 0 z" fill="${col}"/>`);
   }
   return y1;
+}
+
+/** пробна картка (кнопка «Надіслати пробну картку»): модельні свічки й рівні, ті самі налаштування вигляду, що й у справжніх */
+export function demoSpec({ theme = "dark", parts = null, n = 80, now = Date.now() } = {}) {
+  let s = 11; const R = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const H = 36e5, t0 = Math.floor(now / H) * H - n * H, cs = []; let p = 100;
+  for (let i = 0; i < n; i++) {
+    const drift = i < n * 0.55 ? 0.0012 : -0.0021, o = p; p = p * (1 + drift + (R() - 0.5) * 0.009);
+    cs.push({ t: t0 + i * H, o, h: Math.max(o, p) * (1 + R() * 0.003), l: Math.min(o, p) * (1 - R() * 0.003), c: p });
+  }
+  const e = p, dca = [1, 2, 3, 4].map((k) => ({ k, p: e * (1 - 0.015 * k * (1 + 0.1 * (k - 1))), done: false }));
+  return { theme, pair: "DEMO/USDT", side: 1, tf: 1, lev: 3, exchange: "Пробна картка", time: now,
+    event: { kind: "test", title: "Пробна картка" }, candles: cs,
+    lines: { entry: e, dca, tp: e * 1.012, sl: e * 0.9, liq: e * (1 - (1 / 3 - 0.005)) },
+    marks: [{ t: cs[n - 1].t, p: e, k: "e" }],
+    reasons: ["Спрацювало 2 з 2 сигналів (потрібно 2)", "RSI(14) = 28.4 — нижче 35: ринок перепроданий", `Ціна ${fmtPrice(e)} нижче нижньої смуги Bollinger(20, 2)`],
+    result: null, parts };
 }
