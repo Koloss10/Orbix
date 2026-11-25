@@ -11,8 +11,10 @@ description: Викласти зміни Orbix: тести й збірка, ро
 - Репозиторій `Koloss10/Orbix` (раніше `Koloss10/-zorya-trading-bots`; старі git-адреси GitHub перенаправляє), сайт https://koloss10.github.io/Orbix/, робоча гілка `claude/trading-bots-platform-nk0qa3`, злиття в `main` лише через PR.
 - Проєкт Supabase `krmnaypaitruhqgaxkfw`.
 - Функції:
-  - `runner`: `verify_jwt: false`, захист через `x-runner-secret`. Файли `index.ts, mirror.js, core.js, risk.js, engine.js, exchanges.ts, sign.js` (7).
+  - `runner`: `verify_jwt: false`, захист через `x-runner-secret`. Файли `index.ts, mirror.js, core.js, risk.js, signal.js, commands.js, engine.js, exchanges.ts, sign.js` (9).
   - `exchange`: `verify_jwt: true`, потрібна MFA. Файли `index.ts, exchanges.ts, sign.js`.
+  - `tg-card`: `verify_jwt: false` (автентифікація в коді). Файли `index.ts, card.js`.
+  - `ai-assistant`: `verify_jwt: true`. Файли `index.ts, agent.js, provider.js, tools.js, docs.js, market.js, monitor.js, risk.js, engine.js` (9).
   - `tg-notify`: `index.ts`. Поточний `verify_jwt` дізнайся через `list_edge_functions` і залиш таким самим.
 - Розклад `orbix-runner` (pg_cron, кожні 5 хв) викликає `runner` через pg_net.
 
@@ -43,6 +45,7 @@ npm test         # усі тести
 - `tg-notify/*` → `tg-notify`.
 
 ## 4. Розгортання
+- **Основний спосіб (з 25.11):** GitHub Actions «Deploy Supabase function» (`.github/workflows/deploy-function.yml`). Запуск: `gh api repos/Koloss10/Orbix/actions/workflows/deploy-function.yml/dispatches -f ref=<гілка> -f inputs[function]=<runner|exchange|ai-assistant|tg-card>`, потім дочекатися завершення (`actions/runs`). Офіційний CLI викладає всю теку функції; секрет `SUPABASE_ACCESS_TOKEN` у репозиторії. Ручний `deploy_edge_function` — лише для малих функцій: `runner` уже завеликий для одного виклику.
 - `deploy_edge_function` завжди отримує **всі** файли функції, а не лише змінені, бо файл, якого немає у виклику, зникає з функції.
 - Вміст файлів бери з актуальних локальних файлів (`cat`) дослівно.
 - `entrypoint_path: index.ts`, `verify_jwt` як у списку вище.

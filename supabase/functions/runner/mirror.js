@@ -14,6 +14,7 @@
 // (з перевіркою, що інший запуск не змінив його), і лише потім ідуть на біржу.
 import { lv, rnd } from "./engine.js";
 import { eventText } from "./core.js";
+import { tfMs } from "./engine.js";
 import { floorStep } from "./sign.js";
 import { dayStart } from "./risk.js";
 
@@ -58,15 +59,39 @@ export function ladder(g, px, F) {
    ts — відстань трейлінгу в ціні (частка g.trail від рівня активації).
    З частковою фіксацією TP веде сервер (на біржі лише SL); mp — позиція моделі: після TP1 з беззбитком (g.be)
    стоп переноситься туди ж, куди й у рушії (mp.be). */
-export function protect(g, avg, F, mp = null) {
+export function protect(g, avg, F, mp = null, stopAt = 0) {
   const d = g.d, tk = F && F.tick, part = g.s1 > 0, has = g.tp > 0 && !part;
   const lvl = has ? rnd(avg * (1 + d * g.tp), tk, d > 0 ? "ceil" : "floor") : 0;
   const sl = mp && mp.t1 && mp.be > 0 ? rnd(mp.be, tk, d > 0 ? "floor" : "ceil")
-    : g.sl > 0 ? rnd(avg * (1 - d * g.sl), tk, d > 0 ? "floor" : "ceil") : 0;
+    : g.sl > 0 ? rnd(stopAt > 0 ? stopAt : avg * (1 - d * g.sl), tk, d > 0 ? "floor" : "ceil") : 0;
   if (has && g.trail > 0) return { tp: 0, sl, ap: lvl, ts: Math.max(rnd(lvl * g.trail, tk, "ceil"), tk || 0) };
   return { tp: lvl, sl, ap: 0, ts: 0 };
 }
+/* Стоп, на якому реально зупиниться модель. SL рахується від середньої ціни, а середня зсувається з кожною
+   докупівлею: модель докуповує, поки наступний рівень лежить вище за поточний SL (і ліквідацію), і лише потім
+   виходить за стопом. Лімітні докупівлі бота стоять на біржі й виконуються всередині свічки, тож ціна, що йде до
+   стопу, неминуче проходить їх раніше. Тому на біржі одразу ставиться кінцевий стоп — після останньої досяжної
+   докупівлі (rest — лімітні ордери бота, що стоять зараз). Інакше стоп біржі, який сервер оновлює раз на 5 хв,
+   при різкому русі закрив би позицію раніше, ніж модель, і останні докупівлі не встигли б. */
+export function slStop(g, { q, avg }, rest = []) {
+  if (!(g.sl > 0) || !(q > 0) || !(avg > 0)) return 0;
+  const d = g.d, L = +g.fut ? g.lev || 1 : 1;
+  let cost = q * avg;
+  const R = rest.filter((o) => o.price > 0 && o.qty > 0).sort((a, b) => (d > 0 ? b.price - a.price : a.price - b.price));
+  for (const o of R) {
+    const a = cost / q, slp = a * (1 - d * g.sl), lqp = L > 1 ? a * (1 - d * Math.max(1 / L - 0.005, 0)) : 0;
+    const lim = lqp && (d > 0 ? lqp > slp : lqp < slp) ? lqp : slp;
+    if (d > 0 ? o.price <= lim : o.price >= lim) break; // цей рівень за стопом — модель вийде раніше
+    q += o.qty; cost += o.qty * o.price;
+  }
+  return (cost / q) * (1 - d * g.sl);
+}
 const lev = (g) => Math.min(20, Math.max(1, Math.round(g.lev || 1)));
+/* Часткове виставлення (g.live > 0): на біржі одночасно стоять лише live найближчих лімітних докупівель.
+   Рівні: 1…orders−1; модель уже зробила рівні < mp.n, тож мають стояти рівні до mp.n − 1 + live.
+   fl.lt — найвищий рівень, уже виставлений на біржу в цій угоді (рівні вище ще ніколи не ставились). */
+export const liveN = (g) => { const n = Math.round(+g.live || 0); return n > 0 ? n : Infinity; };
+const liveTop = (g, n) => Math.min((g.orders || 1) - 1, n - 1 + liveN(g));
 const near = (a, b, tick) => Math.abs((+a || 0) - (+b || 0)) <= (tick || 0) / 2 + 1e-12;
 
 /* ордер з ідентифікатором: якщо такий уже є на біржі — повторно не надсилається.
@@ -97,7 +122,14 @@ const protText = (w) => `${w.tp ? ` · TP ${w.tp}` : ""}${w.ts ? ` · трейл
 /* Привести захист позиції на біржі до потрібного (рідний режим). Повертає текст для журналу або null, якщо змін немає.
    fl — прапорці бота, що зберігаються в стані (nots: біржа не прийняла трейлінг — лишаємо SL, TP веде сервер). */
 export async function guard(ex, { g, symbol, botId, fl = {}, mp = null }, p, F) {
-  const d = g.d, want = protect(g, p.entry, F, mp), m = +p.mark || 0, lvl = want.tp || want.ap;
+  const d = g.d;
+  // кінцевий стоп з урахуванням лімітних докупівель бота, що стоять на біржі (крім беззбитку після TP1)
+  let stopAt = 0;
+  if (g.sl > 0 && !(mp && mp.t1 && mp.be > 0) && typeof ex.openOrders === "function") {
+    const rest = (await mineOf(ex, symbol, botId)).filter((o) => !o.reduceOnly && (d > 0 ? /^buy$/i : /^sell$/i).test(String(o.side))).map((o) => ({ price: +o.price, qty: +o.qty }));
+    stopAt = slStop(g, { q: Math.abs(+p.amt), avg: +p.entry }, rest);
+  }
+  const want = protect(g, p.entry, F, mp, stopAt), m = +p.mark || 0, lvl = want.tp || want.ap;
   const closeNow = async (why) => {
     await cancelMine(ex, symbol, botId);
     const o = await ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", Math.abs(p.amt), true);
@@ -141,15 +173,18 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
     // драбина — від ціни входу моделі (закриття свічки), а не від фактичної ціни на біржі: інакше прослизання входу
     // зсуває всі рівні, і біржа докуповує не там, де модель (дії старих версій без ціни — від ціни на біржі)
     const e0 = a.price > 0 ? a.price : p.entry;
-    let n = 0;
+    let n = 0, lt = 0, gap = false;
+    const top = liveTop(g, 1);
     for (const r of ladder(g, e0, F)) {
-      try { await once(ex, symbol, base + "d" + r.k, () => ex.limit(symbol, side, r.qty, r.price, base + "d" + r.k)); n++; }
-      catch (e) { msg += ` · докупівля ${r.k}: ${e.message}`; }
+      if (r.k > top) break;
+      try { await once(ex, symbol, base + "d" + r.k, () => ex.limit(symbol, side, r.qty, r.price, base + "d" + r.k)); n++; if (!gap) lt = r.k; }
+      catch (e) { gap = true; msg += ` · докупівля ${r.k}: ${e.message}`; }
     }
-    delete fl.nots; delete fl.rg;
+    delete fl.nots; delete fl.rg; delete fl.lt;
+    if (liveN(g) < Infinity) fl.lt = lt; // наступні рівні докладе topUp, щойно модель зарахує докупівлю
     fl.lb = base; fl.e0 = e0; fl.ex = p.entry; // e0 — база драбини (для відновлення після паузи), ex — ціна входу на біржі
     const gd = await guard(ex, { g, symbol, botId, fl }, p, F);
-    return msg + ` · на біржі: ${n} лімітн. докупівель${gd ? " · " + gd.msg.replace("Bybit Demo: ", "") : ""}`;
+    return msg + ` · на біржі: ${n} лімітн. докупівель${liveN(g) < Infinity && top < (g.orders || 1) - 1 ? ` (з ${(g.orders || 1) - 1}; решта — по одній після виконання)` : ""}${gd ? " · " + gd.msg.replace("Bybit Demo: ", "") : ""}`;
   }
   if (a.kind === "dca") {
     const o = await once(ex, symbol, a.id, () => marketNotional(ex, symbol, side, a.notional, a.id));
@@ -166,6 +201,20 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
     if (!(q > 0) || (F && q < F.minQty)) return `${name}: частка ${Math.round(a.share * 100)} % замала для біржі — часткову фіксацію пропущено`;
     const o = await once(ex, symbol, a.id, () => ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", q, true, a.id));
     return `${name}: частково зафіксовано ${o.qty} за ${pxOf(o, p)}${native ? " · лімітні докупівлі знято" : ""}`;
+  }
+  // ручні дії з кнопок картки (runner/commands.js): повертають { msg, px }
+  if (a.kind === "mcancel") {
+    const n = native ? await cancelMine(ex, symbol, botId) : 0;
+    return { msg: `${name}: угоду скасовано вручну — знято ${n} лімітн. ордер(ів) бота, позиція лишилась на біржі`, px: null };
+  }
+  if (a.kind === "mclose") {
+    if (native) await cancelMine(ex, symbol, botId);
+    const had = await ex.byLink(symbol, a.id);
+    if (had) return { msg: `${name}: угоду закрито вручну за ринком за ${had.price}`, px: had.price > 0 ? had.price : null };
+    const p = (await ex.positions(symbol))[0];
+    if (!p || Math.sign(p.amt) !== Math.sign(g.d)) return { msg: `${name}: позиції бота на біржі вже немає — угоду моделі закрито за поточною ціною`, px: null };
+    const o = await once(ex, symbol, a.id, () => ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", Math.abs(p.amt), true, a.id));
+    return { msg: `${name}: угоду закрито вручну за ринком за ${pxOf(o, p)}`, px: o.price > 0 ? o.price : p.mark > 0 ? p.mark : null };
   }
   // close
   if (native) await cancelMine(ex, symbol, botId);
@@ -227,6 +276,23 @@ export function reconcile(mp, xp, g) {
 export const MIS_RUNS = 2;
 export const RUN_GAP = 12 * 60e3; // запуски йдуть кожні 5 хв; більший проміжок — лічильник починається знову
 export const clearMis = (fl) => { delete fl.mis; delete fl.had; delete fl.xc; delete fl.tid; };
+/* «Біржа головна»: якщо біржа вже закрила позицію бота (TP/SL/трейлінг, fl.xc), модель не чекає власного виходу за свічками,
+   а закриває свою угоду за фактичною ціною закриття на біржі (state.xr.l[].px). Тоді картка, статистика й журнал показують те,
+   що сталося на біржі. Закриття шукається серед записів біржі після входу в угоду (вхід на біржі — закриття свічки входу). */
+export function exchangeExit(xr, mp, g) {
+  const t0 = mp && mp.f && mp.f[0] && mp.f[0].t;
+  if (!xr || !Array.isArray(xr.l) || !(t0 > 0)) return null;
+  const from = t0 + tfMs(g.tf || 1);
+  const L = xr.l.filter((x) => x.t > from && x.px > 0).sort((a, b) => a.t - b.t);
+  return L.length ? L[L.length - 1] : null;
+}
+/* закрити позицію моделі за ціною px у момент t: той самий розрахунок, що й вихід рушія (v. Bot.step), зі збереженням угоди в b.tr */
+export function closeByExchange(b, g, { px, t, tag = "xc" }) {
+  const p = b.pos, d = g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
+  const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
+  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
+  return { ...b, pos: null, tr, cum: b.cum + pnl, cd: i + g.cd + 1 };
+}
 /* угода моделі, до якої належать прапорці звірки */
 const tidOf = (mp) => (mp ? (mp.f && mp.f[0] && mp.f[0].t) || mp.first || 1 : null);
 export async function onReconcile({ fl, mp, out, g, log, notify, now = Date.now() }) {
@@ -248,7 +314,7 @@ export async function onReconcile({ fl, mp, out, g, log, notify, now = Date.now(
     const hint = d.k === "orphan" ? " Бот нею не керує: перевірте позицію в Bybit Demo і за потреби закрийте її там." : d.k === "nopos" ? " Нові ордери за цією угодою на біржу не надсилатимуться; бот продовжить після її закриття в моделі." : " Перевірте позицію в Bybit Demo.";
     const m = `Звірка з біржею: ${d.t}.${hint}`;
     await log("warn", m);
-    await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+    await notify(`Orbix (сервер): ${g.pair} — ${m}`, "other");
   }
   return fl.mis;
 }
@@ -263,20 +329,50 @@ export async function restore(ex, { g, symbol, fl, mp }) {
   if (!fl.lb || !(fl.e0 > 0)) return "Bybit Demo: бот знову працює, але драбину докупівель не відновлено (угоду відкрито до оновлення сервера) — докупівлі цієї угоди лише в моделі";
   const side = g.d > 0 ? "BUY" : "SELL", F = await ex.filt(symbol), gen = (fl.rg || 0) + 1;
   const was = (k) => [fl.lb + "d" + k, ...Array.from({ length: gen - 1 }, (_, i) => fl.lb + "e" + (i + 1) + "x" + k)];
-  let n = 0;
+  let n = 0, firstMiss = 0;
   const miss = [];
+  const top = liveTop(g, mp.n);
   for (const r of ladder(g, fl.e0, F)) {
     if (r.k < mp.n) continue;
+    if (r.k > top) break;
     // перевірка не вдалася — відновлення переривається (fl.rs лишається, повтор наступного запуску): інакше нове покоління продублювало б сходинку
     const prev = await Promise.all(was(r.k).map((id) => ex.byLink(symbol, id)));
     if (prev.some((o) => o && /^(New|PartiallyFilled|Filled|Untriggered)$/.test(o.status))) continue; // ще стоїть або вже виконаний
     const id = fl.lb + "e" + gen + "x" + r.k;
     try { await once(ex, symbol, id, () => ex.limit(symbol, side, r.qty, r.price, id)); n++; }
-    catch (e) { miss.push(`${r.k}: ${e.message}`); }
+    catch (e) { miss.push(`${r.k}: ${e.message}`); if (!firstMiss) firstMiss = r.k; }
   }
   fl.rg = gen;
+  if (liveN(g) < Infinity) fl.lt = Math.max(mp.n - 1, firstMiss ? firstMiss - 1 : top); // невдалий рівень і вище докладе topUp
   if (!n && !miss.length) return null;
   return `Bybit Demo: бот знову працює — відновлено ${n} лімітн. докупівель${miss.length ? ` · не вдалося: ${miss.join("; ")}` : ""}`;
+}
+
+/* Часткове виставлення: модель зарахувала докупівлю — докласти наступні рівні драбини, щоб на біржі знову стояло live ордерів.
+   Ідентифікатор — як у поточного покоління драбини (<база>d<рівень> або <база>e<покоління>x<рівень> після паузи);
+   рівні вище fl.lt ще не ставились, тож повтору немає, а once не надішле ордер двічі. Рівень, який модель уже
+   докупила, але на біржі його не було (ціна проскочила кілька рівнів за свічку), ставиться так само: лімітний ордер
+   за ціною, гіршою за ринок, виконується одразу, і біржа наздоганяє модель. Перша помилка зупиняє — повтор наступного запуску. */
+export async function topUp(ex, { g, symbol, fl, mp }) {
+  if (!(liveN(g) < Infinity) || !mp || mp.t1 || !fl.lb || !(fl.e0 > 0) || fl.rs) return null;
+  // угоду відкрито без часткового виставлення (до оновлення чи до зміни налаштування) — уся драбина вже на біржі
+  if (fl.lt == null) { fl.lt = (g.orders || 1) - 1; return null; }
+  const top = liveTop(g, mp.n), have = fl.lt;
+  if (top <= have) return null;
+  const p = (await ex.positions(symbol))[0];
+  if (!p || Math.sign(p.amt) !== Math.sign(g.d)) return null;
+  const side = g.d > 0 ? "BUY" : "SELL", F = await ex.filt(symbol);
+  let n = 0, err = null;
+  for (const r of ladder(g, fl.e0, F)) {
+    if (r.k <= have) continue;
+    if (r.k > top) break;
+    const id = fl.rg ? fl.lb + "e" + fl.rg + "x" + r.k : fl.lb + "d" + r.k;
+    try { const o = await once(ex, symbol, id, () => ex.limit(symbol, side, r.qty, r.price, id)); if (!o.existed) n++; fl.lt = r.k; }
+    catch (e) { err = `${r.k}: ${e.message}`; break; }
+  }
+  if (!err && fl.lt < top) fl.lt = top; // рівнів із ненульовою кількістю більше немає
+  if (!n && !err) return null;
+  return `Bybit Demo: докладено ${n} лімітн. докупівель (на біржі до рівня ${fl.lt || have} з ${(g.orders || 1) - 1})${err ? ` · не вдалося: ${err}, повторю` : ""}`;
 }
 
 /* Один рахунок біржі — одна позиція на символ: з кількох працюючих ботів із «Тестнет» на одній парі одного
@@ -320,8 +416,10 @@ export async function results(ex, { symbol, xr }) {
  *       ex — адаптер біржі або null (немає ключів); mirror — чи дублювати угоди; native — рідний режим Bybit.
  * risk — ліміти ризику для ботів, що торгують на біржі: { blk: null | { k, t } (runner/risk.js) }; r.skipped — скільки
  *       сигналів входу модель пропустила через ліміт. fl.rl — діюче обмеження (для картки й моніторингу).
+ * notify(text, cat) — cat: вид події рушія (open, dca, close, sl, liq, part), xclose, risk, error або other (фільтр подій у налаштуваннях).
+ * card(ev) — необов'язково: надіслати картку сигналу замість тексту; true — надіслано (текст тоді не потрібен).
  */
-export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, risk = null, now = Date.now() }) {
+export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, card = null, risk = null, now = Date.now() }) {
   const pend = [...(Array.isArray(bot.state?.pend) ? bot.state.pend : []), ...(mirror ? actionsFor(r.events, bot.id, native) : [])];
   const fl = { ...(bot.state?.fl || {}) }, fl0 = JSON.stringify(fl);
   if (fl.parked && native) fl.rs = 1; // бот знято з паузи — відновити драбину на біржі (повторюється, доки не вдасться)
@@ -347,9 +445,9 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   for (const ev of r.events) {
     const text = eventText(ev, g);
     await log(ev.kind === "liq" || ev.kind === "sl" ? "warn" : "info", text, ev);
-    await notify(text);
+    if (!(card && (await card(ev, text)))) await notify(text, ev.kind);
   }
-  for (const [lvl, m, tg] of rlMsg) { await log(lvl, m); if (tg) await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+  for (const [lvl, m, tg] of rlMsg) { await log(lvl, m); if (tg) await notify(`Orbix (сервер): ${g.pair} — ${m}`, "risk"); }
   if (!mirror) return { saved: true };
   if (!ex) {
     if (pend.length) await log("error", "Ключі біржі не підключено — угоди не продубльовано");
@@ -357,12 +455,14 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
     return { saved: true };
   }
   const left = [];
-  let stop = false, changed = false;
+  let stop = false, changed = false, man = null;
   for (const a of pend) {
     if (stop) { left.push(a); continue; }
-    if (a.kind !== "close" && a.kind !== "part" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
+    if (a.kind !== "close" && a.kind !== "part" && a.kind !== "mclose" && a.kind !== "mcancel" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
     try {
-      await log("info", await execute(ex, a, { g, symbol, native, botId: bot.id, fl })); changed = true;
+      const out = await execute(ex, a, { g, symbol, native, botId: bot.id, fl }); changed = true;
+      await log("info", typeof out === "string" ? out : out.msg);
+      if (a.kind === "mclose") man = { a, px: out.px > 0 ? out.px : a.price };
       // прослизання входу: ціна моделі (закриття свічки) проти фактичної середньої ціни на біржі
       if (a.kind === "open" && st.xr && a.price > 0 && fl.ex > 0) st.xr.en = [...st.xr.en, { t: a.t, m: a.price, x: fl.ex }].slice(-XR_KEEP);
     }
@@ -370,16 +470,29 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       const b = { ...a, tries: (a.tries || 0) + 1 };
       changed = true;
       exErr(e.message);
-      if (b.tries >= MAX_TRIES) { const m = `Біржа: дію «${a.kind}» знято після ${MAX_TRIES} спроб — ${e.message}`; await log("error", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+      if (b.tries >= MAX_TRIES) { const m = `Біржа: дію «${a.kind}» знято після ${MAX_TRIES} спроб — ${e.message}`; await log("error", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`, "error"); }
       else { await log("error", `Біржа: ${e.message} (спроба ${b.tries} з ${MAX_TRIES}, повторю)`); left.push(b); stop = true; }
     }
   }
-  const mp = r.state?.b?.pos || null;
-  if (!mp) { delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; } // угоди немає — дані драбини не потрібні
+  // ручне закриття (кнопка «Закрити за ринком»): модель закривається за ціною закриття на біржі
+  if (fl.mc && !left.some((a) => a.kind === "mclose")) delete fl.mc; // дію виконано або знято після MAX_TRIES
+  if (man && st.b && st.b.pos && tidOf(st.b.pos) === man.a.tid) {
+    st.b = closeByExchange(st.b, g, { px: man.px, t: now, tag: "man" });
+    st.equity = st.b.cum;
+    clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; delete fl.mc;
+    left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+    const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+    const m = `Угоду закрито вручну за ринком за ${man.px}, PnL моделі ${f2(l.pnl)} USDT`;
+    await log("info", m, { kind: "manual_close", price: man.px, pnl: l.pnl, t: now });
+    await notify(`Orbix (сервер): ${g.pair} — ${m}`, "close");
+  }
+  const mp = st.b?.pos || null;
+  if (!mp) { delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; } // угоди немає — дані драбини не потрібні
   if (native && !left.length) {
     const out = {};
     try {
       if (fl.rs) { const m = await restore(ex, { g, symbol, fl, mp }); if (m) await log("info", m); delete fl.rs; }
+      { const m = await topUp(ex, { g, symbol, fl, mp }); if (m) await log("info", m); }
       // біржа вже закрила цю угоду (fl.xc), а позиція на біржі знову є: між закриттям і запуском сервера виконалась
       // залишкова лімітна докупівля бота — це зайва позиція, модель нею не керує: закрити її й зняти ордери
       if (fl.xc && mp && fl.tid === tidOf(mp)) {
@@ -388,11 +501,11 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
           await cancelMine(ex, symbol, bot.id);
           const o = await ex.market(symbol, gp.amt > 0 ? "SELL" : "BUY", Math.abs(gp.amt), true);
           const m = `Bybit Demo: угоду вже закрила біржа, але після цього виконалась залишкова лімітна докупівля — зайву позицію ${Math.abs(gp.amt)} закрито ринком${o.price > 0 ? ` за ${o.price}` : ""}`;
-          await log("warn", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`);
+          await log("warn", m); await notify(`Orbix (сервер): ${g.pair} — ${m}`, "other");
         }
       }
       const m = await sync(ex, { g, symbol, botId: bot.id, fl, out, mp });
-      if (m) { await log("info", m); if (/закрито (біржею|ринком)|не прийняла/.test(m)) await notify(`Orbix (сервер): ${g.pair} — ${m}`); }
+      if (m) { await log("info", m); if (/закрито (біржею|ринком)|не прийняла/.test(m)) await notify(`Orbix (сервер): ${g.pair} — ${m}`, /не прийняла/.test(m) ? "error" : "close"); }
       await onReconcile({ fl, mp, out, g, log, notify, now });
       const pv = bot.state?.xs, cur = out.pos;
       st.xs = snapshot(out); delete st.xe; // звірка пройшла — біржа відповідає
@@ -403,6 +516,24 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   }
   // закриття за даними біржі; помилка не критична — повторю наступного запуску, але не більше 3 разів
   if (st.xr && st.xr.due) { try { await results(ex, { symbol, xr: st.xr }); } catch (e) { if (--st.xr.due <= 0) delete st.xr.due; } }
-  if (changed || JSON.stringify(fl) !== fl0 || xsOf() !== xs0) await save({ ...st, pend: left, fl });
+  // біржа головна: позицію закрила біржа, а модель ще тримає угоду — закрити її за ціною біржі (наступним запуском, якщо запису ще немає)
+  let xcDone = false;
+  if (fl.xc && st.xr && st.b && st.b.pos && fl.tid === tidOf(st.b.pos)) {
+    const rec = exchangeExit(st.xr, st.b.pos, g);
+    if (rec) {
+      st.b = closeByExchange(st.b, g, { px: rec.px, t: rec.t });
+      st.equity = st.b.cum;
+      clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt;
+      const gone = left.filter((a) => a.kind === "dca" || a.kind === "part").length;
+      if (gone) left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+      const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+      const m = `Біржа закрила позицію (TP/SL/трейлінг) — угоду моделі закрито за ціною біржі ${rec.px}, PnL моделі ${f2(l.pnl)} USDT${gone ? "; незавершені докупівлі скасовано" : ""}`;
+      await log("info", m, { kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t });
+      const tx = `Orbix (сервер): ${g.pair} — ${m}`;
+      if (!(card && (await card({ kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t, trade: l }, tx)))) await notify(tx, "xclose");
+      xcDone = true;
+    }
+  }
+  if (changed || xcDone || JSON.stringify(fl) !== fl0 || xsOf() !== xs0) await save({ ...st, pend: left, fl });
   return { saved: true, left: left.length };
 }

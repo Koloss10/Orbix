@@ -66,7 +66,7 @@ function simEx() {
     },
     async limit(_s, side, qty, price, link) { order(link, { side, qty, price, status: 'New' }); return { id: S.orders.length, qty, price, link }; },
     async byLink(_s, link) { const o = S.orders.find((x) => x.link === link); return o ? { id: 1, qty: o.qty, price: o.price, status: o.status, link } : null; },
-    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, price: o.price, qty: o.qty })); },
+    async openOrders() { return S.orders.filter((o) => o.status === 'New').map((o) => ({ link: o.link, side: o.side === 'BUY' ? 'Buy' : 'Sell', price: o.price, qty: o.qty })); },
     async cancel(_s, link) { const o = S.orders.find((x) => x.link === link && x.status === 'New'); if (o) o.status = 'Cancelled'; },
     async cancelAll() { for (const o of S.orders) if (o.status === 'New') o.status = 'Cancelled'; },
     async tradingStop(_s, { tp, sl, ts = 0, ap = 0 }) { const p = S.pos; if (!p) { const e = new Error('position is zero'); e.code = 10001; throw e; } Object.assign(p, { tp, sl, ts, ap }); if (!ts) { p.act = 0; } },
@@ -99,7 +99,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
   const sp = []; { let from = cs[hist].t - 1; for (const [a, b] of pauses) { sp.push([from, cs[a].t]); from = cs[b].t; } sp.push([from, null]); }
   const spans = pauses.length ? sp : null;
   // ліміти ризику, як у runner: перевірка перед кожним прогоном моделі; dayOpens — входи, відкриті, коли збиток доби за даними біржі вже досяг ліміту
-  let skipped = 0, blocked = 0, badOpen = '';
+  let skipped = 0, blocked = 0, badOpen = '', maxOwn = 0;
   const riskAt = (at) => (limits ? riskBlock({ limits, self: { g, state: stored }, now: at }) : null);
   const exDay = (at) => ex.S.closed.reduce((a, x) => a + (x.t >= dayStart(at) && x.t <= at ? x.pnl : 0), 0);
   const checkOpens = (r, at) => { if (limits && limits.dayLoss && r.events.some((e) => e.kind === 'open') && exDay(at) <= -limits.dayLoss - 1e-9) badOpen ||= `вхід о ${new Date(at).toISOString()} при збитку доби ${exDay(at).toFixed(2)}`; skipped += r.skipped || 0; };
@@ -147,6 +147,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
     trades += r.events.filter((e) => e.kind === 'open').length;
     if (stored.fl?.mis?.on) { alarms++; alarm ||= `свічка ${i}: ${stored.fl.mis.t}`; }
     const mp = stored.b?.pos || null;
+    maxOwn = Math.max(maxOwn, own(ex).length);
     if (!mp && !stored.pend?.length) {
       assert.equal(ex.S.pos, null, `свічка ${i}: модель без позиції, а на біржі позиція ${ex.S.pos && ex.S.pos.amt}`);
       assert.equal(own(ex).length, 0, `свічка ${i}: модель без позиції, а на біржі лишились ордери бота`);
@@ -158,7 +159,9 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
       // поки модель може докуповувати, на біржі стоїть драбина (хіба що біржа вже виконала всі рівні)
       if (!mp.t1 && mp.n < g.orders && stored.fl?.e0 > 0) {
         const full = Math.abs(ex.S.pos.amt) >= ladder(g, stored.fl.e0, F).reduce((a, x) => a + x.qty, 0) * 0.98;
-        if (!full && !own(ex).length) ladBad ||= `свічка ${i}: модель на рівні ${mp.n} з ${g.orders}, а лімітних докупівель на біржі немає`;
+        // збій біржі під час докладання рівня (flaky): рівень докладе наступний запуск, тож порожня драбина тимчасова
+        const retrying = logs.slice(-4).some(([, m]) => /докладено \d+ лімітн.*не вдалося.*повторю/.test(m));
+        if (!full && !own(ex).length && !retrying) ladBad ||= `свічка ${i}: модель на рівні ${mp.n} з ${g.orders}, а лімітних докупівель на біржі немає`;
       }
     }
   }
@@ -166,7 +169,7 @@ async function simulate(cfg, { n = 600, seed = 7, crashEvery = 0, pauses = [], v
   // облік результатів на біржі (Demo проти моделі): кожне закриття на біржі записано один раз, нічого не загублено
   const xr = stored.xr, want = ex.S.closed.filter((x) => x.t >= xr.from).slice(-50).map((x) => x.id), got = xr.l.map((x) => x.id);
   const xrBad = new Set(got).size !== got.length ? 'повторний запис закриття' : want.join() !== got.join() ? `закриття на біржі ${want.length}, записано ${got.length}` : '';
-  return { g, ex, logs, notes, alarms, alarm, trades, errs, maxGap, stored, crashes, beBad, ladBad, xrBad, xr, ghostLive, skipped, blocked, badOpen };
+  return { g, ex, logs, notes, alarms, alarm, trades, errs, maxGap, stored, crashes, beBad, ladBad, xrBad, xr, ghostLive, skipped, blocked, badOpen, maxOwn };
 }
 
 for (const [name, cfg] of [
@@ -228,6 +231,23 @@ test('Симуляція з денним лімітом збитку: після
     }
   }
   assert.equal(hit, 3, `ліміт мав спрацювати в усіх трьох сценаріях (спрацював у ${hit})`);
+});
+
+test('Симуляція з частковим виставленням ордерів: на біржі не більше live докупівель, драбина поповнюється, без дублів і тривог', async () => {
+  let topped = 0;
+  for (const [seed, d, live, opt] of [[7, 1, 1, {}], [11, -1, 1, {}], [23, 1, 2, {}], [7, 1, 1, { flaky: 0.08 }], [11, 1, 1, { pauses: Array.from({ length: 8 }, (_, k) => [140 + k * 50, 146 + k * 50]) }]]) {
+    const full = await simulate({ d }, { seed, ...opt });
+    const s = await simulate({ d, live }, { seed, ...opt });
+    assert.ok(s.trades >= 3, `seed ${seed}: угод ${s.trades}`);
+    assert.equal(s.trades, full.trades, `seed ${seed}: модель торгує так само, як без часткового виставлення`);
+    assert.ok(s.maxOwn <= live, `seed ${seed}: на біржі ${s.maxOwn} ордерів бота при live = ${live}`);
+    assert.ok(full.maxOwn > live, `seed ${seed}: без часткового виставлення стоїть уся драбина (${full.maxOwn})`);
+    assert.equal(s.ex.S.dup, 0, `seed ${seed}: повторний orderLinkId`); assert.deepEqual(s.errs.filter((m) => !/timeout|недоступн|збій/i.test(m)), [], `seed ${seed}: помилки`);
+    const ids = s.ex.S.orders.filter((o) => o.status === 'Filled' && o.link).map((o) => o.link); assert.equal(new Set(ids).size, ids.length, `seed ${seed}: два виконання з одним ідентифікатором`);
+    assert.equal(s.alarms, 0, `seed ${seed}: тривога звірки — ${s.alarm}`); assert.equal(s.ladBad, '', `seed ${seed}: ${s.ladBad}`); assert.equal(s.ghostLive, 0); assert.equal(s.xrBad, '');
+    topped += s.logs.filter(([, m]) => /докладено \d+ лімітн/.test(m)).length;
+  }
+  assert.ok(topped >= 5, `драбину поповнено лише ${topped} раз(и)`);
 });
 
 test('Симуляція з паузами: після зняття з паузи драбина повертається, модель і біржа не розходяться', async () => {
@@ -334,4 +354,47 @@ test('Кілька ботів одночасно на одному рахунк�
   assert.ok(exOf.DOT.S.orders.every((o) => !o.link || o.link.startsWith(pre(dot.id))));
   assert.equal(exOf.TON.S.dup + exOf.DOT.S.dup, 0);
   assert.equal(dup.st.fl.mis, undefined, 'у дубліката немає звірки — і немає хибної тривоги');
+});
+
+/* Знахідка 25.11 (XMR): стоп на біржі рахувався від середньої ціни на момент останньої звірки і оновлювався
+   раз на 5 хв. При різкому падінні крізь кілька докупівель за ці хвилини біржа закрила б позицію за старим,
+   вищим стопом, хоча модель (SL від середньої, що зсувається з кожною докупівлею) ще докуповувала б.
+   Тепер на біржі одразу стоїть кінцевий стоп — після останньої досяжної докупівлі. */
+import { Bot } from '../supabase/functions/runner/engine.js';
+import { slStop } from '../supabase/functions/runner/mirror.js';
+async function openedOnSim(cfg) {
+  const g = botConfig({ pair: 'SIM/USDT', tf: 1, fut: 1, lev: 1, orders: 5, base: 20, step: 0.015, smul: 1, mult: 1.3, tp: 0.01, sl: 0.05, d: 1, ...cfg });
+  const ex = simEx(); ex.S.px = 2.5; ex.S.slip = 0; ex.S.t = T0;
+  const b = new Bot(g, null, null); b.step(Math.floor(T0 / H), { t: T0, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  let st = null; const now = T0 + H + 3e5;
+  await handleBot({ bot: { id: BOT, state: null }, g, r: { state: { b: { pos: b.pos, tr: [], cd: 0, cum: 0 }, lt: T0 + H }, events: [{ kind: 'open', notional: b.pos.cost, price: 2.5, t: T0 + H }] },
+    symbol: 'SIMUSDT', mirror: true, native: true, ex, now, save: async (x) => { st = JSON.parse(JSON.stringify(x)); return true; }, log: async () => {}, notify: async () => {} });
+  return { g, ex, st };
+}
+
+test('Кінцевий стоп на біржі: різке падіння крізь усі докупівлі за одну мить не закриває позицію раніше, ніж модель', async () => {
+  for (const d of [1, -1]) {
+    const { g, ex } = await openedOnSim({ d });
+    const lv = ladder(g, 2.5, F), last = lv[lv.length - 1].price;
+    assert.equal(lv.length, 4);
+    assert.ok(d > 0 ? ex.S.pos.sl < last : ex.S.pos.sl > last, `SL ${ex.S.pos.sl} має бути за останньою докупівлею ${last}`);
+    const crash = d > 0 ? Math.max(ex.S.pos.sl * 1.002, last * 0.999) : Math.min(ex.S.pos.sl * 0.998, last * 1.001);
+    ex.at(crash);
+    assert.ok(ex.S.pos, `${d > 0 ? 'Long' : 'Short'}: біржа не закрила позицію за старим стопом`);
+    assert.equal(ex.S.orders.filter((o) => o.status === 'New').length, 0, 'усі докупівлі виконались');
+    // модель на тій самій свічці: усі докупівлі, без виходу
+    const b = new Bot(g, null, null); b.step(0, { t: T0, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+    b.step(1, { t: T0 + H, o: 2.5, h: d > 0 ? 2.5 : crash, l: d > 0 ? crash : 2.5, c: crash }, false);
+    assert.ok(b.pos && b.pos.n === 5 && b.tr.length === 0, 'модель теж тримає позицію з усіма докупівлями');
+  }
+});
+
+test('Кінцевий стоп: рівень за поточним стопом модель не докуповує — стоп на ньому й зупиняється', () => {
+  const g = botConfig({ pair: 'SIM/USDT', fut: 1, lev: 1, d: 1, sl: 0.02, orders: 4, step: 0.015, mult: 1, base: 10 });
+  const rest = [{ price: 2.4625, qty: 4 }, { price: 2.4256, qty: 4 }, { price: 2.3892, qty: 4 }];
+  const s = slStop(g, { q: 4, avg: 2.5 }, rest);
+  // після першої докупівлі середня ≈2.48125, SL ≈2.4316 > 2.4256 — далі модель не докуповує
+  assert.ok(Math.abs(s - ((2.5 + 2.4625) / 2) * 0.98) < 1e-9, String(s));
+  assert.equal(slStop(g, { q: 4, avg: 2.5 }, []), 2.5 * 0.98, 'без ордерів на біржі — звичайний стоп від середньої');
+  assert.equal(slStop({ ...g, sl: 0 }, { q: 4, avg: 2.5 }, rest), 0);
 });

@@ -1,0 +1,52 @@
+name: Deploy Supabase function
+
+# Викладання Edge Function на Supabase (проєкт Orbix) кнопкою: Actions → «Deploy Supabase function» → Run workflow.
+# Офіційний CLI бере ВСІ файли функції з репозиторію — пропустити файл неможливо (на відміну від ручного виклику).
+# Перед викладанням — npm run verify (збірка актуальна, усі тести зелені). verify_jwt — як у CLAUDE.md.
+# Потрібен секрет репозиторію SUPABASE_ACCESS_TOKEN (вносить власник у Settings → Secrets → Actions).
+# Після викладання — звірка файлів verify.py і перевірка запуску розкладу (скіл orbix-deploy).
+
+on:
+  workflow_dispatch:
+    inputs:
+      function:
+        description: "Функція"
+        required: true
+        type: choice
+        options: [runner, exchange, ai-assistant, tg-card]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.function }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_REF: krmnaypaitruhqgaxkfw
+      FN: ${{ inputs.function }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Перевірка (check + тести)
+        run: npm run verify
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Викласти функцію
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          case "$FN" in
+            runner|tg-card) JWT="--no-verify-jwt" ;;
+            exchange|ai-assistant) JWT="" ;;
+            *) echo "Невідома функція $FN"; exit 1 ;;
+          esac
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Немає секрету SUPABASE_ACCESS_TOKEN"; exit 1; }
+          echo "Викладаю $FN з $(git rev-parse --short HEAD), файли:"; ls -1 "supabase/functions/$FN"
+          supabase functions deploy "$FN" --project-ref "$PROJECT_REF" --use-api --yes $JWT

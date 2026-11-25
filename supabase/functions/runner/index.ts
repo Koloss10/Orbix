@@ -9,21 +9,24 @@ import { botConfig, INTERVAL, processBot } from "./core.js";
 import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
 import { limitsOf, riskBlock } from "./risk.js";
+import { htfNeed, tfMs } from "./engine.js";
+import { applyCommands, CMD_TTL } from "./commands.js";
+import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 const BYIV: Record<string, string> = { "1h": "60", "4h": "240", "12h": "720", "1d": "D", "1w": "W" };
-type C = { t: number; o: number; h: number; l: number; c: number; v: number; ml?: number; mh?: number };
+type C = { t: number; o: number; h: number; l: number; c: number; v: number; bv?: number; nt?: number; ml?: number; mh?: number };
 
 async function getJson(u: string) { const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status} ${u.split("?")[0]}`); return r.json(); }
 /* ринкові дані: Binance (ф'ючерси з mark price і funding або спот), резерв — Bybit */
-async function market(symbol: string, iv: string, fut: boolean) {
+async function market(symbol: string, iv: string, fut: boolean, lim = 400) {
   try {
     const base = fut ? "https://fapi.binance.com/fapi/v1" : "https://api.binance.com/api/v3";
-    const k = await getJson(`${base}/klines?symbol=${symbol}&interval=${iv}&limit=400`);
-    const candles: C[] = k.map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5] }));
+    const k = await getJson(`${base}/klines?symbol=${symbol}&interval=${iv}&limit=${lim}`);
+    const candles: C[] = k.map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5], bv: +r[9], nt: +r[8] })); // bv — об'єм покупців (taker buy) для фільтра китів, nt — кількість угод (сплеск активності)
     let funding: { t: number; r: number }[] | null = null;
     if (fut) {
-      const m = await getJson(`${base}/markPriceKlines?symbol=${symbol}&interval=${iv}&limit=400`).catch(() => []);
+      const m = await getJson(`${base}/markPriceKlines?symbol=${symbol}&interval=${iv}&limit=${lim}`).catch(() => []);
       const mm = new Map(m.map((r: any[]) => [+r[0], r]));
       for (const c of candles) { const x: any = mm.get(c.t); if (x) { c.ml = +x[3]; c.mh = +x[2]; } }
       const f = await getJson(`${base}/fundingRate?symbol=${symbol}&startTime=${Date.now() - 45 * 864e5}&limit=1000`).catch(() => []);
@@ -32,11 +35,11 @@ async function market(symbol: string, iv: string, fut: boolean) {
     return { candles, funding, src: "binance" };
   } catch (_e) {
     const cat = fut ? "linear" : "spot";
-    const j = await getJson(`https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYIV[iv]}&limit=400`);
+    const j = await getJson(`https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYIV[iv]}&limit=${lim}`);
     const candles: C[] = (j.result?.list ?? []).map((r: any[]) => ({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5] })).reverse();
     let funding: { t: number; r: number }[] | null = null;
     if (fut) {
-      const m = await getJson(`https://api.bybit.com/v5/market/mark-price-kline?category=linear&symbol=${symbol}&interval=${BYIV[iv]}&limit=400`).catch(() => ({}));
+      const m = await getJson(`https://api.bybit.com/v5/market/mark-price-kline?category=linear&symbol=${symbol}&interval=${BYIV[iv]}&limit=${lim}`).catch(() => ({}));
       const mm = new Map((m.result?.list ?? []).map((r: any[]) => [+r[0], r]));
       for (const c of candles) { const x: any = mm.get(c.t); if (x) { c.ml = +x[3]; c.mh = +x[2]; } }
       const f = await getJson(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${symbol}&limit=200`).catch(() => ({}));
@@ -51,6 +54,9 @@ Deno.serve(async (req) => {
   const { data: ok } = await admin.rpc("runner_check", { p_token: req.headers.get("x-runner-secret") ?? "" });
   if (ok !== true) return json({ error: "forbidden" }, 403);
   const started = Date.now();
+  // адресний запуск одного бота (тригер таблиці bot_commands: кнопка на картці) — { bot: uuid }; розклад шле {}
+  const body = await req.json().catch(() => ({}));
+  const only = typeof body?.bot === "string" && /^[0-9a-f-]{36}$/i.test(body.bot) ? body.bot : null;
   // серверні боти: ті, що працюють (обробляються рушієм), і ті, що на паузі (знімаються їхні ордери на біржі)
   const { data: all, error } = await admin.from("bots").select("id,user_id,config,status").in("status", ["running", "paused"]).eq("config->>_srv", "true");
   if (error) return json({ error: error.message }, 500);
@@ -63,6 +69,18 @@ Deno.serve(async (req) => {
     for (const v of vs ?? []) { ver.set(v.bot_id, v.updated_at); stOf.set(v.bot_id, v.state); }
   }
   for (const b of all ?? []) (b as any).state = stOf.get(b.id) ?? null;
+  // ручні команди з кнопок картки (runner/commands.js); застарілі — позначаються пропущеними
+  const cmdsOf = new Map<string, any[]>();
+  await admin.from("bot_commands").update({ status: "skipped", result: "команда застаріла: сервер не обробив її за 30 хв", done_at: new Date().toISOString() })
+    .eq("status", "new").lt("created_at", new Date(started - CMD_TTL).toISOString());
+  if (ids.length) {
+    const { data: cs, error: ce } = await admin.from("bot_commands").select("id,bot_id,kind,created_at").eq("status", "new").in("bot_id", ids).order("id");
+    if (ce) console.warn("runner: bot_commands", ce.message);
+    for (const c of cs ?? []) { if (!cmdsOf.has(c.bot_id)) cmdsOf.set(c.bot_id, []); cmdsOf.get(c.bot_id)!.push(c); }
+  }
+  const markCmds = async (results: any[]) => {
+    for (const x of results) await admin.from("bot_commands").update({ status: x.status, result: String(x.text).slice(0, 300), done_at: new Date().toISOString() }).eq("id", x.id).eq("status", "new");
+  };
   const rows = (all ?? []).filter((b: any) => b.status === "running"), paused = (all ?? []).filter((b: any) => b.status === "paused");
 
   const mcache = new Map<string, Promise<any>>(), keys = new Map<string, Promise<any>>(), tgs = new Map<string, Promise<any>>();
@@ -76,9 +94,26 @@ Deno.serve(async (req) => {
     }));
     return keys.get(k)!;
   };
+  // налаштування карток сигналів (v18): що надсилати й як; немає рядка — значення за замовчуванням
+  const cprefs = new Map<string, any>();
+  {
+    const uids = [...new Set((all ?? []).map((b: any) => b.user_id))];
+    const { data: cp, error: cpe } = uids.length ? await admin.from("tg_card_prefs").select("*").in("user_id", uids) : { data: [], error: null };
+    if (cpe) console.warn("runner: tg_card_prefs", cpe.message); // таблиці ще немає або збій — усе як раніше, текстом
+    for (const p of cp ?? []) cprefs.set(p.user_id, p);
+  }
+  const prefsOf = (uid: string) => cardPrefs(cprefs.get(uid));
+  const runnerSecret = req.headers.get("x-runner-secret") ?? "";
   const tgFor = (uid: string) => {
     if (!tgs.has(uid)) tgs.set(uid, admin.rpc("tg_secret_for", { p_uid: uid }).then(({ data }) => (Array.isArray(data) ? data[0] : data) ?? null));
     return tgs.get(uid)!;
+  };
+
+  const tgSend = async (uid: string, text: string) => {
+    try {
+      const t = await tgFor(uid);
+      if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text, disable_web_page_preview: true }) });
+    } catch (_e) { /* сповіщення не критичні */ }
   };
 
   let done = 0, evCount = 0;
@@ -112,31 +147,75 @@ Deno.serve(async (req) => {
   };
 
   for (const bot of rows ?? []) {
+    if (only && bot.id !== only) continue;
     if (Date.now() - started > 100e3) break; // запас до ліміту часу функції
     try {
       const g: any = botConfig(bot.config), cfg = bot.config || {};
       if (!/^[A-Z0-9]{2,20}\/USDT$/.test(g.pair || "")) continue;
       const iv = (INTERVAL as Record<number, string>)[g.tf || 1];
       if (!iv) continue;
-      const symbol = g.pair.replace("/", ""), mk = `${symbol}|${iv}|${g.fut ? 1 : 0}`;
-      if (!mcache.has(mk)) mcache.set(mk, market(symbol, iv, !!g.fut));
+      // фільтр тренду старшого таймфрейму потребує довшої історії: до 1000 свічок (ліміт Bybit)
+      const lim = Math.min(1000, Math.max(400, htfNeed(g) + 30));
+      const symbol = g.pair.replace("/", ""), mk = `${symbol}|${iv}|${g.fut ? 1 : 0}|${lim}`;
+      if (!mcache.has(mk)) mcache.set(mk, market(symbol, iv, !!g.fut, lim));
       const m = await mcache.get(mk);
       const exName = cfg._ex === "binance" ? "binance" : "bybit";
       const want = !!(cfg._tn && g.fut);
       const mirror = want && owner.get(`${bot.user_id}|${exName}|${g.pair}`) === bot.id;
+      const ex = mirror ? await exFor(bot.user_id, exName) : null;
+      // ручні команди: застосовуються до збереженого стану до прогону рушія; позначка «виконано» — після першого збереження
+      let cmdRes: any[] = [], cmdNotes: any[] = [];
+      const cmds = cmdsOf.get(bot.id) ?? [];
+      if (cmds.length) {
+        const live = m.candles[m.candles.length - 1];
+        const a = applyCommands({ cmds, state: bot.state, g, botId: bot.id, mirror: mirror && !!ex, native: !!ex?.native, price: live ? live.c : 0, now: Date.now() });
+        bot.state = a.state; cmdRes = a.results; cmdNotes = a.notes;
+      }
       // ліміт ризику: перевищено — нових угод не відкривати (позиції, що вже є, бот веде далі)
       const peers = mirror ? [...tnBots.entries()].filter(([id, x]) => id !== bot.id && x.uid === bot.user_id).map(([, x]) => x) : [];
       const blk = mirror ? riskBlock({ limits: limitsOf(lims.get(bot.user_id)), self: { g, state: bot.state }, peers, now: Date.now() }) : null;
-      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk });
+      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk && !bot.state?.fl?.sa }); // fl.sa — «Пауза до кінця угоди»
       evCount += r.events.length;
       if (tnBots.has(bot.id)) tnBots.get(bot.id)!.state = { ...(bot.state || {}), ...r.state }; // нова угода цього запуску займає ліміт для наступних ботів
       if (want && !mirror && r.events.length) await log(bot, "warn", `На демо-рахунку вже торгує інший бот ${g.pair} — угоду не продубльовано (позиції злилися б в одну)`);
-      const ex = mirror ? await exFor(bot.user_id, exName) : null;
       await handleBot({
         bot, g, r, symbol, mirror, native: !!ex?.native, ex, risk: mirror ? { blk } : null,
-        save: saver(bot),
+        save: async (state: unknown) => {
+          const ok = await saver(bot)(state);
+          if (ok && cmdRes.length) { // стан із командами збережено — позначити їх і повідомити
+            const res = cmdRes, notes = cmdNotes; cmdRes = []; cmdNotes = [];
+            await markCmds(res);
+            for (const n of notes) {
+              await log(bot, "info", `Ручна команда: ${n.text}`);
+              if (wantMsg(prefsOf(bot.user_id), n.kind === "close" || n.kind === "cancel" ? "close" : "other")) await tgSend(bot.user_id, `Orbix (сервер): ${g.pair} — ${n.text}`);
+            }
+          }
+          return ok;
+        },
         log: (level: string, text: string, data: unknown = null) => log(bot, level, text, data && typeof data === "object" ? { ...(data as object), src: m.src } : data),
-        notify: async (text: string) => {
+        card: async (ev: any, text: string) => {
+          const pf = prefsOf(bot.user_id);
+          if (!wantMsg(pf, ev.kind)) return true; // подію вимкнено в налаштуваннях — нічого не надсилаємо
+          if (!wantCard(pf, bot.id, ev.kind)) return false;
+          try {
+            const t = await tgFor(bot.user_id);
+            if (!t?.token || !t?.chat_id) return true;
+            const W = tfMs(g.tf || 1), A = m.candles.filter((c: C) => c.t + W <= (ev.t || Date.now()));
+            const st: any = r.state?.b || {}, pos = ev.kind === "open" || ev.kind === "dca" ? st.pos : null;
+            const trade = ev.trade || (["close", "sl", "liq"].includes(ev.kind) ? st.tr?.[st.tr.length - 1] : null);
+            const reasons = ev.kind === "open" && pf.parts.logic ? entryReasons(A, g) : [];
+            const spec = cardSpec({ g, ev, pos, trade, candles: A, reasons, exchange: mirror ? (exName === "binance" ? "Binance Testnet" : "Bybit Demo") : "модель Orbix",
+              theme: themeFor(pf), n: pf.candles, parts: pf.parts });
+            const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/tg-card`, { method: "POST",
+              headers: { "content-type": "application/json", "x-runner-secret": runnerSecret },
+              body: JSON.stringify({ uid: bot.user_id, spec, caption: cardCaption(text, reasons.slice(1)) }) });
+            if (res.ok) return true;
+            console.warn("runner: tg-card", res.status);
+          } catch (e) { console.warn("runner: tg-card", (e as Error).message); }
+          return false; // картка не вийшла — надішлемо текстом
+        },
+        notify: async (text: string, cat = "other") => {
+          if (!wantMsg(prefsOf(bot.user_id), cat)) return;
           try {
             const t = await tgFor(bot.user_id);
             if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text, disable_web_page_preview: true }) });
@@ -152,6 +231,9 @@ Deno.serve(async (req) => {
   // боти на паузі, яких сервер уже вів із «Тестнет»: один раз зняти їхні лімітні докупівлі на біржі
   let parked = 0;
   for (const bot of paused) {
+    const pc = cmdsOf.get(bot.id);
+    if (pc?.length) await markCmds(pc.map((c: any) => ({ id: c.id, status: "skipped", text: "бот на паузі — увімкніть бота, щоб виконати команду" })));
+    if (only) continue;
     if (Date.now() - started > 110e3) break;
     try {
       const cfg = bot.config || {}, st = bot.state;
@@ -164,7 +246,7 @@ Deno.serve(async (req) => {
       parked++;
       if (msg && !busy) {
         await log(bot, "warn", msg);
-        try {
+        if (wantMsg(prefsOf(bot.user_id), "other")) try {
           const t = await tgFor(bot.user_id);
           if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text: `Orbix (сервер): ${cfg.pair} — ${msg}`, disable_web_page_preview: true }) });
         } catch (_e) { /* сповіщення не критичні */ }

@@ -62,6 +62,7 @@ svg{width:100%;height:auto;display:block}
 .fl{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}
 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu);letter-spacing:.01em}
 .ck{flex-direction:row;align-items:center;gap:8px;color:var(--tx);min-height:44px;font-size:14px}
+.ck input{flex-shrink:0}
 input[type=checkbox]{width:22px;min-height:22px;accent-color:var(--ac)}
 input,select,textarea{width:100%;min-height:44px;background:var(--pan2);border:1px solid var(--ln);border-radius:12px;color:var(--tx);padding:0 12px;font:500 15px 'JetBrains Mono',ui-monospace,monospace}
 textarea{padding:10px 12px;font:400 14px Inter,system-ui,sans-serif;min-height:90px;resize:vertical}
@@ -250,6 +251,55 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 .hql{display:inline-flex;align-items:center;gap:0}
 #srbg{position:fixed;inset:0;background:rgba(5,7,10,.6);z-index:11}#srp{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));width:min(640px,calc(100vw - 16px));max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));overflow:auto;z-index:12;background:var(--pan);border:1px solid var(--ln);border-radius:var(--r);padding:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}.srh{display:flex;gap:8px;position:sticky;top:-12px;background:var(--pan);padding:0 0 8px}.srh input{flex:1;min-width:0}#srr h3{margin:12px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}.sri{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin-bottom:6px;padding:8px 12px}.sri .mu{font-size:12px;font-weight:400;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.chip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc.flash{outline:2px solid var(--ac);outline-offset:2px;transition:outline-color .3s}
 @media (max-width:480px){header{gap:6px}header #sbtn,header #mb{padding:0 9px!important}.chip{font-size:10px;letter-spacing:.03em;padding:4px 8px}.brand{gap:6px;padding-right:0}}
+
+/* ---------- Orbix AI ---------- */
+.aig{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:16px;align-items:start}
+.aih{display:flex;align-items:center;gap:12px;margin-bottom:6px}.aih h2{margin:0;margin-right:auto;display:flex;align-items:center;gap:8px}.aih .chip{margin-left:0}
+.aiq{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.ail{display:flex;flex-direction:column;gap:10px;max-height:min(60vh,560px);min-height:140px;overflow-y:auto;padding:12px;border:1px solid var(--ln);border-radius:12px;background:var(--pan2);overscroll-behavior:contain}
+.aimg{max-width:88%;padding:10px 12px;border-radius:14px;line-height:1.5;font-size:14px}
+.aimg.u{align-self:flex-end;background:color-mix(in srgb,var(--ac) 16%,transparent);border:1px solid color-mix(in srgb,var(--ac) 35%,transparent);border-bottom-right-radius:4px}
+.aimg.a{align-self:flex-start;background:var(--pan);border:1px solid var(--ln);border-bottom-left-radius:4px}
+.aitx{white-space:pre-wrap;overflow-wrap:anywhere}.aimt{margin-top:6px;font-size:12px}
+.aiw{color:var(--mu);animation:aip 1.4s ease-in-out infinite}@keyframes aip{50%{opacity:.45}}
+.aif{display:flex;gap:8px;margin-top:12px;align-items:flex-end}.aif textarea{flex:1;min-width:0;resize:vertical;min-height:48px;max-height:200px}
+.aici{display:flex;gap:6px;margin-bottom:6px}.aici .b:first-child{flex:1;min-width:0;justify-content:flex-start;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aici.on .b:first-child{border-color:var(--ac)}
+.srl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:860px){.aig{grid-template-columns:1fr}.aimg{max-width:94%}}
+@media (prefers-reduced-motion:reduce){.aiw{animation:none}}
+
+/* ---------- Orbix AI: плаваюча кнопка й вікно ---------- */
+#aifab{position:fixed;left:0;top:0;z-index:7;width:56px;height:56px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ac) 55%,transparent);padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+color:var(--ac);background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--ac) 30%,var(--pan2)),var(--pan2) 70%);
+box-shadow:0 10px 28px -10px color-mix(in srgb,var(--ac) 80%,transparent),0 0 0 6px color-mix(in srgb,var(--ac) 8%,transparent),inset 0 1px 0 rgba(255,255,255,.12);
+transition:box-shadow .2s,scale .15s;will-change:transform}
+#aifab[hidden]{display:none}
+#aifab svg{width:100%;height:100%;display:block;overflow:visible}
+#aifab .aifr{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.7}
+#aifab .aifs{fill:var(--pan2);opacity:.9}
+#aifab .aifo{transform-origin:24px 24px;animation:aifo 6s linear infinite}#aifab .aifo circle{fill:var(--ac2,var(--ac))}
+@keyframes aifo{to{transform:rotate(360deg)}}
+#aifab:hover{box-shadow:0 12px 32px -8px color-mix(in srgb,var(--ac) 90%,transparent),0 0 0 8px color-mix(in srgb,var(--ac) 12%,transparent)}
+#aifab:focus-visible{outline:2px solid var(--ac);outline-offset:4px}
+#aifab:active{scale:.95}
+#aifab.drag{cursor:grabbing;scale:1.08;box-shadow:0 18px 40px -10px color-mix(in srgb,var(--ac) 95%,transparent),0 0 0 10px color-mix(in srgb,var(--ac) 14%,transparent)}
+#aifab.snap{transition:transform .24s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s}
+#aifab.on{border-color:var(--ac)}
+#aipop{position:fixed;z-index:12;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(400px,calc(100vw - 32px));height:min(620px,calc(100vh - 110px));display:flex;flex-direction:column;
+background:color-mix(in srgb,var(--pan2) 96%,transparent);border:1px solid var(--ln);border-radius:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.65);backdrop-filter:blur(14px);overflow:hidden;animation:aipin .18s ease-out}
+#aipop.l{right:auto;left:16px}
+#aipop[hidden]{display:none}
+@keyframes aipin{from{opacity:0;transform:translateY(12px) scale(.98)}}
+.aiph{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ln)}.aiph b{font:600 15px 'Space Grotesk',Inter,sans-serif}.aiph .chip{margin-left:0;margin-right:auto}
+#aipb{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 12px 12px}
+.aig.pop{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;width:100%}.aig.pop .aim{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;width:100%}.aig.pop .aiq,.aig.pop .ail,.aig.pop .aif{min-width:0;max-width:100%}.aig.pop .card{background:none;border:0;padding:0;box-shadow:none}.aig.pop .aih h2,.aig.pop .aiint{display:none}.aig.pop .aih{justify-content:flex-end}
+.aig.pop .aiq{flex-wrap:nowrap;overflow-x:auto;margin:8px 0 10px;padding-bottom:4px;scrollbar-width:thin}.aig.pop .aiq .b{flex:none}
+.aig.pop .ail{flex:1;min-height:110px;max-height:none}.aig.pop .aih{margin:0}
+.aig.pop .aic{margin-top:10px;max-height:32%;overflow-y:auto;flex:none}.aig.pop .aic summary{cursor:pointer;color:var(--mu);font-size:13px;min-height:32px}
+.w.tb~#aipop{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+@media (max-width:600px){#aipop,#aipop.l{left:8px;right:8px;width:auto;height:min(78vh,640px)}}
+@media (prefers-reduced-motion:reduce){#aifab .aifo,#aipop{animation:none}#aifab.snap{transition:none}}
 </style>
 </head>
 <body>
@@ -348,6 +398,8 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 <div class="card" data-pt="a"><h2>Безпека</h2><div id="sec"></div></div>
 </section>
 
+<section id="v-ai" class="s" hidden><div id="aix"></div></section>
+
 <section id="v-fb" class="s" hidden><div id="fbx"></div></section>
 
 <section id="v-adm" class="s" hidden><div id="adm"></div></section>
@@ -363,6 +415,8 @@ td{padding:10px 8px;border-top:1px solid var(--ln);font-size:14px}
 </div>
 
 <nav id="tab" aria-label="Розділи" hidden></nav>
+<button id="aifab" type="button" aria-label="Orbix AI — помічник. Утримайте, щоб пересунути" aria-haspopup="dialog" aria-expanded="false" aria-controls="aipop"><svg viewBox="0 0 48 48" aria-hidden="true"><defs><radialGradient id="aifg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".45" stop-color="currentColor" stop-opacity=".9"/><stop offset="1" stop-color="currentColor" stop-opacity=".15"/></radialGradient></defs><ellipse class="aifr" cx="24" cy="24" rx="19" ry="8" transform="rotate(-28 24 24)"/><circle cx="24" cy="24" r="8.5" fill="url(#aifg)"/><path class="aifs" d="M24 18.6l1.4 3.9 3.9 1.5-3.9 1.4-1.4 3.9-1.5-3.9-3.9-1.4 3.9-1.5z"/><g class="aifo"><circle cx="40.5" cy="15" r="2.6"/></g></svg></button>
+<section id="aipop" role="dialog" aria-modal="false" aria-labelledby="aipt" hidden><div class="aiph"><b id="aipt">Orbix AI</b><span class="chip">бета</span><button class="b sm" id="aipo" type="button">На весь екран</button><button class="b sm" id="aipx" type="button" aria-label="Закрити Orbix AI">×</button></div><div id="aipb"></div></section>
 <div id="ts" role="status" hidden></div>
 <div id="lk" hidden role="dialog" aria-modal="true" aria-labelledby="lkt"><div class="lkb"><span class="av" style="width:72px;height:72px"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h2 id="lkt" style="margin:14px 0 6px">Orbix заблоковано</h2><p class="mu" style="margin-bottom:16px">Підтвердіть, що це ви: відбиток пальця, Face ID або PIN пристрою.</p><p class="mu" id="lka" style="margin:-8px 0 14px;font-size:13px"></p><button class="b p" id="lkb">Розблокувати</button><p class="dn" id="lkm" style="margin-top:10px"></p><button class="b sm" id="lkr" style="margin-top:18px">Не вдається розблокувати</button></div></div>
 <div id="srbg" hidden></div>
@@ -409,7 +463,7 @@ const dk=g=>g&&g.fut&&MD.fut&&MD.fset&&MD.fset.has(g.pair)?g.pair+FK:g&&g.pair;
 const mkLbl=k=>isF(k)?'ф\'ючерси '+MD.fsrc:'спот '+(MD.src||'');
 const withMark=(c,m)=>{if(m){c.ml=+m[3];c.mh=+m[2]}return c};
 /* свічки 1г у порядку зростання; lim до 1000; end — час відкриття останньої потрібної свічки */
-async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),bc=r=>({t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]});
+async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),bc=r=>{const c={t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]};if(r.length>9&&isFinite(+r[9]))c.bv=+r[9];if(r.length>9&&isFinite(+r[8]))c.nt=+r[8];return c};
 if(isF(k)){if(MD.fk==='by'){const q=`category=linear&symbol=${s}&interval=60&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`;
 const[j,m]=await Promise.all([jget(`${MD.fbase}/v5/market/kline?${q}`),jget(`${MD.fbase}/v5/market/mark-price-kline?${q}`).catch(()=>null)]);if(j.retCode)throw new Error(j.retMsg||'Bybit');
 const mm=new Map((m&&m.result&&m.result.list||[]).map(r=>[+r[0],r]));return(j.result.list||[]).map(r=>withMark(bc(r),mm.get(+r[0]))).reverse()}
@@ -428,8 +482,8 @@ F.sort((a,b)=>a.t-b.t);MD.fr[p]=F;IDB.set(key,F);return F}
 const IDB=(()=>{let db=null;const open=()=>db||(db=new Promise((res,rej)=>{const r=indexedDB.open('orbix-md',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
 return{get:async k=>{try{const d=await open();return await new Promise(r=>{const q=d.transaction('k').objectStore('k').get(k);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)})}catch(e){return null}},
 set:async(k,v)=>{try{const d=await open();d.transaction('k','readwrite').objectStore('k').put(v,k)}catch(e){}}}})();
-const pack1=a=>({t:a.map(c=>c.t),o:a.map(c=>c.o),h:a.map(c=>c.h),l:a.map(c=>c.l),c:a.map(c=>c.c),v:a.map(c=>c.v),ml:a.map(c=>c.ml),mh:a.map(c=>c.mh)});
-const unpack1=s=>s&&s.t?s.t.map((t,i)=>{const c={t,o:s.o[i],h:s.h[i],l:s.l[i],c:s.c[i],v:s.v[i]};if(s.ml&&s.ml[i]!=null){c.ml=s.ml[i];c.mh=s.mh[i]}return c}):[];
+const pack1=a=>({t:a.map(c=>c.t),o:a.map(c=>c.o),h:a.map(c=>c.h),l:a.map(c=>c.l),c:a.map(c=>c.c),v:a.map(c=>c.v),ml:a.map(c=>c.ml),mh:a.map(c=>c.mh),bv:a.map(c=>c.bv),nt:a.map(c=>c.nt)});
+const unpack1=s=>s&&s.t?s.t.map((t,i)=>{const c={t,o:s.o[i],h:s.h[i],l:s.l[i],c:s.c[i],v:s.v[i]};if(s.ml&&s.ml[i]!=null){c.ml=s.ml[i];c.mh=s.mh[i]}if(s.bv&&s.bv[i]!=null)c.bv=s.bv[i];if(s.nt&&s.nt[i]!=null)c.nt=s.nt[i];return c}):[];
 /* розділяє закриті свічки й поточну (незакриту) */
 function split(p,a){const now=Date.now();if(a.length&&a[a.length-1].t+H1>now)MD.live[p]=a.pop();return a}
 async function load1(p,hours){const key=(isF(p)?'f'+MD.fk:MD.k)+':'+p;let a=DT[p]?DT[p].slice():unpack1(await IDB.get(key));
@@ -482,12 +536,12 @@ async function tkRefresh(){if(MD.mode!=='live')return;try{Object.assign(MD.tk,tk
 const lastC=p=>MD.live[p]||D[p][D[p].length-1];
 const listed=(p,e)=>PK.indexOf(p)<EXS[e][1];
 const maxLev=(p,e)=>{const i=PK.indexOf(p),F=MD.flt&&MD.flt[p+FK];return Math.min(F&&F.maxLev?F.maxLev:i<2?125:i<10?75:i<30?25:10,EXS[e][0])};
-function agg(cs,k){if(k===1)return cs;const o=[];for(let i=0;i+k<=cs.length;i+=k){let h=-1/0,l=1/0,v=0;for(let j=i;j<i+k;j++){if(cs[j].h>h)h=cs[j].h;if(cs[j].l<l)l=cs[j].l;v+=cs[j].v||0}o.push({t:cs[i].t,o:cs[i].o,h,l,c:cs[i+k-1].c,v})}return o}
+function agg(cs,k){if(k===1)return cs;const o=[];for(let i=0;i+k<=cs.length;i+=k){let h=-1/0,l=1/0,v=0,bv=0,nb=0,nt=0,nn=0;for(let j=i;j<i+k;j++){if(cs[j].h>h)h=cs[j].h;if(cs[j].l<l)l=cs[j].l;v+=cs[j].v||0;if(cs[j].bv!=null){bv+=cs[j].bv;nb++}if(cs[j].nt!=null){nt+=cs[j].nt;nn++}}const x={t:cs[i].t,o:cs[i].o,h,l,c:cs[i+k-1].c,v};if(nb===k)x.bv=bv;if(nn===k)x.nt=nt;o.push(x)}return o}
 /* свічки старших таймфреймів вирівняні за UTC, як на біржах (тиждень — з понеділка 00:00 UTC);
    неповна перша група й ще не закрита остання відкидаються */
 const tfOff=tf=>tf===168?4*864e5:0,tfMs=tf=>tf*36e5;
 function aggT(cs,tf){if(tf===1)return cs;const o=[],W=tfMs(tf),off=tfOff(tf);let cur=null,key=null;
-for(const c of cs){const k=Math.floor((c.t-off)/W);if(k!==key){if(cur)o.push(cur);key=k;cur={t:k*W+off,o:c.o,h:c.h,l:c.l,c:c.c,v:c.v||0,_s:c.t};if(c.ml!=null){cur.ml=c.ml;cur.mh=c.mh}}else{if(c.h>cur.h)cur.h=c.h;if(c.l<cur.l)cur.l=c.l;cur.c=c.c;cur.v+=c.v||0;if(c.ml!=null){cur.ml=cur.ml==null?c.ml:Math.min(cur.ml,c.ml);cur.mh=cur.mh==null?c.mh:Math.max(cur.mh,c.mh)}}}
+for(const c of cs){const k=Math.floor((c.t-off)/W);if(k!==key){if(cur)o.push(cur);key=k;cur={t:k*W+off,o:c.o,h:c.h,l:c.l,c:c.c,v:c.v||0,_s:c.t};if(c.bv!=null)cur.bv=c.bv;else cur._nb=1;if(c.nt!=null)cur.nt=c.nt;else cur._nn=1;if(c.ml!=null){cur.ml=c.ml;cur.mh=c.mh}}else{if(c.h>cur.h)cur.h=c.h;if(c.l<cur.l)cur.l=c.l;cur.c=c.c;cur.v+=c.v||0;if(c.bv!=null&&!cur._nb)cur.bv+=c.bv;else{cur._nb=1;delete cur.bv}if(c.nt!=null&&!cur._nn)cur.nt+=c.nt;else{cur._nn=1;delete cur.nt}if(c.ml!=null){cur.ml=cur.ml==null?c.ml:Math.min(cur.ml,c.ml);cur.mh=cur.mh==null?c.mh:Math.max(cur.mh,c.mh)}}}
 if(cur)o.push(cur);if(o.length&&o[0]._s!==o[0].t)o.shift();const L=cs[cs.length-1];if(o.length&&L&&L.t+36e5<o[o.length-1].t+W)o.pop();return o}
 /* чи щойно закрилась свічка таймфрейму tf (за останньою годинною свічкою) */
 const closedTf=(cs,tf)=>{const L=cs[cs.length-1];return!!L&&(tf===1||(L.t+36e5-tfOff(tf))%tfMs(tf)===0)};
@@ -515,10 +569,65 @@ lvl:A=>memo(A,'lvl',()=>A.map((x,i)=>{const n=100;if(i<n)return 0;let hi=-1/0,lo
 ta:A=>{const c=cl(A),R=memo(A,'r14',()=>rsi(c,14)),S=memo(A,'s',()=>stoch(A)),C=memo(A,'c20',()=>cci(A,20)),M=memo(A,'m',()=>macdH(c)),E1=memo(A,'e20',()=>ema(c,20)),E2=memo(A,'e50',()=>ema(c,50));
 return A.map((x,i)=>{const v=(R[i]<30?1:R[i]>70?-1:0)+(S[i]<20?1:S[i]>80?-1:0)+(C[i]<-100?1:C[i]>100?-1:0)+(M[i]>0?1:-1)+(x.c>E1[i]?1:-1)+(E1[i]>E2[i]?1:-1);return v>=3?1:v<=-3?-1:0})}};
 const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг'};
-const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,fm:0,fee:.001,slip:.0005};
+const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
+/* Фільтр китів (сплеск об'єму): свічка i — «кит», якщо її об'єм ≥ wk × середнього за попередні WHL свічок,
+   оборот (об'єм × ціна) ≥ wn USDT і переважають покупці (Long) чи продавці (Short): частка taker-buy об'єму
+   ≥ wb (Long) або ≤ 1 − wb (Short). Якщо біржа не дає taker-buy об'єму (Bybit, демо-дані), напрям — за кольором свічки.
+   Вхід дозволено, якщо кит був на одній з останніх WHW свічок (включно з поточною). wk = 0 — фільтр вимкнено. */
+const WHL=20,WHW=3;
+function whale(A,g){const n=A.length,o=new Array(n).fill(false),k=+g.wk||0;if(!(k>0))return o.fill(true);const wn=+g.wn||0,wb=g.wb==null?.6:+g.wb,d=g.d<0?-1:1;let s=0;const hit=new Array(n).fill(false);
+for(let i=0;i<n;i++){const c=A[i],v=+c.v||0;if(i>=WHL){const avg=s/WHL;if(avg>0&&v>=k*avg&&v*c.c>=wn){let ok;if(c.bv!=null&&v>0){const sh=c.bv/v;ok=d>0?sh>=wb-1e-12:sh<=1-wb+1e-12}else ok=d>0?c.c>c.o:c.c<c.o;hit[i]=ok}}
+s+=v;if(i>=WHL)s-=+A[i-WHL].v||0;let w=false;for(let j=Math.max(0,i-WHW+1);j<=i;j++)if(hit[j]){w=true;break}o[i]=w}return o}
+/* ---------- ліквідність, сплеск активності, каскад ліквідацій (лише закриті свічки, без зазирання вперед) ----------
+   Свінг-мінімум на свічці j: l[j] строго найменший серед j−SWP…j+SWP; відомий лише після закриття свічки j+SWP.
+   Зона ліквідності — скупчення ≥ lqn свінгів за останні LQL свічок у межах допуску lqt; рівень — крайній свінг
+   скупчення (за ним стоять стопи). Зона знята, якщо після останнього свінгу ціна вже пройшла рівень.
+   Вхід дозволено, якщо умова фільтра виконалась на одній з останніх FLW свічок (як у фільтра китів). */
+const SWP=3,LQL=100,FLW=3,AVN=20;
+function swings(A){const n=A.length,lo=[],hi=[];for(let j=SWP;j+SWP<n;j++){let L=true,H=true;
+for(let q=j-SWP;q<=j+SWP&&(L||H);q++){if(q===j)continue;if(A[q].l<=A[j].l)L=false;if(A[q].h>=A[j].h)H=false}
+if(L)lo.push({j,at:j+SWP,p:A[j].l});if(H)hi.push({j,at:j+SWP,p:A[j].h})}return{lo,hi}}
+/* незняті зони на момент свічки i: side 'lo' — зони мінімумів (стопи під ними), 'hi' — максимумів; upto — до якої свічки
+   включно перевіряти, що рівень ще не пройдено (i−1 — для розвороту на свічці i, i — для руху до ліквідності) */
+function liqZones(A,i,sw,g,side,upto){const tol=+g.lqt>0?+g.lqt:.003,need=Math.max(2,Math.round(+g.lqn||2)),src=side==='lo'?sw.lo:sw.hi;
+const P=src.filter(s=>s.at<=i&&s.j>=i-LQL).sort((a,b)=>a.p-b.p),Z=[];
+for(let s=0;s<P.length;){let e=s;while(e+1<P.length&&P[e+1].p<=P[s].p*(1+tol))e++;
+if(e-s+1>=need){const grp=P.slice(s,e+1),lvl=side==='lo'?grp[0].p:grp[grp.length-1].p,jl=Math.max(...grp.map(x=>x.j));let ok=true;
+for(let q=jl+1;q<=upto;q++)if(side==='lo'?A[q].l<lvl:A[q].h>lvl){ok=false;break}if(ok)Z.push({lvl,j:jl,n:grp.length});s=e+1}else s++}return Z}
+const winOf=(hit,n)=>{const o=new Array(n).fill(false);for(let i=0;i<n;i++)for(let j=Math.max(0,i-FLW+1);j<=i;j++)if(hit[j]){o[i]=true;break}return o};
+/* 1. Ліквідність: lq 1 — розворот після зняття стопів, 2 — рух до ліквідності */
+function liq(A,g){const n=A.length,m=Math.round(+g.lq||0);if(!m)return new Array(n).fill(true);const sw=swings(A),d=g.d<0?-1:1,hit=new Array(n).fill(false),dist=+g.lqd>0?+g.lqd:.03;
+for(let i=SWP*2;i<n;i++){const c=A[i];
+if(m===1){const Z=liqZones(A,i,sw,g,d>0?'lo':'hi',i-1);hit[i]=Z.some(z=>d>0?c.l<z.lvl&&c.c>z.lvl:c.h>z.lvl&&c.c<z.lvl)}
+else{const Z=liqZones(A,i,sw,g,d>0?'hi':'lo',i);hit[i]=Z.some(z=>d>0?z.lvl>c.c&&z.lvl/c.c-1<=dist+1e-12:z.lvl<c.c&&1-z.lvl/c.c<=dist+1e-12)}}
+return winOf(hit,n)}
+/* 2. Сплеск активності, проти свічки: розмах ≥ ak× середнього за AVN свічок і кількість угод (без неї — об'єм) ≥ ak× середнього;
+   після червоної свічки — Long, після зеленої — Short */
+function act(A,g){const n=A.length,k=+g.ak||0;if(!(k>0))return new Array(n).fill(true);const d=g.d<0?-1:1,hit=new Array(n).fill(false);
+for(let i=AVN;i<n;i++){let r=0,v=0,t=0,tn=0;for(let q=i-AVN;q<i;q++){r+=A[q].h-A[q].l;v+=+A[q].v||0;if(A[q].nt!=null){t+=A[q].nt;tn++}}
+const c=A[i],useT=tn===AVN&&c.nt!=null,act=useT?c.nt>=k*t/AVN-1e-9:(+c.v||0)>=k*v/AVN-1e-9;
+hit[i]=r>0&&c.h-c.l>=k*r/AVN-1e-12&&act&&(d>0?c.c<c.o:c.c>c.o)}return winOf(hit,n)}
+/* 3. Каскад ліквідацій через свічки: новий мінімум за AVN свічок, об'єм ≥ lk× середнього, закриття у верхній половині
+   розмаху (довга нижня тінь — ліквідації викуплено) — Long; дзеркально — Short */
+function casc(A,g){const n=A.length,k=+g.lk||0;if(!(k>0))return new Array(n).fill(true);const d=g.d<0?-1:1,hit=new Array(n).fill(false);
+for(let i=AVN;i<n;i++){let v=0,lo=Infinity,hi=-Infinity;for(let q=i-AVN;q<i;q++){v+=+A[q].v||0;if(A[q].l<lo)lo=A[q].l;if(A[q].h>hi)hi=A[q].h}
+const c=A[i],rg=c.h-c.l;if(!(rg>0)||!((+c.v||0)>=k*v/AVN-1e-9))continue;const pos=(c.c-c.l)/rg;
+hit[i]=d>0?c.l<lo&&pos>=.5:c.h>hi&&pos<=.5}return winOf(hit,n)}
+/* 4. Тренд старшого таймфрейму: htf — старший таймфрейм у годинах (4, 12, 24, 168), hte — період EMA за його свічками.
+   Свічки старшого ТФ складаються з закритих свічок бота; свічка старшого ТФ враховується лише тоді, коли закрилась
+   остання свічка бота в ній (без зазирання вперед). Неповна перша група відкидається. Long — закриття останньої
+   закритої свічки старшого ТФ не нижче EMA (тренд не спадний), Short — не вище. Поки EMA не набрала hte свічок — вхід заборонено. */
+const htfNeed=g=>{const H=+g.htf||0;return H>0?Math.ceil((Math.max(2,Math.round(+g.hte||50))+2)*H/(+g.tf||1)):0};
+function htf(A,g){const n=A.length,H=+g.htf||0,o=new Array(n).fill(false);if(!(H>0))return o.fill(true);
+const W=tfMs(H),off=tfOff(H),Wb=tfMs(+g.tf||1),p=Math.max(2,Math.round(+g.hte||50)),d=g.d<0?-1:1,a=2/(p+1);if(W<=Wb)return o.fill(true);
+let key=null,full=false,ema=null,cnt=0,last=null;
+for(let i=0;i<n;i++){const t=A[i].t,k=Math.floor((t-off)/W);if(k!==key){key=k;full=t===k*W+off}
+if(full&&t+Wb===(k+1)*W+off){const c=A[i].c;cnt++;ema=cnt===1?c:ema+(c-ema)*a;last=c;full=false}
+o[i]=cnt>=p&&(d>0?last>=ema-1e-12:last<=ema+1e-12)}return o}
 function entry(A,g){const S=g.sg.map(k=>SIG[k](A,g)),n=A.length,o=new Array(n).fill(false),f=PAIRS[g.pair],
 w=Math.max(g.rp,g.bn,g.cn,30,g.sg.includes('ema')?100:0,g.sg.includes('lvl')?100:0,g.sg.includes('fib')?50:0),k=Math.min(g.k||S.length,S.length);
-if(!S.length||(g.fm&&f&&f.f<g.fm))return o;for(let i=w;i<n;i++){let c=0;for(const s of S)if(s[i]===g.d)c++;o[i]=c>=k}return o}
+if(!S.length||(g.fm&&f&&f.f<g.fm))return o;const WH=+g.wk>0?whale(A,g):null,FL=[+g.lq>0?liq(A,g):null,+g.ak>0?act(A,g):null,+g.lk>0?casc(A,g):null,+g.htf>0?htf(A,g):null].filter(Boolean);
+for(let i=Math.max(w,WH?WHL:0,FL.length?AVN:0);i<n;i++){let c=0;for(const s of S)if(s[i]===g.d)c++;o[i]=c>=k&&(!WH||WH[i])&&FL.every(F=>F[i])}return o}
 /* Комісії: ftk — тейкер (ринковий вхід, стоп, трейлінг, ліквідація), fmk — мейкер (лімітні DCA і TP).
    Funding: події fr={t,r}; при r>0 Long платить, Short отримує, сума = r·кількість·ціна.
    g.frx — множник funding для перевірки якості (за замовчуванням 1; 0 — без funding, 2 — подвоєний).
@@ -885,7 +994,7 @@ return`<p class="mu" style="margin:0">Фандінг: ${p?`угода <b class="
 function bcard(x){const p=x.b.pos,v=bv(x),s=x.b.tr,w=s.filter(t=>t.pnl>0).length;
 return`<div class="bc ${x.on?'on':'off'}" data-bot="${x.id}"><div class="bh"><b>${x.g.pair}</b><span class="mu">${dir(x.g)} · ${tfl(x.g.tf)} · ${x.g.lev}× · ${x.ex} · з ${tm(x.t0)}</span><span class="st" style="margin-left:auto">${x.on?'Працює':'Пауза'}</span></div>${!s.length&&!p?`<p class="mu bwait">${x.on?'Чекає на сигнал':'На паузі'} · перевірка після закриття свічки ${tfl(x.g.tf)}</p>`:''}${x.trunc?'<p class="mu" style="margin:0">Історії бракує, щоб відтворити бота з самого запуску: показано з найранішої доступної свічки.</p>':''}
 ${srvLine(x)}${p&&p.ta&&+x.g.trail>0&&p.peak>0?`<p class="mu" style="margin:0">Тейк-профіт досягнуто — працює трейлінг: угода закриється, коли ціна відкотиться на ${n2(x.g.trail*100,2).replace(/,?0+$/,'')} % від ${x.g.d>0?'максимуму':'мінімуму'} ${n2(p.peak,p.peak<1?5:2)} (≈ ${n2(p.peak*(1-x.g.d*x.g.trail),p.peak<1?5:2)}).</p>${trHint(x,p)}`:''}${fdLine(x,p)}${x.tn?((ex,r)=>r&&(r.worst>=.1||r.zero)?`<p class="rndw" style="margin:0">${rndText(r,ex,1)}</p>`:'')(x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit',rndInfo(x.g,x.srvEx||(typeof TN!=='undefined'&&TN.ex)||'bybit')):''}<div class="bm"><div>PnL з відкритою<b class="${cls(v)}">${f(v)}</b></div><div>Угод / win<b>${s.length} / ${s.length?Math.round(w/s.length*100):0}%</b></div><div>Позиція<b>${p?p.n+' з '+x.g.orders+' орд.':'немає'}</b></div><div>Просадка<b class="${cls(x.dd)}">${f(x.dd,0)}</b></div></div>
-<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button><button class="b sm" data-a="ed" data-id="${x.id}">Редагувати</button>${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden><button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
+<div class="ac"><button class="b sm ${x.on?'':'p'}" data-a="t" data-id="${x.id}">${x.on?'Пауза':'Запустити'}</button><button class="b sm" data-a="g" data-id="${x.id}">Графік</button><button class="b sm" data-a="j" data-id="${x.id}">Угоди</button><button class="b sm" data-a="ed" data-id="${x.id}">Редагувати</button>${x.srv&&x.rid?`<button class="b sm" data-a="ai" data-id="${x.id}">Запитати AI</button>`:''}${CLOUD.u?`<button class="b sm tg" data-a="srv" data-id="${x.id}" aria-pressed="${!!x.srv}" title="Бот торгує на сервері, навіть коли застосунок закритий">${x.srv?'Сервер 24/7: увімк.':'Сервер 24/7'}</button>`:''}${x.g.fut&&CLOUD.u&&TN.c?`<button class="b sm tg" data-a="tn" data-id="${x.id}" aria-pressed="${!!x.tn}" title="Дублювати угоди бота ордерами на демо-рахунку біржі (Bybit Demo або Binance Testnet)">${x.tn?'Тестнет: увімк.':'Тестнет'}</button>`:''}<button class="b sm bmore" data-a="m" data-id="${x.id}" aria-expanded="false" aria-label="Ще дії" title="Ще дії">⋯</button></div><div class="ac bmo" hidden>${typeof srvCmdBtns==='function'?srvCmdBtns(x):''}<button class="b sm" data-a="c" data-id="${x.id}">Клонувати</button><button class="b sm d" data-a="x" data-id="${x.id}">Видалити бота</button></div><div class="gr" id="gr${x.id}" hidden></div><div class="gr" id="jr${x.id}" hidden></div></div>`}
 function lstTo(el,list){if(!el)return;const on=list.filter(x=>x.on),off=list.filter(x=>!x.on);el.innerHTML=list.length?(on.length?`<h3>Працюють · ${on.length}</h3>`+on.map(bcard).join(''):'')+(off.length?`<h3>На паузі · ${off.length}</h3>`+off.map(bcard).join(''):''):'<p class="mu">Ботів ще немає. Запустіть топового бота, скористайтеся Авто-майстром або створіть свого.</p>'}
 function lst(){lstTo($('#bl'),bots);const q=($('#bq')&&$('#bq').value||'').trim().toUpperCase();lstTo($('#bl2'),q?bots.filter(x=>x.g.pair.includes(q)):bots);upd()}
 const jrn=x=>x.b.tr.length?x.b.tr.slice(-10).reverse().map(t=>`<div class="tr"><span>${tm(t.ts)}, ордерів ${t.n}${t.liq?', ліквідація':t.sl?', SL':''}</span><span class="mono ${cls(t.pnl)}">${f(t.pnl)}</span></div>`).join(''):'<p class="mu">Угод ще немає.</p>';
@@ -934,6 +1043,8 @@ if(a==='g'){const g=t.closest('.bc').querySelector('.gr');g.hidden=!g.hidden;if(
 if(a==='j'){const j=t.closest('.bc').querySelectorAll('.gr')[1];j.hidden=!j.hidden;j.innerHTML=jrn(x);return}
 if(a==='c'){if(typeof edEnd==='function')edEnd();fill(x.g,x.ex);go('bd');return}
 if(a==='ed'){edStart(x);return}
+if(a==='cmd'){srvCmd(x,t.dataset.k);return}
+if(a==='ai'){aiOpen({type:'bot',id:x.rid},`Проаналізуй бота ${x.g.pair}: стан, позицію, ризики й останні події. Чи все гаразд?`);return}
 if(a==='srv'||a==='tn')x.demo=0; // користувач узяв демо-бота в роботу — тепер це звичайний бот
 if(a==='srv'){srvToggle(x);return}
 if(a==='tn'){if(!x.tn){const o=bots.find(y=>y!==x&&y.tn&&y.g.fut&&y.g.pair===x.g.pair);if(o){toast('На демо-рахунку вже торгує бот '+x.g.pair+' — позиції на біржі злилися б в одну. Вимкніть «Тестнет» в іншому боті або виберіть іншу пару.');return}}x.tn=!x.tn;sbots();lst();toast(x.tn?'Угоди бота '+x.g.pair+' дублюватимуться на демо-рахунку біржі'+(x.srv?' — сервером, цілодобово.'+rkWarn(x):' (поки застосунок відкритий)'):'Тестнет для бота вимкнено');return}
@@ -948,29 +1059,29 @@ else toast('Усі боти на паузі — збережено на серв
 $('#ks').onclick=killAll;$('#ks2').onclick=killAll;$('#nb2').onclick=()=>go('bd');$('#bq').oninput=lst;
 
 /* ---------- форма конструктора ---------- */
-const NUM=[['frp','RSI період','rp',1],['frs','RSI поріг','rm',1],['fbn','Bollinger період','bn',1],['fbk','Bollinger k','bk',1],['fcn','CCI період','cn',1],['fcv','CCI рівень','cv',1],['fb','Сума на бота (маржа), USDT','base',1],['fo','Ордерів DCA','orders',1],['fs','Крок, %','step',100],['fx','Множник кроку','smul',1],['fm','Множник ордера (мартингейл)','mult',1],['ft','Take-Profit, %','tp',100],['fs1','Multi-TP: частка на TP1, %','s1',100],['ft2','Multi-TP: другий TP, %','tp2',100],['fr','Trailing, %','trail',100],['fl','Stop-Loss, %','sl',100],['fc','Пауза після угоди, свічок','cd',1],['fk','Мін. сигналів із вибраних','k',1],['ffm','Фундаментальний фільтр: мін. бал','fm',1],['flv','Плече','lev',1]];
+const NUM=[['frp','RSI період','rp',1],['frs','RSI поріг','rm',1],['fbn','Bollinger період','bn',1],['fbk','Bollinger k','bk',1],['fcn','CCI період','cn',1],['fcv','CCI рівень','cv',1],['fb','Сума на бота (маржа), USDT','base',1],['fo','Ордерів DCA','orders',1],['fs','Крок, %','step',100],['fx','Множник кроку','smul',1],['fm','Множник ордера (мартингейл)','mult',1],['ft','Take-Profit, %','tp',100],['fs1','Multi-TP: частка на TP1, %','s1',100],['ft2','Multi-TP: другий TP, %','tp2',100],['fr','Trailing, %','trail',100],['fl','Stop-Loss, %','sl',100],['fc','Пауза після угоди, свічок','cd',1],['fk','Мін. сигналів із вибраних','k',1],['ffm','Фундаментальний фільтр: мін. бал','fm',1],['fwk','Кити: сплеск об\'єму, × від середнього (0 — вимкнено)','wk',1],['fwn','Кити: мін. оборот свічки, USDT','wn',1],['fwb','Кити: частка покупців (Long) / продавців (Short), %','wb',100],['flqt','Ліквідність: допуск зони, %','lqt',100],['flqn','Ліквідність: мін. дотиків','lqn',1],['flqd','Рух до ліквідності: макс. відстань, %','lqd',100],['fak','Сплеск активності (проти свічки), × розмаху (0 — вимкнено)','ak',1],['flk','Каскад ліквідацій, × об\'єму (0 — вимкнено)','lk',1],['fhte','Тренд: період EMA старшого таймфрейму','hte',1],['flive','Ордерів DCA одночасно на біржі (0 — усі)','live',1],['flv','Плече','lev',1]];
 const sel=(id,l,o,v)=>`<label>${l}<select id="${id}">${o.map(([a,b])=>`<option value="${a}"${a==v?' selected':''}>${b}</option>`).join('')}</select></label>`;
 $('#pl').innerHTML=PK.map(k=>`<option value="${k}">`).join('');
 /* поля згруповано в розділи, що згортаються; ідентифікатори полів ті самі, тож cfg()/fill()/bad() не змінюються */
 const FGR=[['main','Основне',1],['sig','Сигнали входу'],['dca','Сітка DCA'],['ex','Вихід: TP, SL, трейлінг'],['flt','Фільтри'],['bt','Бектест']],
-FGI={fb:'main',flv:'main',frp:'sig',frs:'sig',fbn:'sig',fbk:'sig',fcn:'sig',fcv:'sig',fk:'sig',fo:'dca',fs:'dca',fx:'dca',fm:'dca',ft:'ex',fs1:'ex',ft2:'ex',fr:'ex',fl:'ex',fc:'ex',ffm:'flt'},
+FGI={fb:'main',flv:'main',frp:'sig',frs:'sig',fbn:'sig',fbk:'sig',fcn:'sig',fcv:'sig',fk:'sig',fo:'dca',fs:'dca',fx:'dca',fm:'dca',flive:'dca',ft:'ex',fs1:'ex',ft2:'ex',fr:'ex',fl:'ex',fc:'ex',ffm:'flt'},
 fin=([i,l,k,m])=>`<label>${l}<input id="${i}" type="number" inputmode="decimal" step="any" value="${k==='base'?+(DEF.base*ladder(DEF)).toFixed(2):+(DEF[k]*m).toFixed(4)}"></label>`,fgn=g=>NUM.filter(n=>(FGI[n[0]]||'flt')===g).map(fin).join(''),
 FGH={main:()=>sel('fe','Біржа',[])+sel('fp','Пара',PK.map(k=>[k,k]))+sel('fmk','Ринок',[[1,'Futures'],[0,'Spot']])+sel('fdr','Напрямок',[[1,'Long'],[-1,'Short']])+sel('ftf','Таймфрейм свічок',TFS)+fgn('main'),
 sig:()=>'<label class="fw">Готова стратегія<select id="fst"></select></label><div class="sgr fw" id="fsg"></div>'+fgn('sig'),
-dca:()=>fgn('dca'),ex:()=>sel('fbe','SL у беззбиток після TP1',[[0,'Ні'],[1,'На нулі'],[2,'На ціні TP1']])+fgn('ex'),flt:()=>fgn('flt'),
+dca:()=>fgn('dca'),ex:()=>sel('fbe','SL у беззбиток після TP1',[[0,'Ні'],[1,'На нулі'],[2,'На ціні TP1']])+fgn('ex'),flt:()=>sel('fhtf','Тренд старшого таймфрейму',[[0,'Вимкнено'],[4,'4 год'],[12,'12 год'],[24,'1 день'],[168,'1 тиждень']],0)+sel('flq','Ліквідність',[[0,'Вимкнено'],[1,'Розворот після зняття стопів'],[2,'Рух до ліквідності']],0)+fgn('flt'),
 bt:()=>sel('fper','Період бектесту',PER,8760)+'<label>Депозит, USDT<input id="fdp" type="number" inputmode="decimal" step="any" value="1000"></label>'};
 $('#fg').innerHTML=FGR.map(([k,t,o])=>`<details class="fgs" data-g="${k}"${o?' open':''}><summary><b>${t}</b><span class="mu" id="fgs-${k}"></span></summary><div class="fg">${FGH[k]()}</div></details>`).join('');
 /* короткий підсумок у заголовку кожного розділу */
 function fgSum(c){const g=c.g,p=x=>n2(x*100,2).replace(/,?0+$/,'')+' %',S={main:`${g.pair} · ${g.d>0?'Long':'Short'} · ${tfl(g.tf)} · ${n2(g.base,0)} USDT${g.fut&&g.lev>1?' · '+g.lev+'×':''}`,
 sig:`${g.sg.map(k=>SGN[k]).join(', ')||'не вибрано'} · мін. ${g.k}`,dca:`${g.orders} орд. · крок ${p(g.step)} · ×${String(g.mult).replace(".",",")}`,
-ex:`TP ${p(g.tp)} · SL ${p(g.sl)}${g.trail>0?' · трейлінг '+p(g.trail):''}${g.s1>0?' · Multi-TP':''}`,flt:g.fm>0?`фундаментальний бал ≥ ${g.fm}`:'вимкнено',bt:`${perl(c.per)} · депозит ${n2(c.dep,0)} USDT`};
+ex:`TP ${p(g.tp)} · SL ${p(g.sl)}${g.trail>0?' · трейлінг '+p(g.trail):''}${g.s1>0?' · Multi-TP':''}`,flt:[g.fm>0?`фунд. бал ≥ ${g.fm}`:'',g.wk>0?`кити ≥ ${g.wk}×`:'',g.lq===1?'зняття стопів':g.lq===2?'рух до ліквідності':'',g.ak>0?`активність ≥ ${g.ak}×`:'',g.lk>0?`каскад ≥ ${g.lk}×`:'',g.htf>0?`тренд ${tfl(g.htf)} EMA${g.hte}`:''].filter(Boolean).join(' · ')||'вимкнено',bt:`${perl(c.per)} · депозит ${n2(c.dep,0)} USDT`};
 for(const k in S){const e=$('#fgs-'+k);if(e)e.textContent=S[k]}}
 $('#fsg').innerHTML=Object.entries(SGN).map(([k,l])=>`<label class="ck"><input type="checkbox" data-sg="${k}"${DEF.sg.includes(k)?' checked':''}>${l}</label>`).join('');
 $('#fst').innerHTML='<option value="">Власний набір сигналів</option>'+STR.map((s,i)=>`<option value="${i}">${s[0]}</option>`).join('');
 $('#fst').onchange=e=>{const s=STR[+e.target.value];if(!s)return;$$('[data-sg]').forEach(c=>c.checked=s[1].includes(c.dataset.sg));$('#fk').value=s[2];pv()};
-function cfg(){const g={d:+$('#fdr').value,tf:+$('#ftf').value,fut:+$('#fmk').value,be:+$('#fbe').value,pair:$('#fp').value,sg:$$('[data-sg]').filter(c=>c.checked).map(c=>c.dataset.sg),fee:.001,slip:.0005};NUM.forEach(([i,,k,m])=>g[k]=+$('#'+i).value/m);['orders','rp','bn','cn','cd','k'].forEach(k=>g[k]=Math.round(g[k]));if(!g.fut)g.lev=1;{const u=ladder(g);if(u>0)g.base/=u}return{g,ex:$('#fe').value,per:+$('#fper').value,dep:+$('#fdp').value}}
-function bad(c){const g=c.g;if(!c.ex)return'Підключіть біржу в профілі.';if(!PAIRS[g.pair]||!listed(g.pair,c.ex))return'Ця пара не торгується на вибраній біржі.';if(!g.sg.length)return'Оберіть хоча б один сигнал входу.';if(Object.values(g).some(v=>typeof v==='number'&&!isFinite(v)))return'Усі числові поля мають бути заповнені.';if(!(g.base>0&&g.step>0&&g.tp>0&&g.sl>0&&g.mult>0&&g.smul>0&&g.tp2>0&&c.dep>0))return'Сума на бота, крок, TP, SL, множники й депозит мають бути більшими за 0.';if(g.orders<1||g.orders>30)return'Ордерів DCA: від 1 до 30.';if(g.rp<2||g.bn<2||g.cn<2)return'Періоди індикаторів мають бути не менші за 2.';if(g.d<0&&!g.fut)return'Short доступний лише на Futures.';const m=maxLev(g.pair,c.ex);if(g.lev<1||g.lev>m)return'Плече для цієї пари на цій біржі: від 1 до '+m+'×.';if(g.s1<0||g.s1>=1)return'Частка Multi-TP: від 0 до 99%.';const F=fltOf(g);if(F&&F.minN){const mo=g.base*(g.fut?g.lev:1)*Math.min(1,g.mult**(g.orders-1));if(mo<F.minN-1e-9)return`Біржа не прийме такий ордер: мінімум ${n2(F.minN,2)} USDT на ордер для ${g.pair}${g.fut?' (ф\'ючерси)':''}. ${g.mult<1?'Найменший ордер сітки':'Перший ордер з плечем'}: ${n2(mo,2)} USDT.`}if(g.k<1)return'Мін. сигналів має бути не менше 1.';{const r=minFirst(g);if(r&&g.base<r.min-1e-9)return minText(r)}return''}
-function fill(g,ex){g={...DEF,...g};$('#fp').value=g.pair;if(ex&&cx.includes(ex))$('#fe').value=ex;$('#fdr').value=g.d;$('#ftf').value=g.tf;$('#fmk').value=g.fut;$('#fbe').value=g.be;NUM.forEach(([i,,k,m])=>$('#'+i).value=+(g[k]*m).toFixed(4));$('#fb').value=+(g.base*ladder(g)).toFixed(2);$$('[data-sg]').forEach(c=>c.checked=g.sg.includes(c.dataset.sg))}
+function cfg(){const g={htf:+$('#fhtf').value,lq:+$('#flq').value,d:+$('#fdr').value,tf:+$('#ftf').value,fut:+$('#fmk').value,be:+$('#fbe').value,pair:$('#fp').value,sg:$$('[data-sg]').filter(c=>c.checked).map(c=>c.dataset.sg),fee:.001,slip:.0005};NUM.forEach(([i,,k,m])=>g[k]=+$('#'+i).value/m);['orders','rp','bn','cn','cd','k','live','lqn','hte'].forEach(k=>g[k]=Math.round(g[k]));if(!g.fut)g.lev=1;{const u=ladder(g);if(u>0)g.base/=u}return{g,ex:$('#fe').value,per:+$('#fper').value,dep:+$('#fdp').value}}
+function bad(c){const g=c.g;if(!c.ex)return'Підключіть біржу в профілі.';if(!PAIRS[g.pair]||!listed(g.pair,c.ex))return'Ця пара не торгується на вибраній біржі.';if(!g.sg.length)return'Оберіть хоча б один сигнал входу.';if(Object.values(g).some(v=>typeof v==='number'&&!isFinite(v)))return'Усі числові поля мають бути заповнені.';if(!(g.base>0&&g.step>0&&g.tp>0&&g.sl>0&&g.mult>0&&g.smul>0&&g.tp2>0&&c.dep>0))return'Сума на бота, крок, TP, SL, множники й депозит мають бути більшими за 0.';if(g.orders<1||g.orders>30)return'Ордерів DCA: від 1 до 30.';if(g.wk<0||g.wn<0)return'Фільтр китів: значення не можуть бути від\'ємними.';if(g.wk>0&&(g.wb<.5||g.wb>1))return'Фільтр китів: частка покупців чи продавців — від 50 до 100%.';if(g.lq>0&&(g.lqt<.0005||g.lqt>.03))return'Ліквідність: допуск зони — від 0,05 до 3%.';if(g.lq>0&&(g.lqn<2||g.lqn>10))return'Ліквідність: мінімум дотиків — від 2 до 10.';if(g.lq===2&&(g.lqd<.005||g.lqd>.2))return'Рух до ліквідності: відстань — від 0,5 до 20%.';if(g.htf>0&&g.htf<=g.tf)return'Тренд старшого таймфрейму: оберіть таймфрейм, більший за таймфрейм бота ('+tfl(g.tf)+').';if(g.htf>0&&(g.hte<5||g.hte>200))return'Тренд: період EMA — від 5 до 200 свічок старшого таймфрейму.';if(g.htf>0&&htfNeed(g)>970)return`Тренд: серверу знадобиться ${htfNeed(g)} свічок ${tfl(g.tf)}, а біржа дає до 1000. Зменшіть період EMA до ${Math.floor(970*g.tf/g.htf)-2} або оберіть менший старший таймфрейм.`;if(g.ak!==0&&(g.ak<1.2||g.ak>20))return'Сплеск активності: множник 0 (вимкнено) або від 1,2 до 20.';if(g.lk!==0&&(g.lk<1.2||g.lk>20))return'Каскад ліквідацій: множник 0 (вимкнено) або від 1,2 до 20.';if(g.live<0||g.live>30)return'Ордерів DCA одночасно на біржі: від 0 (усі) до 30.';if(g.rp<2||g.bn<2||g.cn<2)return'Періоди індикаторів мають бути не менші за 2.';if(g.d<0&&!g.fut)return'Short доступний лише на Futures.';const m=maxLev(g.pair,c.ex);if(g.lev<1||g.lev>m)return'Плече для цієї пари на цій біржі: від 1 до '+m+'×.';if(g.s1<0||g.s1>=1)return'Частка Multi-TP: від 0 до 99%.';const F=fltOf(g);if(F&&F.minN){const mo=g.base*(g.fut?g.lev:1)*Math.min(1,g.mult**(g.orders-1));if(mo<F.minN-1e-9)return`Біржа не прийме такий ордер: мінімум ${n2(F.minN,2)} USDT на ордер для ${g.pair}${g.fut?' (ф\'ючерси)':''}. ${g.mult<1?'Найменший ордер сітки':'Перший ордер з плечем'}: ${n2(mo,2)} USDT.`}if(g.k<1)return'Мін. сигналів має бути не менше 1.';{const r=minFirst(g);if(r&&g.base<r.min-1e-9)return minText(r)}return''}
+function fill(g,ex){g={...DEF,...g};$('#fp').value=g.pair;if(ex&&cx.includes(ex))$('#fe').value=ex;$('#fdr').value=g.d;$('#ftf').value=g.tf;$('#fmk').value=g.fut;$('#fbe').value=g.be;$('#flq').value=g.lq||0;$('#fhtf').value=g.htf||0;NUM.forEach(([i,,k,m])=>$('#'+i).value=+(g[k]*m).toFixed(4));$('#fb').value=+(g.base*ladder(g)).toFixed(2);$$('[data-sg]').forEach(c=>c.checked=g.sg.includes(c.dataset.sg))}
 const MODES=[{step:.025,orders:4,mult:1.15,tp:.006,sl:.06},{step:.015,orders:5,mult:1.3,tp:.01,sl:.05},{step:.01,orders:7,mult:1.6,tp:.015,sl:.08}];
 $$('[data-m]').forEach(b=>b.onclick=()=>{const c=cfg();{const T=c.g.base*ladder(c.g),n={...c.g,...MODES[+b.dataset.m]};n.base=T/ladder(n);fill(n,c.ex)};pv()});
 /* округлення кількості на демо-біржі: кожен ордер сітки (вхід і докупівлі) біржа округлює вниз до кроку кількості,
@@ -1020,7 +1131,7 @@ const same=q.every(v=>Math.abs(v-q[0])<1e-9);
 el.textContent=`${n} орд. ${same?'по '+n2(q[0],2):'— '+q.map(v=>n2(v,2)).join(' · ')} USDT маржі${L>1?` · з плечем ${L}× позиція до ${n2(N,0)} USDT`:''}`+(lim?(N>lim+1e-9?` · ⚠ більше за ваш ліміт угоди ${n2(lim,0)} USDT — на сервері бот не відкриватиме угод`:` · ліміт угоди ${n2(lim,0)} USDT ✓`):'');
 el.classList.toggle('dn',!!(lim&&N>lim+1e-9))}
 function pv(){const c=cfg(),m=$('#flh'),e=bad(c);fbInfo(c.g);fgSum(c);minLoad(c.g);minR(c.g);if(e)$$('#fg input').forEach(i=>{if(i.type==='number'&&(i.value===''||!isFinite(+i.value))){const d=i.closest('details');if(d)d.open=true}});const mx=PAIRS[c.g.pair]?maxLev(c.g.pair,c.ex||'Binance'):1;
-m.textContent=`Макс. плече для ${c.g.pair} на ${c.ex||'біржі'}: ${mx}×. Фундаментальний бал пари (демо): ${PAIRS[c.g.pair].f}/100.`+(c.g.lev>1&&c.g.fut?` Ліквідація приблизно за ${((1/c.g.lev-.005)*100).toFixed(1)}% проти позиції.`:'')+((F=>F?` Правила біржі: мін. ордер ${n2(F.minN,2)} USDT, крок ціни ${F.tick}, крок кількості ${F.step}${F.maxLev?', плече до '+F.maxLev+'×':''}.`:'')(fltOf(normG({...c.g}))));
+m.textContent=`Макс. плече для ${c.g.pair} на ${c.ex||'біржі'}: ${mx}×. Фундаментальний бал пари (демо): ${PAIRS[c.g.pair].f}/100.`+(c.g.lev>1&&c.g.fut?` Ліквідація приблизно за ${((1/c.g.lev-.005)*100).toFixed(1)}% проти позиції.`:'')+((F=>F?` Правила біржі: мін. ордер ${n2(F.minN,2)} USDT, крок ціни ${F.tick}, крок кількості ${F.step}${F.maxLev?', плече до '+F.maxLev+'×':''}.`:'')(fltOf(normG({...c.g}))))+(c.g.lq===1?` Ліквідність: вхід після зняття стопів — свічка проколює тінню зону з ${c.g.lqn}+ однакових ${c.g.d>0?'мінімумів':'максимумів'} (допуск ${n2(c.g.lqt*100,2)}%) і закривається назад${c.g.d>0?' вище':' нижче'} рівня.`:c.g.lq===2?` Ліквідність: вхід, коли ${c.g.d>0?'над':'під'} ціною є незнята зона ${c.g.d>0?'максимумів':'мінімумів'} не далі ${n2(c.g.lqd*100,1)}% — ціль руху.`:'')+(c.g.ak>0?` Сплеск активності: свічка з розмахом і кількістю угод (без неї — об'ємом) ≥ ${c.g.ak}× середнього — вхід проти неї (${c.g.d>0?'після червоної':'після зеленої'}).`:'')+(c.g.lk>0?` Каскад ліквідацій: новий ${c.g.d>0?'мінімум':'максимум'} за 20 свічок, об'єм ≥ ${c.g.lk}× середнього й закриття ${c.g.d>0?'у верхній':'у нижній'} половині свічки.`:'')+(c.g.htf>0?` Тренд старшого таймфрейму: ${c.g.d>0?'Long':'Short'} лише коли закриття останньої закритої свічки ${tfl(c.g.htf)} ${c.g.d>0?'не нижче':'не вище'} EMA ${c.g.hte} (тренд ${c.g.d>0?'не спадний':'не висхідний'}).`:'')+(c.g.wk>0?` Фільтр китів: вхід лише після свічки з об'ємом ≥ ${c.g.wk}× середнього за 20 свічок${c.g.wn>0?', оборотом ≥ '+n2(c.g.wn,0)+' USDT':''} і перевагою ${c.g.d>0?'покупців':'продавців'} ≥ ${Math.round(c.g.wb*100)}% (за останні 3 свічки).`:'')+(c.g.live>0&&c.g.live<c.g.orders-1?` На біржі одночасно стоятимуть ${c.g.live} найближчих ордерів DCA з ${c.g.orders - 1}; виконався один — ставиться наступний.`:'');
 if(e){$('#gs').textContent=e;return}
 const ck=dk(c.g);if(!ready(ck)){$('#gs').textContent='Завантажую історію '+c.g.pair+' ('+mkLbl(ck)+')…';need(ck).then(pv).catch(er=>$('#gs').textContent='Не вдалося завантажити дані: '+er.message);return}
 const v=$('#gv');if(v._k!==ck||(v._g&&v._g.tf!==c.g.tf))v._mk=null;v._p=c.g.pair;v._k=ck;v._g=c.g;if(!v._d)lwChart(v,()=>({pair:v._p,key:v._k,tf:v._g.tf,lv:()=>lines(v._g,null,v._k),mk:()=>v._mk||[]}),'full');else v._d();if(v._lt!==c.g.tf){v._lt=c.g.tf;if(v._tf){v._tf(c.g.tf);v._d()}}
@@ -1295,7 +1406,7 @@ if(CLOUD.u&&!TG.loaded)tgLoad().then(()=>{if(CUR==='pf')pfr()}).catch(()=>{});
 $('#msg').innerHTML=Object.entries(MSN).map(([k,n])=>{const c=MS[k];return`<div class="bc ${c.on?'on':'off'}"><div class="bh"><b>${n}</b><span class="st" style="margin-left:auto">${c.on?'Увімкнено':'Вимкнено'}</span></div>
 <div class="fg" style="margin-bottom:8px">${tgF()}${sel(k+'-tpl','Формат повідомлень',[['short','Короткий'],['normal','Звичайний'],['detailed','Детальний']],c.tpl)}</div>
 <h3>Події</h3><div class="sgr">${Object.entries(EVN).map(([e,l])=>`<label class="ck"><input type="checkbox" data-ms="${k}" data-ev="${e}"${(c.ev||SET.ev)[e]?' checked':''}>${l}</label>`).join('')}</div>
-<div class="ac"><button class="b sm ${c.on?'d':'p'}" data-ms-on="${k}">${c.on?'Вимкнути':'Увімкнути'}</button><button class="b sm" data-ms-t="${k}">Надіслати тест</button></div><pre class="mu" id="${k}-pv" style="white-space:pre-wrap;font:400 12px Inter,sans-serif;margin:6px 0 0"></pre></div>`}).join('');
+${k==='tg'?tcF():''}<div class="ac"><button class="b sm ${c.on?'d':'p'}" data-ms-on="${k}">${c.on?'Вимкнути':'Увімкнути'}</button><button class="b sm" data-ms-t="${k}">Надіслати тест</button></div><pre class="mu" id="${k}-pv" style="white-space:pre-wrap;font:400 12px Inter,sans-serif;margin:6px 0 0"></pre></div>`}).join('');
 secR();secLoad().catch(()=>{});tnR();rkR();accR()}
 /* вкладки профілю: Акаунт / Біржі й ризик / Сповіщення; вхід, 2FA і відновлення пароля — завжди «Акаунт» */
 let PFT=ld('zpft','a');
@@ -1346,16 +1457,16 @@ im.onerror=()=>{URL.revokeObjectURL(u);$('#avm').textContent='Не вдалос�
 $('#help').innerHTML=[['Бета-тест: як почати','Меню → Профіль → вкажіть пошту й пароль (від 8 символів) → «Зареєструватися». Вхід одразу, листа чекати не треба. Запам’ятайте пароль: під час бета-тесту листи з кодом і «Забули пароль?» не надсилаються. Двофакторний вхід — у Профілі → «Акаунт» → «Безпека». Боти працюють на демо-даних і паперових рахунках; для ордерів на демо-рахунку біржі додайте власні демо-ключі Bybit у Профілі → «Біржі й ризик» (ключі без права виведення). Відгуки й помилки надсилайте через Меню → «Відгук»: ваш ID і розділ додаються самі, пошта — ні.'],['Що бачить адміністратор','Лише загальну статистику: ваш ID, нік, кількість і налаштування ботів (пара, таймфрейм, сигнали, плече) і результати у відсотках. Пошту, паролі, ключі API й суми адміністратор не бачить.'],['Як запустити бота','Оберіть топового бота й натисніть «Запустити», або відкрийте Авто-майстер, вкажіть біржу, пару й суму. Бот працює в режимі paper: ордери не відправляються. Paper-бот торгує лише з моменту запуску, а сигнал перевіряє після закриття кожної свічки свого таймфрейму. Як стратегія торгувала б у минулому — дивіться в бектесті.'],['DCA-сітка','Перший ордер, крок між докупівлями, множник кроку та множник ордера (мартингейл). Середня ціна зміщується з кожною докупівлею, TP рахується від середньої.'],['Захист','Stop-Loss від середньої, Multi-TP, перенесення стопа в беззбиток, trailing. На Futures також видно ціну ліквідації.'],['Ринкові дані','Ціни й свічки беруться з публічного API Binance (резерв — Binance Vision і Bybit), без ключів. Історія кешується в браузері, нові свічки підтягуються кожні 15 секунд. Якщо біржі недоступні, вмикаються демо-дані (позначка «Демо-дані» вгорі).'],['Графіки','Ринок — повний графік TradingView. У налаштуванні бота — великий графік з індикаторами й сіткою ордерів. У ботах і бектестах — компактний графік: штрихові лінії ордерів, TP, SL, ліквідації та значки купівлі (B) і продажу (S).'],['Walk-forward','Авто-майстер перевіряє сам спосіб підбору: параметри підбираються на одному вікні історії, а торгують наступне, якого підбір не бачив, і так кілька кроків поспіль. У топ потрапляють лише пари, де підбір пройшов цю перевірку.'],['Бектести','Бектест іде на реальній годинній історії пари (типово рік, для «3 роки» докачується більше). Минулі результати не гарантують майбутніх: дивіться перевірку поза підбором і стрес-тест.'],['Сповіщення','Звук, вібрація, спливаючі й системні сповіщення в Налаштуваннях. Месенджери в Профілі: Telegram працює прямо з браузера.'],['Акаунт і хмара','Увійдіть у Профілі: боти, бектести, обрані й ім’я збережуться в хмарі Orbix і будуть доступні з телефона та комп’ютера. Без входу все лишається в цьому браузері.'],['Топ Боти й Обрані','На головній «Топ Боти»: до 10 найкращих стратегій Orbix і Авто-майстра, гортайте вбік. Іконка-воронка біля заголовка відкриває фільтри. Зірочка додає бота в «Обрані Боти». Цифри на картках — бектест, а не обіцянка прибутку.'],['Профіль','Відкрийте меню й натисніть на свій нік угорі: там нік, картинка профілю (10 логотипів або власне фото), акаунт, біржі та месенджери.']].map(([q,a])=>`<div class="tr" style="flex-direction:column;gap:4px"><b>${q}</b><span class="mu">${a}</span></div>`).join('');
 
 /* ---------- меню й навігація ---------- */
-const IC={fb:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',adm:'<path d="M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',ov:'<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',bots:'<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01"/>',aw:'<path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M5 19l1-2.5M19 19l-1-2.5"/>',bd:'<path d="M12 5v14M5 12h14"/>',mk:'<path d="M3 17l5-6 4 3 5-7 4 4"/>',bs:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>',jr:'<path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/>',st:'<path d="M4 19V10M10 19V4M16 19v-7M22 19H2"/>',sx:'<path d="M4 14l4-8 4 10 4-6 4 4"/>',mon:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',pf:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>'};
-const MENU=[['ov','Головна'],['bots','Мої боти'],['aw','Авто-майстер'],['bd','Новий бот'],['mk','Ринок і графік'],['bs','Бектести'],['jr','Журнал угод'],['st','Статистика'],['mon','Моніторинг'],['sx','Стрес-тест'],['set','Налаштування'],['pf','Профіль'],['fb','Відгук'],['adm','Адмін'],['help','Довідка']];
+const IC={ai:'<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>',fb:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',adm:'<path d="M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',ov:'<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',bots:'<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01"/>',aw:'<path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M5 19l1-2.5M19 19l-1-2.5"/>',bd:'<path d="M12 5v14M5 12h14"/>',mk:'<path d="M3 17l5-6 4 3 5-7 4 4"/>',bs:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>',jr:'<path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/>',st:'<path d="M4 19V10M10 19V4M16 19v-7M22 19H2"/>',sx:'<path d="M4 14l4-8 4 10 4-6 4 4"/>',mon:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',pf:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>'};
+const MENU=[['ov','Головна'],['bots','Мої боти'],['aw','Авто-майстер'],['bd','Новий бот'],['mk','Ринок і графік'],['bs','Бектести'],['jr','Журнал угод'],['st','Статистика'],['mon','Моніторинг'],['ai','Orbix AI'],['sx','Стрес-тест'],['set','Налаштування'],['pf','Профіль'],['fb','Відгук'],['adm','Адмін'],['help','Довідка']];
 function mnuR(){const m=$('#mn'),b=BRANDS[SET.brand];const head=VARIANT===2?`<button class="b mi" data-v="pf" style="min-height:64px;margin-bottom:6px" aria-label="Профіль: ${esc(PF.n||'Трейдер')}">${avH(40)}<span><b>${esc(PF.n||'Трейдер')}</b><div class="mu">${CLOUD.u?esc(emMask(CLOUD.u.email))+' · профіль ›':'Увійти в акаунт ›'}</div></span></button>`:`<div style="display:flex;align-items:center;gap:10px;padding:6px 8px 12px"><span style="width:28px;height:28px">${b.svg}</span><b style="font:700 14px 'Space Grotesk',sans-serif;letter-spacing:.14em">${b.n}</b></div>`;
 m.innerHTML=head+MENU.filter(([k])=>(VARIANT!==2||k!=='pf')&&(k!=='adm'||CLOUD.adm)).map(([k,l])=>`<button class="b mi" data-v="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${l}</button>`).join('')+`<p class="mu" style="margin-top:auto;padding:10px 8px 0">${b.n} · paper-режим. ${MD.mode==='live'?'Ціни '+MD.src+' у реальному часі':'Ціни демо'}, ордери не відправляються.</p>`;
 const t=$('#tab');if(VARIANT===2){t.hidden=false;$('#wrap').classList.add('tb');t.innerHTML=[['ov','Головна'],['bots','Боти'],['mk','Ринок'],['top','Топ'],['menu','Меню']].map(([k,l])=>`<button data-v="${k}" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k==='top'?'aw':k==='menu'?'set':k]}</svg>${l}</button>`).join('');t.onclick=e=>{const b=e.target.closest('button');if(!b)return;b.dataset.v==='menu'?mnu(1):go(b.dataset.v)}}}
 function mnu(o){if(o&&$('#srp')&&!$('#srp').hidden)srOpen(0);if(!o&&$('#mn').contains(document.activeElement))$('#mb').focus();$('#mn').hidden=$('#sh').hidden=!o;$('#mb').setAttribute('aria-expanded',!!o);if(o){const f=$('#mn button');f&&f.focus()}}
-const VIEWS=['ov','bots','mk','aw','bd','bs','jr','st','mon','sx','set','pf','fb','adm','help','wiki'];let CUR='ov';
+const VIEWS=['ov','bots','mk','aw','bd','bs','jr','st','mon','sx','set','pf','fb','adm','help','wiki','ai'];let CUR='ov';
 function go(n){if(n!=='bd'&&typeof edEnd==='function')edEnd();if(n==='top'){go('ov');setTimeout(()=>{const e=$('#home-top');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
 if(n==='fb'&&CUR!=='fb')FB.from=CUR;VIEWS.forEach(k=>{const e=$('#v-'+k);if(e)e.hidden=k!==n});CUR=n;$$('.mi').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));$$('#tab button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===n));mnu(0);scrollTo(0,0);
-if(n==='st')sta();if(n==='mon')monR(1);if(n==='bd')pv();if(n==='bs')bsl();if(n==='pf')pfr();if(n==='sx')sxr();if(n==='set')setR();if(n==='jr')jr();if(n==='mk')mkt();if(n==='bots')lst();if(n==='adm')admR(1);if(n==='fb'){FB.msg='';fbR();fbMine()}if(n==='ov')$$('.chv').forEach(c=>{if(c.offsetParent)c._d()})}
+if(n==='st')sta();if(n==='mon')monR(1);if(n==='bd')pv();if(n==='bs')bsl();if(n==='pf')pfr();if(n==='sx')sxr();if(n==='set')setR();if(n==='jr')jr();if(n==='mk')mkt();if(n==='bots')lst();if(n==='adm')admR(1);if(typeof aiFabSync==='function')aiFabSync();if(n==='ai'){aiR();if(AI.list===null&&!AI.off)aiList()}if(n==='fb'){FB.msg='';fbR();fbMine()}if(n==='ov')$$('.chv').forEach(c=>{if(c.offsetParent)c._d()})}
 $('#mb').onclick=()=>mnu($('#mn').hidden);$('#sh').onclick=()=>mnu(0);$('#brand').onclick=()=>go('ov');
 addEventListener('keydown',e=>{if(e.key==='Escape')mnu(0)});
 $('#mn').onclick=e=>{const t=e.target.closest('button');if(t&&t.dataset.v)go(t.dataset.v)};
@@ -1481,8 +1592,8 @@ const fv=await SB.from('favorite_presets').select('preset_id');
 if(!fv.error){const have=new Set(fv.data.map(x=>x.preset_id)),up=[...FAVP].filter(id=>!have.has(id)&&PRE.some(p=>p.id===id));if(up.length)await SB.from('favorite_presets').upsert(up.map(id=>({user_id:u.id,preset_id:id})),{onConflict:'user_id,preset_id',ignoreDuplicates:true});FAVP=new Set([...have,...up]);sv('zfavp',[...FAVP]);presR()}
 const p=await SB.from('profiles').select('display_name,avatar,public_no,risk_max_pos,risk_max_total,risk_day_loss').eq('id',u.id).single();
 if(!p.error&&p.data){CLOUD.no=p.data.public_no||null;rkSet(p.data);if(p.data.display_name)PF.n=p.data.display_name;else if(PF.n)nameQ();sv('zpf',PF);const a=avFrom(p.data.avatar);if(a){AV=a;try{localStorage.setItem('zav',JSON.stringify(AV))}catch(e){}}else if(AV.img||AV.k!=='orbit')avQ();if(CUR==='pf')avR();mnuR()}
-CLOUD.ok=Date.now();accR();srvLoad();admCheck();if(CUR==='bs')bsl();if(CUR==='pf')pfr();toast('Увійшли: дані синхронізовано')}
-function cloudOut(){pfLocalReset();CLOUD.adm=0;CLOUD.no=null;ADM.d=null;if(CUR==='adm')go('ov');TN={...TN,c:null,cs:{},loaded:0,bal:null,pos:null,msg:'',busy:0,q:Promise.resolve()};RK={l:null,msg:'',busy:0};TG={st:null,loaded:0,err:''};if(CUR==='pf')setTimeout(()=>{secR();accR()},0);CLOUD.u=null;CLOUD.pend=null;SEC.f=null;SEC.enr=null;SEC.msg='';CLOUD.known=new Set();CLOUD.ok=0;CLOUD.err='';bots=[];BT=[];FAVP=new Set();['zorya3','zbt','zfavp','zuid'].forEach(k=>sv(k,k==='zuid'?'':[]));lst();presR();accR();if(CUR==='bs')bsl()}
+CLOUD.ok=Date.now();accR();srvLoad();admCheck();if(CUR==='bs')bsl();if(CUR==='pf')pfr();if(typeof aiInit==='function')aiInit();toast('Увійшли: дані синхронізовано')}
+function cloudOut(){pfLocalReset();CLOUD.adm=0;CLOUD.no=null;ADM.d=null;if(CUR==='adm')go('ov');TN={...TN,c:null,cs:{},loaded:0,bal:null,pos:null,msg:'',busy:0,q:Promise.resolve()};RK={l:null,msg:'',busy:0};TG={st:null,loaded:0,err:''};if(CUR==='pf')setTimeout(()=>{secR();accR()},0);CLOUD.u=null;CLOUD.pend=null;SEC.f=null;SEC.enr=null;SEC.msg='';CLOUD.known=new Set();CLOUD.ok=0;CLOUD.err='';bots=[];BT=[];FAVP=new Set();['zorya3','zbt','zfavp','zuid'].forEach(k=>sv(k,k==='zuid'?'':[]));lst();presR();accR();if(CUR==='bs')bsl();if(typeof aiInit==='function')aiInit()}
 function cloudStart(){accR();presLoad().catch(()=>{}).finally(()=>{if(!SB)return;
 SB.auth.onAuthStateChange((ev,s)=>{const u=s&&s.user;if(ev==='PASSWORD_RECOVERY'){CLOUD.rec=1;setTimeout(()=>go('pf'),0)}
 if(u){if(ev!=='TOKEN_REFRESHED'||CLOUD.pend)setTimeout(()=>gate(u).catch(cloudFail),0)}else if(CLOUD.u||CLOUD.pend||CLOUD.rec){CLOUD.pend=null;CLOUD.rec=0;setTimeout(cloudOut,0)}})})}
@@ -1521,6 +1632,105 @@ return`<div class="card"><div class="row" style="justify-content:space-between;a
 ${F.items.length?F.items.map(x=>`<div class="fbi"><div class="row" style="justify-content:space-between;gap:8px;align-items:center"><span><b class="mono">#${String(x.no??'—').padStart(4,'0')}</b> ${esc(x.nick||'')} · <span class="fbk fbk-${esc(x.kind)}">${K2[x.kind]||esc(x.kind)}</span></span><span class="mu" style="font-size:12px">${new Date(x.at).toLocaleString('uk-UA',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${x.page?' · '+esc((typeof VNAME!=='undefined'&&VNAME[x.page])||x.page):''}</span></div><p class="fbb">${esc(x.body)}</p><button class="b sm" data-fbs="${x.id}" data-st="${x.status==='done'?'new':'done'}">${x.status==='done'?'Повернути в нові':'Готово'}</button></div>`).join(''):'<p class="mu" style="margin-top:8px">Немає відгуків.</p>'}</div>`}
 /* після входу: чи адмін (пункт меню «Адмін»); помилка — просто без пункту */
 async function admCheck(){CLOUD.adm=0;if(!SB||!CLOUD.u)return mnuR();try{const r=await SB.rpc('is_admin');CLOUD.adm=!r.error&&r.data===true?1:0}catch(e){CLOUD.adm=0}mnuR();if(CUR==='adm')admR(1)}
+/* ---------- Orbix AI: помічник, що читає дані акаунта й пояснює (етап 1) ----------
+   Розмова йде через серверну функцію ai-assistant: ключ AI-сервісу лишається на сервері, модель бачить
+   лише торгові дані (без пошти, імен і ключів). AI нічого не змінює: ні ботів, ні лімітів, ні ордерів.
+   Відповіді виводяться як текст (textContent), без HTML. Якщо функцію ще не викладено чи AI вимкнено —
+   розділ показує це й решта Orbix працює як раніше. */
+const AI={conv:null,msgs:[],list:null,busy:0,ctx:null,err:'',off:'',pop:0};
+const AI_Q=[['Стан усіх ботів','Як зараз почуваються всі мої боти? Чи є проблеми?'],['Перевірка ризиків','Перевір мої ризики: ліміти, зайняту експозицію, денний збиток. Чи блокується щось?'],
+['Найкращі й найгірші','Які мої боти мають найкращі й найгірші результати і чому?'],['Аналіз портфеля','Зроби короткий огляд мого акаунта: скільки ботів працює, загальний результат моделі й біржі.'],
+['Останні бектести','Поясни результати моїх останніх бектестів: що добре, що слабко.'],['Пошук проблем','Чи є помилки біржі, розбіжності моделі з біржею або боти, які давно не оброблялись сервером?']];
+const aiT=t=>{try{return new Date(t).toLocaleString('uk-UA',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return''}};
+async function aiErr(r){let d=r.data;if(r.error){try{d=await r.error.context.json()}catch(e){d=null}const s=r.error.context&&r.error.context.status;
+if(s===404||(!d&&/Failed to send|FunctionsFetchError|404/.test(r.error.message||'')))return{off:'Orbix AI ще не підключено на сервері.'};
+if(d&&d.code==='disabled')return{off:'Orbix AI вимкнено адміністратором. Боти й решта Orbix працюють як завжди.'};
+return{err:(d&&d.error)||'Orbix AI тимчасово недоступний. Боти працюють як завжди.'}}return{d}}
+async function aiList(){if(!SB||!CLOUD.u)return;const r=await SB.from('ai_conversations').select('id,title,updated_at,context_type').order('updated_at',{ascending:false}).limit(20);
+if(r.error){AI.list=[];if(/ai_conversations|does not exist|schema cache/.test(r.error.message||''))AI.off='Orbix AI ще не підключено на сервері.';}else AI.list=r.data||[];aiR()}
+async function aiOpenConv(id){if(!SB)return;AI.conv=id;AI.msgs=[];AI.err='';aiR();
+const r=await SB.from('ai_messages').select('role,content,metadata,created_at').eq('conversation_id',id).order('id',{ascending:true}).limit(200);
+if(r.error){AI.err='Не вдалося завантажити діалог.';}else AI.msgs=r.data||[];aiR()}
+function aiNew(){AI.conv=null;AI.msgs=[];AI.err='';AI.ctx=null;aiR();const t=$('#aiin');t&&t.focus()}
+async function aiDel(id){if(!SB||!confirm('Видалити цей діалог?'))return;const r=await SB.from('ai_conversations').delete().eq('id',id);
+if(r.error)return toast('Не вдалося видалити діалог.');if(AI.conv===id)aiNew();aiList()}
+async function aiErase(){if(!SB||!CLOUD.u||!confirm('Видалити ВСІ ваші діалоги з Orbix AI? Це не можна скасувати.'))return;const r=await SB.rpc('ai_erase_my_data');
+if(r.error)return toast('Не вдалося видалити діалоги.');toast('Усі діалоги видалено.');aiNew();aiList()}
+async function aiSend(text){text=String(text||'').trim();if(!text||AI.busy)return;if(!SB||!CLOUD.u){AI.err='Увійдіть в акаунт, щоб користуватися Orbix AI.';return aiR()}
+if(text.length>2000){AI.err='Питання задовге: до 2000 символів.';return aiR()}
+const me=CLOUD.u.id;{const ti=$('#aiin');if(ti)ti.value=''}AI.busy=1;AI.err='';AI.msgs=[...AI.msgs,{role:'user',content:text,created_at:new Date().toISOString()}];aiR();
+try{const r=await SB.functions.invoke('ai-assistant',{body:{message:text,conversationId:AI.conv,...(AI.ctx?{context:AI.ctx}:{})}});const e=await aiErr(r);
+if(!CLOUD.u||CLOUD.u.id!==me)return;/* акаунт змінився, поки чекали відповідь */
+if(e.off)AI.off=e.off;else if(e.err)AI.err=e.err;else{const d=e.d;AI.conv=d.conversationId;AI.ctx=null;AI.msgs=[...AI.msgs,{role:'assistant',content:d.text,metadata:{tools:d.tools,data_at:d.dataAt},created_at:new Date().toISOString()}];AI.left=d.dailyLimit-d.usedToday;aiList()}}
+catch(er){if(!CLOUD.u||CLOUD.u.id!==me)return;AI.err='Немає зв\'язку з Orbix AI. Спробуйте ще раз.'}
+AI.busy=0;aiR()}
+/* вхід або вихід з акаунта: діалоги попереднього акаунта не показуються (ідея з гілки колеги) */
+function aiInit(){Object.assign(AI,{conv:null,msgs:[],list:null,busy:0,ctx:null,err:'',off:'',left:null});if(CUR==='ai'||AI.pop){aiR();if(CLOUD.u)aiList()}}
+/* відкрити помічника з контекстом (наприклад, з картки бота) */
+function aiOpen(ctx,q){if(AI.pop)aiPop(0,1);AI.conv=null;AI.msgs=[];AI.err='';AI.ctx=ctx||null;go('ai');if(q)aiSend(q)}
+/* ---------- Плаваюча кнопка Orbix AI (на всіх розділах, крім самого «Orbix AI») ----------
+   Натиск — відкрити або закрити вікно помічника. Утримати (або одразу потягнути) — перетягнути кнопку;
+   після відпускання вона «прилипає» до найближчого краю. Місце запам'ятовується в цьому браузері (zaifab).
+   Клавіатура: Enter/Пробіл — відкрити, Alt+↑/↓ — пересунути, Esc — закрити вікно. */
+const FAB={k:'zaifab',s:56,m:12,p:null,drag:0,moved:0,t:0,sx:0,sy:0,ox:0,oy:0};
+const fabLoad=()=>{try{const v=JSON.parse(localStorage.getItem(FAB.k)||'null');return v&&(v.side==='l'||v.side==='r')&&isFinite(v.y)?v:null}catch(e){return null}};
+const fabSave=p=>{try{localStorage.setItem(FAB.k,JSON.stringify(p))}catch(e){}};
+/* межі: не під шапкою і не під нижньою панеллю вкладок */
+function fabBounds(){const t=$('#tab'),tb=t&&!t.hidden?t.getBoundingClientRect().height:0;return{x0:FAB.m,x1:innerWidth-FAB.s-FAB.m,y0:72,y1:Math.max(80,innerHeight-FAB.s-FAB.m-tb)}}
+function fabPut(x,y){const b=$('#aifab');if(b)b.style.transform=`translate3d(${Math.round(x)}px,${Math.round(y)}px,0)`;FAB.x=x;FAB.y=y}
+function fabPlace(){const B=fabBounds(),p=FAB.p||{side:'r',y:B.y1-24};fabPut(p.side==='l'?B.x0:B.x1,Math.min(Math.max(p.y,B.y0),B.y1))}
+function fabSnap(){const B=fabBounds(),side=FAB.x+FAB.s/2<innerWidth/2?'l':'r';FAB.p={side,y:Math.min(Math.max(FAB.y,B.y0),B.y1)};fabSave(FAB.p);
+const b=$('#aifab');b.classList.add('snap');fabPlace();setTimeout(()=>b.classList.remove('snap'),260)}
+function aiFabSync(){const b=$('#aifab');if(!b)return;const hide=CUR==='ai';b.hidden=hide;if(!hide)fabPlace();if(hide&&AI.pop)aiPop(0,1)}
+/* відкрити/закрити вікно; контекст — розділ, з якого відкрито (якщо діалог новий) */
+function aiPop(o,quiet){const w=$('#aipop'),b=$('#aifab');if(!w)return;AI.pop=o?1:0;w.hidden=!o;b.setAttribute('aria-expanded',o?'true':'false');b.classList.toggle('on',!!o);
+if(o){if(!AI.conv&&!AI.msgs.length){const c={mon:'monitor',bs:'backtest',mk:'market',sx:'risk'}[CUR];AI.ctx=c?{type:c,id:null}:AI.ctx&&AI.ctx.type==='bot'?AI.ctx:null}
+w.classList.toggle('l',FAB.p&&FAB.p.side==='l');aiR();if(CLOUD.u&&AI.list===null&&!AI.off)aiList();if(!quiet){const t=$('#aiin')||$('#aipx');t.focus()}}
+else{$('#aipb').innerHTML='';if(CUR==='ai')aiR();if(!quiet)b.focus()}}
+function fabInit(){const b=$('#aifab');if(!b)return;FAB.p=fabLoad();fabPlace();aiFabSync();
+b.addEventListener('pointerdown',e=>{if(e.button)return;FAB.drag=0;FAB.moved=0;FAB.sx=e.clientX;FAB.sy=e.clientY;FAB.ox=FAB.x;FAB.oy=FAB.y;b.setPointerCapture(e.pointerId);
+clearTimeout(FAB.t);FAB.t=setTimeout(()=>{FAB.drag=1;b.classList.add('drag');if(navigator.vibrate)try{navigator.vibrate(12)}catch(er){}},260)});
+b.addEventListener('pointermove',e=>{if(!b.hasPointerCapture(e.pointerId))return;const dx=e.clientX-FAB.sx,dy=e.clientY-FAB.sy;
+if(!FAB.drag&&Math.hypot(dx,dy)>8){FAB.drag=1;clearTimeout(FAB.t);b.classList.add('drag')}
+if(FAB.drag){FAB.moved=1;const B=fabBounds();fabPut(Math.min(Math.max(FAB.ox+dx,B.x0),B.x1),Math.min(Math.max(FAB.oy+dy,B.y0),B.y1));e.preventDefault()}});
+const up=e=>{clearTimeout(FAB.t);if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId);const was=FAB.drag;FAB.drag=0;b.classList.remove('drag');
+if(was){fabSnap();if(AI.pop)$('#aipop').classList.toggle('l',FAB.p.side==='l');FAB.skip=1;setTimeout(()=>FAB.skip=0,50)}};
+b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);
+b.addEventListener('click',e=>{if(FAB.skip){e.preventDefault();return}aiPop(!AI.pop)});
+b.addEventListener('keydown',e=>{if(e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();FAB.y+=e.key==='ArrowUp'?-48:48;fabSnap()}});
+b.addEventListener('contextmenu',e=>e.preventDefault());
+$('#aipx').onclick=()=>aiPop(0);$('#aipo').onclick=()=>{aiPop(0,1);go('ai')};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&AI.pop)aiPop(0)});
+addEventListener('resize',()=>fabPlace())}
+fabInit();
+function aiR(){const pop=!!AI.pop,el=$(pop?'#aipb':'#aix');if(!el)return;const oth=$(pop?'#aix':'#aipb');if(oth)oth.innerHTML='';
+/* перемальовування не губить набраний текст і фокус (історія діалогів довантажується у фоні) */
+const ti0=$('#aiin'),keep=ti0?ti0.value:'',hadF=!!(ti0&&document.activeElement===ti0);
+if(!CLOUD.u){el.innerHTML='<div class="card"><h2>Orbix AI</h2><p class="mu">Увійдіть в акаунт, щоб запитати Orbix AI про своїх ботів, ризики й бектести.</p></div>';return}
+if(AI.off){el.innerHTML=`<div class="card"><h2>Orbix AI <span class="chip">бета</span></h2><p class="mu" id="aioff"></p></div>`;$('#aioff').textContent=AI.off;return}
+el.innerHTML=`<div class="aig${pop?' pop':''}"><div class="card aim"><div class="aih"><h2>Orbix AI <span class="chip">бета</span></h2><button class="b sm" id="ainw">Новий діалог</button></div>
+<p class="mu aiint">Читає дані вашого акаунта й пояснює. Нічого не змінює: ордери, боти й ліміти — лише у вас. Відповіді AI можуть бути неточними — перевіряйте цифри в Orbix.</p>
+<div class="aiq" role="group" aria-label="Швидкі запити">${AI_Q.map(([l],i)=>`<button class="b sm" data-aq="${i}"${AI.busy?' disabled':''}>${l}</button>`).join('')}</div>
+<div class="ail" id="ail" role="log" aria-live="polite" aria-busy="${AI.busy?'true':'false'}"></div>
+<p class="dn" id="aier" ${AI.err?'':'hidden'}></p>
+<form class="aif" id="aif"><label class="srl" for="aiin">Ваше питання</label><textarea id="aiin" rows="2" maxlength="2000" placeholder="Напр.: Чому BNB не відкриває угод?"${AI.busy?' disabled':''}></textarea><button class="b p" id="aisd"${AI.busy?' disabled':''}>${AI.busy?'Думаю…':'Надіслати'}</button></form>
+${AI.left!=null?`<p class="mu" style="margin-top:6px">Сьогодні залишилось запитів: ${Math.max(0,AI.left)}</p>`:''}</div>
+<${pop?'details':'div'} class="card aic">${pop?'<summary>Історія діалогів</summary>':'<h3>Історія</h3>'}<div id="aicl"></div><button class="b sm" id="aier2" type="button">Видалити всі діалоги</button></${pop?'details':'div'}></div>`;
+const log=$('#ail');
+if(!AI.msgs.length){const p=document.createElement('p');p.className='mu';p.textContent=AI.ctx&&AI.ctx.type==='bot'?'Питання стосуватиметься вибраного бота.':'Поставте питання або виберіть швидкий запит.';log.append(p)}
+for(const m of AI.msgs){const d=document.createElement('div');d.className='aimg '+(m.role==='user'?'u':'a');const t=document.createElement('div');t.className='aitx';t.textContent=m.content;d.append(t);
+if(m.role==='assistant'){const md=m.metadata||{},s=document.createElement('p');s.className='mu aimt';s.textContent=(md.data_at?'Дані Orbix на '+aiT(md.data_at):'Без даних акаунта')+(md.tools&&md.tools.length?' · джерел: '+md.tools.length:'');d.append(s)}log.append(d)}
+if(AI.busy){const d=document.createElement('div');d.className='aimg a aiw';d.textContent='Orbix AI читає дані…';log.append(d)}
+log.scrollTop=log.scrollHeight;
+if(AI.err)$('#aier').textContent=AI.err;
+const cl=$('#aicl');if(AI.list===null)cl.innerHTML='<p class="mu">Завантаження…</p>';else if(!AI.list.length)cl.innerHTML='<p class="mu">Ще немає діалогів.</p>';
+else for(const c of AI.list){const r=document.createElement('div');r.className='aici'+(c.id===AI.conv?' on':'');const o=document.createElement('button');o.className='b sm';o.dataset.ac=c.id;o.textContent=c.title;o.title=aiT(c.updated_at);
+const x=document.createElement('button');x.className='b sm';x.dataset.ad=c.id;x.setAttribute('aria-label','Видалити діалог «'+c.title+'»');x.textContent='×';r.append(o,x);cl.append(r)}
+$('#ainw').onclick=aiNew;$('#aif').onsubmit=e=>{e.preventDefault();const t=$('#aiin');aiSend(t.value)};
+$('#aiin').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend(e.target.value)}};
+$$('[data-aq]').forEach(b=>b.onclick=()=>aiSend(AI_Q[+b.dataset.aq][1]));
+$('#aier2').onclick=aiErase;cl.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.ac)aiOpenConv(b.dataset.ac);else if(b.dataset.ad)aiDel(b.dataset.ad)};
+const ti=$('#aiin');if(ti&&keep&&!ti.disabled)ti.value=keep;if(ti&&hadF&&!ti.disabled)ti.focus()}
 /* ---------- Відгук: учасник бета-тесту пише відгук прямо з Orbix ----------
    Запис у таблицю feedback (RLS: лише свої; тригер ставить автора й статус, не більше 20 на добу).
    Адмін бачить усі відгуки в розділі «Адмін» з ID автора, без пошти. */
@@ -1548,8 +1758,8 @@ catch(e){FB.busy=0;FB.msg='Не вдалося надіслати: '+(e.message|
 /* ---------- Підказки [?] у конструкторі й Вікі ----------
    Біля кожного поля конструктора (індикатор, сигнал, фільтр, параметр сітки й виходу) — кнопка [?]:
    коротка інструкція «що це й навіщо» і посилання на повний опис у Вікі (Налаштування → Вікі).
-   Ключ — id поля конструктора або 'sg:<сигнал>'; поля, яких зараз немає у формі (фільтри, що з'являться
-   після оновлення сервера 25.11), не показуються ні в конструкторі, ні у Вікі — з'являться самі, щойно поле буде у формі.
+   Ключ — id поля конструктора або 'sg:<сигнал>'; поля, яких немає у формі, не показуються ні в конструкторі,
+   ні у Вікі — з'являться самі, щойно поле буде у формі.
    Запис: [ключ, назва, коротко (для [?]), повно (для Вікі)]. */
 const HG=[
 ['Основне',[
@@ -1613,7 +1823,7 @@ const HG=[
 const STRD=['Класика для боковика: вхід, коли ціна і перепродана за RSI, і вийшла за нижню смугу Боллінджера (для Short — навпаки).','Три осцилятори, вистачає двох збігів: частіші входи на відскоках.','Вхід за трендом (EMA 100) на відкаті: RSI і MACD мають підтвердити — потрібні всі три.','Розворотна свічка біля рівня підтримки (для Short — біля опору).','Відкат до 61,8 % Фібоначчі, підтверджений RSI.','Загальна оцінка ринку (TA-рейтинг) плюс вихід ціни за смуги Боллінджера.','Імпульс (MACD) і перепроданість (Stochastic) одночасно.'];
 const wid=k=>'w-'+String(k).replace(/[^\w-]/g,'-');
 const HM={};HG.forEach(([,L])=>L.forEach(x=>HM[x[0]]=x));
-/* поле зараз є у формі? (фільтри після 25.11 з'являться самі) */
+/* поле зараз є у формі? */
 const hqHas=k=>k.startsWith('sg:')?!!$(`[data-sg="${k.slice(3)}"]`):!!$('#'+k);
 const hqLab=k=>{const e=k.startsWith('sg:')?$(`[data-sg="${k.slice(3)}"]`):$('#'+k);return e&&e.closest('label')};
 function hqInit(){Object.keys(HM).forEach(k=>{const l=hqLab(k);if(!l||l.querySelector('.hq'))return;const b=document.createElement('button');b.type='button';b.className='hq';b.dataset.hq=k;b.textContent='?';
@@ -1689,14 +1899,15 @@ toast(x.srv?'Бот '+x.g.pair+' переходить на сервер (до 5 
 async function srvLoad(){if(!SB||!CLOUD.u||SRV.busy)return;const L=bots.filter(x=>x.srv&&x.rid);if(!L.length)return;SRV.busy=1;try{
 const ids=L.map(x=>x.rid),s=await SB.from('bot_state').select('bot_id,state,updated_at').in('bot_id',ids);
 if(!s.error)for(const r of s.data||[]){const x=L.find(y=>y.rid===r.bot_id),st=r.state||{};if(!x||!st.b)continue;
-const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0}
+const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0;x.srvSa=!!(st.fl&&st.fl.sa);x.srvMc=!!(st.fl&&st.fl.mc)}
 const e=await SB.from('bot_events').select('id,bot_id,level,message,created_at').in('bot_id',ids).order('created_at',{ascending:false}).limit(30);
 if(!e.error){let add=0;for(const r of (e.data||[]).slice().reverse()){if(SRV.seen.has(r.id))continue;SRV.seen.add(r.id);FEED.unshift({t:new Date(r.created_at).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),m:'☁ '+r.message});add++}
 if(add){FEED=FEED.slice(0,60);sv('zfeed',FEED);feedR()}}
 lst();upd();if(CUR==='mon')monR()}catch(er){}finally{SRV.busy=0}}
 const srvMisL=x=>{const m=x.srvMis;if(!x.tn||!m||!m.t||(m.k!=='xc'&&!m.on))return'';return`<p class="${m.k==='xc'?'mu':'dn'}" style="margin:0">${m.k==='xc'?'ℹ':'⚠'} Звірка з біржею: ${esc(m.t)}${m.k==='orphan'?' — перевірте позицію в Bybit Demo':''}</p>`};
 const srvRlL=x=>x.srv&&x.tn&&x.srvRl&&x.srvRl.t?`<p class="dn" style="margin:0">⏸ Нові угоди призупинено лімітом ризику: ${esc(x.srvRl.t)}</p>`:'';
-const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
+const srvSaL=x=>x.srv&&x.srvSa?`<p class="dn" style="margin:0">⏸ Пауза до кінця угоди: нових угод бот не відкриватиме${x.b.pos?', поточну доведе до кінця':''}. Відновити — «⋯» → «Відновити нові угоди».</p>`:'';
+const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+srvSaL(x)+(x.srvMc?`<p class="mu" style="margin:0">⏳ Угода закривається за ринком…</p>`:'')+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
 
 /* ---------- Моніторинг серверних ботів ----------
    Для кожного бота «Сервер 24/7»: коли сервер востаннє його обробляв, позиція моделі, стан на демо-біржі
@@ -1741,6 +1952,27 @@ el.innerHTML=`<div class="k">${K('Ботів на сервері',`${run.length}
 ${[...L].sort((a,b)=>(b.on-a.on)||a.g.pair.localeCompare(b.g.pair)).map(monBot).join('')}</div>`;
 $('#monr').onclick=()=>{MON.at=0;monR(1)}}
 setInterval(()=>{if(document.hidden)return;srvLoad();if(CUR==='mon'&&Date.now()-MON.at>60e3)monEv().then(()=>monR())},60000);
+
+/* ---------- Ручні команди серверного бота (меню «⋯» на картці) ----------
+   Браузер лише записує команду в public.bot_commands; сервер (runner) виконує її за кілька секунд
+   у тому ж порядку, що й сигнали: спершу стан, потім біржа. Знімаються лише ордери цього бота. */
+const CMDQ={
+  close:p=>`Закрити угоду ${p} за ринком зараз?\n\nСервер зніме лімітні докупівлі бота й закриє позицію ринковим ордером. Після цього бот, як завжди, шукатиме новий вхід.`,
+  cancel:p=>`Скасувати угоду ${p}?\n\nБот перестане її вести: зніме свої лімітні докупівлі, а позиція ЛИШИТЬСЯ на біржі — закрийте її вручну на біржі. Нова угода бота на цій парі додалася б до неї, тож краще закрити позицію до наступного входу.`,
+  stop_after:p=>`Пауза до кінця угоди ${p}?\n\nПоточну угоду бот доведе до кінця (TP, SL, докупівлі), а нових не відкриватиме, доки ви не натиснете «Відновити нові угоди».`,
+  resume:null};
+const CMDN={close:'Закрити за ринком',cancel:'Скасувати угоду',stop_after:'Пауза до кінця угоди',resume:'Відновити нові угоди'};
+function srvCmdBtns(x){if(!x.srv||!x.rid||!x.on||!x.srvSt||!CLOUD.u)return'';const p=x.b&&x.b.pos,B=(k,c='')=>`<button class="b sm ${c}" data-a="cmd" data-k="${k}" data-id="${x.id}">${CMDN[k]}</button>`;
+return(p?B('close','d')+B('cancel'):'')+(x.srvSa?B('resume','p'):B('stop_after'))}
+async function srvCmd(x,k){if(!CMDN[k]||!SB||!CLOUD.u||!x.rid)return;if(CMDQ[k]&&!confirm(CMDQ[k](x.g.pair)))return;
+try{const r=await SB.from('bot_commands').insert({bot_id:x.rid,kind:k}).select('id').single();
+if(r.error){if(r.error.code==='23505')return toast('Попередня команда для '+x.g.pair+' ще виконується — зачекайте кілька секунд.');throw new Error(r.error.message)}
+toast(CMDN[k]+': команду надіслано на сервер ('+x.g.pair+'). Виконання — за кілька секунд.');srvCmdWait(x,r.data.id,0)}
+catch(e){toast('Не вдалося надіслати команду: '+e.message)}}
+/* дочекатися результату команди (до ~2 хв) і показати його */
+async function srvCmdWait(x,id,n){await new Promise(r=>setTimeout(r,n?10000:6000));try{const r=await SB.from('bot_commands').select('status,result').eq('id',id).single();
+if(!r.error&&r.data&&r.data.status!=='new'){toast(x.g.pair+': '+(r.data.status==='done'?'✓ ':'Не виконано: ')+(r.data.result||'готово'));srvLoad();return}}catch(e){}
+if(n<12)srvCmdWait(x,id,n+1);else toast(x.g.pair+': сервер ще не виконав команду — він підхопить її під час найближчого запуску (до 5 хв).')}
 /* ---------- Тестнет Binance Futures: ключі на сервері, справжні ордери на тестових грошах ----------
    Ключі API зберігаються в Supabase Vault (RPC ex_save / ex_delete), ордери надсилає Edge Function `exchange`,
    жорстко прив'язана до testnet.binancefuture.com. Браузер ключів не бачить. */
@@ -1818,6 +2050,37 @@ RK.busy=1;b.disabled=true;try{const row={risk_max_pos:rd('#rk-p'),risk_max_total
 const r=await SB.from('profiles').update(row).eq('id',CLOUD.u.id).select('risk_max_pos,risk_max_total,risk_day_loss').single();if(r.error)throw r.error;
 rkSet(r.data);RK.msg='Ліміти збережено. Сервер застосує їх під час наступного запуску (до 5 хвилин).'+(!row.risk_max_pos||!row.risk_max_total||!row.risk_day_loss?' Частину лімітів вимкнено — це менш безпечно.':'')}
 catch(er){RK.msg='Помилка: '+(er.message||er)}finally{RK.busy=0;rkR()}};
+/* ---------- Картки сигналів у Telegram (v18): налаштування сервера для кожного користувача ----------
+   Таблиця public.tg_card_prefs (лише власні рядки, з 2FA). Сервер (runner) надсилає картинку з графіком, ордерами,
+   TP/SL і логікою відкриття через функцію tg-card; що надсилати й як — тут. Токен Telegram сюди не потрапляє. */
+const TCE={open:'Відкриття угоди',dca:'Докупівлі (DCA)',close:'Закриття: TP, SL, трейлінг, ліквідація',risk:'Ліміти ризику й аварійна зупинка',error:'Помилки біржі',other:'Інше: звірка з біржею, пауза бота'};
+const TCP={chart:'Графік свічок',orders:'Лінії входу й докупівель',tpsl:'Лінії TP, SL і ліквідації',logic:'Логіка відкриття',result:'Результат угоди в USDT'};
+const TCD={enabled:true,events:{open:true,dca:true,close:true,risk:true,error:true,other:true},parts:{chart:true,orders:true,tpsl:true,logic:true,result:true},theme:'dark',candles:80,bots_off:[]};
+let TC={p:null,bots:[],loaded:0,busy:0,msg:'',uid:null};
+const tcNorm=r=>{const x=r||{},pk=(o,d)=>Object.fromEntries(Object.keys(d).map(k=>[k,o&&typeof o[k]==='boolean'?o[k]:d[k]]));
+return{enabled:x.enabled!==false,events:pk(x.events,TCD.events),parts:pk(x.parts,TCD.parts),theme:['dark','light','auto'].includes(x.theme)?x.theme:'dark',candles:[40,80,150].includes(+x.candles)?+x.candles:80,bots_off:Array.isArray(x.bots_off)?x.bots_off.map(String):[]}};
+async function tcLoad(){if(!SB||!CLOUD.u){TC={p:null,bots:[],loaded:1,busy:0,msg:''};return}
+const[a,b]=await Promise.all([SB.from('tg_card_prefs').select('enabled,events,parts,theme,candles,bots_off').eq('user_id',CLOUD.u.id).maybeSingle(),SB.from('bots').select('id,status,pair:config->>pair,srv:config->>_srv').limit(200)]);
+TC.uid=CLOUD.u.id;TC.p=tcNorm(a.data);TC.bots=(b.data||[]).filter(x=>x.srv==='true');TC.loaded=1;TC.msg=a.error?'Не вдалося прочитати налаштування карток: '+a.error.message:''}
+async function tcSave(){const p=TC.p;const r=await SB.from('tg_card_prefs').upsert({user_id:CLOUD.u.id,enabled:p.enabled,events:p.events,parts:p.parts,theme:p.theme,candles:p.candles,bots_off:p.bots_off,updated_at:new Date().toISOString()});
+if(r.error)throw new Error(r.error.message)}
+function tcF(){if(!CLOUD.u||!TG.st)return'';if(!TC.loaded||TC.uid!==CLOUD.u.id){TC.loaded=1;tcLoad().then(()=>{if(CUR==='pf')pfr()}).catch(e=>{TC.msg=e.message;if(CUR==='pf')pfr()});return'<p class="mu">Завантажую налаштування карток…</p>'}
+const p=TC.p||tcNorm(null),ck=(grp,k,l)=>`<label class="ck"><input type="checkbox" data-tc="${grp}" data-tck="${k}"${(grp==='bot'?!p.bots_off.includes(k):p[grp][k])?' checked':''}>${esc(l)}</label>`;
+return`<h3 style="margin-top:14px">Картки сигналів із сервера</h3><p class="mu" style="margin:0 0 8px">Сервер надсилає в Telegram картинку: графік, вхід, майбутні докупівлі, TP і SL, а внизу — чому бот відкрив угоду. Це для ботів, увімкнених на сервері.</p>
+<label class="ck"><input type="checkbox" data-tc="enabled"${p.enabled?' checked':''}>Надсилати картинкою (вимкнено — лише текст)</label>
+<h3>Що надсилати</h3><div class="sgr">${Object.entries(TCE).map(([k,l])=>ck('events',k,l)).join('')}</div>
+<h3>Що показувати на картці</h3><div class="sgr">${Object.entries(TCP).map(([k,l])=>ck('parts',k,l)).join('')}</div>
+<div class="fg">${sel('tc-theme','Тема картки',[['dark','Темна'],['light','Світла'],['auto','Авто: вдень світла, вночі темна']],p.theme)}${sel('tc-candles','Свічок на графіку',[['40','40'],['80','80'],['150','150']],String(p.candles))}</div>
+${TC.bots.length?`<h3>Картки для ботів</h3><div class="sgr">${TC.bots.map(b=>ck('bot',b.id,(b.pair||'Бот')+(b.status==='running'?'':' (на паузі)'))).join('')}</div>`:''}
+<div class="ac"><button class="b sm p" data-tc-test>Надіслати пробну картку</button></div><p class="mu" id="tc-msg" style="margin:6px 0 0">${esc(TC.msg)}</p>`}
+async function tcTest(){if(!SB||!CLOUD.u)throw new Error('Увійдіть в акаунт.');const r=await SB.functions.invoke('tg-card',{body:{action:'test',theme:TC.p&&TC.p.theme!=='auto'?TC.p.theme:undefined,parts:TC.p?TC.p.parts:undefined}});
+if(r.error){let m=r.error.message;try{const j=await r.error.context.json();m=j.error||m}catch(e){}throw new Error(tgMsg(m))}return r.data}
+document.addEventListener('change',async e=>{const t=e.target;if(!t.closest||!t.closest('#msg')||!TC.p)return;const p=TC.p;
+if(t.dataset.tc==='enabled')p.enabled=t.checked;else if(t.dataset.tc==='bot'){const id=t.dataset.tck;p.bots_off=t.checked?p.bots_off.filter(x=>x!==id):[...p.bots_off,id]}
+else if(t.dataset.tc)p[t.dataset.tc][t.dataset.tck]=t.checked;else if(t.id==='tc-theme')p.theme=t.value;else if(t.id==='tc-candles')p.candles=+t.value;else return;
+const m=$('#tc-msg');try{await tcSave();if(m)m.textContent='Збережено. Сервер застосує з наступного запуску (до 5 хв).'}catch(er){if(m)m.textContent='Не збережено: '+er.message}});
+document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-tc-test]');if(!b||TC.busy)return;TC.busy=1;b.disabled=true;const m=$('#tc-msg');
+if(m)m.textContent='Малюю й надсилаю пробну картку…';try{await tcTest();if(m)m.textContent='Надіслано — перевірте Telegram.'}catch(er){if(m)m.textContent='Помилка: '+er.message}finally{TC.busy=0;b.disabled=false}});
 /* ---------- анімація фону тем (canvas#bgfx) і заставка ---------- */
 /* Кожна тема має свій ефект. Малюється ~30 кадрів/с, пауза у прихованій вкладці,
    вимикається перемикачем «Анімація фону» (SET.anim) або системним «зменшити рух». */

@@ -9,6 +9,8 @@ const GENERATED = [
   'supabase/functions/exchange/sign.js',
   'supabase/functions/runner/exchanges.ts',
   'supabase/functions/runner/sign.js',
+  'supabase/functions/ai-assistant/engine.js',
+  'supabase/functions/ai-assistant/risk.js',
 ];
 
 let input = {};
