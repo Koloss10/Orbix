@@ -133,3 +133,12 @@ test('Авто-майстер: вибір не залежить від свіч�
   for (let i = from; i < H.length; i++) { const k = 1 + Math.sin(i) * 0.05; H[i] = { ...H[i], o: H[i].o * k, h: H[i].h * k * 1.01, l: H[i].l * k * 0.99, c: H[i].c * k }; }
   assert.deepEqual(E2.auto(c, 3).map((o) => JSON.stringify(o.g)), a);
 });
+test('Авто-майстер: «Лише за денним трендом» додає фільтр денного тренду ботам до 12 год; вимкнено — не додає', () => {
+  const E2 = loadEngine(); E2.MD.mode = 'demo';
+  const c = { pair: 'ETH/USDT', ex: 'Binance', amt: 0, per: 2400, tf: 4, dr: 0, fut: 1, lev: 0 };
+  const on = E2.auto(c, 1), off = E2.auto({ ...c, trend: 0 }, 1);
+  assert.ok(on.length > 0 && on.every((o) => o.g.htf === 24 && o.g.hte === 50));
+  assert.ok(off.every((o) => !(o.g.htf > 0)));
+  // входи перераховано з фільтром: їх не більше, ніж без нього
+  assert.ok(on[0].e.filter(Boolean).length <= off[0].e.filter(Boolean).length);
+});
