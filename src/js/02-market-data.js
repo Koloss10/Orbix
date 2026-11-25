@@ -16,7 +16,7 @@ const dk=g=>g&&g.fut&&MD.fut&&MD.fset&&MD.fset.has(g.pair)?g.pair+FK:g&&g.pair;
 const mkLbl=k=>isF(k)?'ф\'ючерси '+MD.fsrc:'спот '+(MD.src||'');
 const withMark=(c,m)=>{if(m){c.ml=+m[3];c.mh=+m[2]}return c};
 /* свічки 1г у порядку зростання; lim до 1000; end — час відкриття останньої потрібної свічки */
-async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),bc=r=>({t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]});
+async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),bc=r=>{const c={t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]};if(r.length>9&&isFinite(+r[9]))c.bv=+r[9];if(r.length>9&&isFinite(+r[8]))c.nt=+r[8];return c};
 if(isF(k)){if(MD.fk==='by'){const q=`category=linear&symbol=${s}&interval=60&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`;
 const[j,m]=await Promise.all([jget(`${MD.fbase}/v5/market/kline?${q}`),jget(`${MD.fbase}/v5/market/mark-price-kline?${q}`).catch(()=>null)]);if(j.retCode)throw new Error(j.retMsg||'Bybit');
 const mm=new Map((m&&m.result&&m.result.list||[]).map(r=>[+r[0],r]));return(j.result.list||[]).map(r=>withMark(bc(r),mm.get(+r[0]))).reverse()}
@@ -35,8 +35,8 @@ F.sort((a,b)=>a.t-b.t);MD.fr[p]=F;IDB.set(key,F);return F}
 const IDB=(()=>{let db=null;const open=()=>db||(db=new Promise((res,rej)=>{const r=indexedDB.open('orbix-md',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
 return{get:async k=>{try{const d=await open();return await new Promise(r=>{const q=d.transaction('k').objectStore('k').get(k);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)})}catch(e){return null}},
 set:async(k,v)=>{try{const d=await open();d.transaction('k','readwrite').objectStore('k').put(v,k)}catch(e){}}}})();
-const pack1=a=>({t:a.map(c=>c.t),o:a.map(c=>c.o),h:a.map(c=>c.h),l:a.map(c=>c.l),c:a.map(c=>c.c),v:a.map(c=>c.v),ml:a.map(c=>c.ml),mh:a.map(c=>c.mh)});
-const unpack1=s=>s&&s.t?s.t.map((t,i)=>{const c={t,o:s.o[i],h:s.h[i],l:s.l[i],c:s.c[i],v:s.v[i]};if(s.ml&&s.ml[i]!=null){c.ml=s.ml[i];c.mh=s.mh[i]}return c}):[];
+const pack1=a=>({t:a.map(c=>c.t),o:a.map(c=>c.o),h:a.map(c=>c.h),l:a.map(c=>c.l),c:a.map(c=>c.c),v:a.map(c=>c.v),ml:a.map(c=>c.ml),mh:a.map(c=>c.mh),bv:a.map(c=>c.bv),nt:a.map(c=>c.nt)});
+const unpack1=s=>s&&s.t?s.t.map((t,i)=>{const c={t,o:s.o[i],h:s.h[i],l:s.l[i],c:s.c[i],v:s.v[i]};if(s.ml&&s.ml[i]!=null){c.ml=s.ml[i];c.mh=s.mh[i]}if(s.bv&&s.bv[i]!=null)c.bv=s.bv[i];if(s.nt&&s.nt[i]!=null)c.nt=s.nt[i];return c}):[];
 /* розділяє закриті свічки й поточну (незакриту) */
 function split(p,a){const now=Date.now();if(a.length&&a[a.length-1].t+H1>now)MD.live[p]=a.pop();return a}
 async function load1(p,hours){const key=(isF(p)?'f'+MD.fk:MD.k)+':'+p;let a=DT[p]?DT[p].slice():unpack1(await IDB.get(key));

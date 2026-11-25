@@ -313,3 +313,151 @@ test('Сітка на графіку (lv) з правилами біржі зб�
   const b = new E.Bot(g, null, F); [C(0, 100, 100, 100, 100), C(1, 100, 100, 93.5, 95)].forEach((r, i) => b.step(i, r, i === 0));
   assert.deepEqual(b.pos.f.map(x => x.p), L);
 });
+
+// ---------- фільтр китів (сплеск об'єму) ----------
+// 30 спокійних свічок з об'ємом 10 (середнє 10), потім свічка-кит з об'ємом V і часткою покупців bv/V
+const WHC = (V, bv, o = 100, c = 101) => { const a = []; for (let i = 0; i < 30; i++) a.push({ t: T0 + i * H1, o: 100, h: 101, l: 99, c: 100, v: 10, bv: 5 }); a.push({ t: T0 + 30 * H1, o, h: Math.max(o, c) + 1, l: Math.min(o, c) - 1, c, v: V, ...(bv == null ? {} : { bv }) }); for (let i = 31; i < 36; i++) a.push({ t: T0 + i * H1, o: 100, h: 101, l: 99, c: 100, v: 10, bv: 5 }); return a; };
+test('Кити: сплеск об\'єму ≥ k×середнього з перевагою покупців дає дозвіл на Long на 3 свічки', () => {
+  // середнє за 20 свічок = 10; кит V=30 (рівно 3×), покупці 18/30 = 60 % = wb
+  const w = E.whale(WHC(30, 18), G({ wk: 3, wb: 0.6 }));
+  assert.equal(w[29], false); assert.equal(w[30], true); assert.equal(w[31], true); assert.equal(w[32], true); assert.equal(w[33], false);
+});
+test('Кити: замалий сплеск, замала сума чи перевага продавців — дозволу немає', () => {
+  assert.equal(E.whale(WHC(29.9, 20), G({ wk: 3, wb: 0.6 }))[30], false, 'сплеск < 3×');
+  assert.equal(E.whale(WHC(30, 17.9), G({ wk: 3, wb: 0.6 }))[30], false, 'покупців < 60 %');
+  // оборот кита 30 × 101 = 3030 USDT
+  assert.equal(E.whale(WHC(30, 18), G({ wk: 3, wb: 0.6, wn: 3031 }))[30], false, 'оборот < мінімуму');
+  assert.equal(E.whale(WHC(30, 18), G({ wk: 3, wb: 0.6, wn: 3030 }))[30], true, 'оборот = мінімуму');
+});
+test('Кити: для Short потрібна перевага продавців; без taker-buy — напрям за кольором свічки', () => {
+  assert.equal(E.whale(WHC(30, 12), G({ wk: 3, wb: 0.6, d: -1 }))[30], true, 'продавців 60 %');
+  assert.equal(E.whale(WHC(30, 13), G({ wk: 3, wb: 0.6, d: -1 }))[30], false, 'продавців 56,7 %');
+  assert.equal(E.whale(WHC(30, null, 100, 101), G({ wk: 3 }))[30], true, 'зелена свічка — Long');
+  assert.equal(E.whale(WHC(30, null, 100, 101), G({ wk: 3, d: -1 }))[30], false, 'зелена свічка — не Short');
+  assert.equal(E.whale(WHC(30, null, 101, 100), G({ wk: 3, d: -1 }))[30], true, 'червона свічка — Short');
+});
+test('Кити: фільтр пригнічує входи без кита, а з wk = 0 вхід не змінюється', () => {
+  const A = WHC(30, 18); for (let i = 31; i < 36; i++) A[i].c = 100 - (i - 30) * 0.5; // падіння → RSI низький
+  const g0 = G({ sg: ['rsi'], k: 1, rp: 3, rm: 99 }); // поріг 99 — RSI-сигнал Long майже на кожній свічці
+  const base = E.entry(A, g0), wh = E.entry(A, { ...g0, wk: 3, wb: 0.6 }), wh0 = E.entry(A, { ...g0, wk: 0 });
+  assert.deepEqual(wh0, base, 'wk = 0 — без змін');
+  for (let i = 0; i < A.length; i++) if (wh[i]) assert.ok(base[i] && i >= 30 && i <= 32, 'вхід лише біля кита ' + i);
+  assert.ok(base.some((x, i) => x && (i < 30 || i > 32)), 'без фільтра є входи далеко від кита');
+});
+test('Кити: об\'єм покупців підсумовується при агрегації таймфреймів', () => {
+  const a = [0, 1, 2, 3].map(i => ({ t: T0 + i * H1, o: 1, h: 1, l: 1, c: 1, v: 10, bv: 1 + i }));
+  const g = E.agg(a, 4); assert.equal(g[0].v, 40); assert.equal(g[0].bv, 10);
+  const b = a.map((x, i) => i === 2 ? { ...x, bv: undefined } : x); delete b[2].bv;
+  assert.equal(E.agg(b, 4)[0].bv, undefined, 'якщо хоч однієї частки немає — bv не вигадується');
+});
+
+// ---------- ліквідність, сплеск активності, каскад ліквідацій ----------
+// базова свічка: o=c=100, h=100.5, l=99.5, об'єм 10, угод 100; X — заміни полів у вибраних свічках
+const LQ = (n, X = {}) => Array.from({ length: n }, (_, i) => ({ t: T0 + i * H1, o: 100, h: 100.5, l: 99.5, c: 100, v: 10, nt: 100, ...(X[i] || {}) }));
+const GF = o => G({ lq: 0, lqt: 0.003, lqn: 2, lqd: 0.03, ak: 0, lk: 0, ...o });
+test('Свінги підтверджуються лише через 3 свічки (без зазирання вперед)', () => {
+  const A = LQ(20, { 10: { l: 95 } }), sw = E.swings(A);
+  assert.equal(JSON.stringify(sw.lo.map(s => [s.j, s.at])), '[[10,13]]');
+  assert.equal(sw.hi.length, 0, 'рівні максимуми не стають свінгами');
+});
+test('Зона ліквідності: 2 мінімуми в межах допуску; поза допуском — ні; знята зона не діє', () => {
+  const sw = A => E.swings(A);
+  let A = LQ(30, { 10: { l: 95 }, 20: { l: 95.2 } });                  // 95·1.003 = 95.285 ≥ 95.2
+  assert.equal(JSON.stringify(E.liqZones(A, 29, sw(A), GF({}), 'lo', 28).map(z => z.lvl)), '[95]');
+  A = LQ(30, { 10: { l: 95 }, 20: { l: 95.4 } });                       // 95.4 > 95.285 — різні рівні
+  assert.equal(E.liqZones(A, 29, sw(A), GF({}), 'lo', 28).length, 0);
+  A = LQ(30, { 10: { l: 95 }, 20: { l: 95.2 }, 25: { l: 93 } });        // свічка 25 пройшла рівень 95 (і сама надто далеко, щоб утворити нову зону)
+  assert.equal(E.liqZones(A, 29, sw(A), GF({}), 'lo', 28).length, 0, 'знята зона');
+});
+test('Ліквідність, розворот: прокол зони мінімумів із закриттям назад — Long; закриття нижче — ні; Short дзеркально', () => {
+  const base = { 10: { l: 95 }, 20: { l: 95.2 } };
+  let A = LQ(31, { ...base, 30: { l: 94.5, c: 96, o: 99 } });
+  let o = E.liq(A, GF({ lq: 1 }));
+  assert.equal(o[29], false); assert.equal(o[30], true);
+  A = LQ(31, { ...base, 30: { l: 94.5, c: 94.8, o: 99 } });
+  assert.equal(E.liq(A, GF({ lq: 1 }))[30], false, 'закриття під рівнем — пробій, а не зняття');
+  assert.equal(E.liq(LQ(31, { ...base, 30: { l: 94.5, c: 96 } }), GF({ lq: 1, d: -1 }))[30], false, 'Short на зоні мінімумів — ні');
+  A = LQ(31, { 10: { h: 105 }, 20: { h: 105.1 }, 30: { h: 105.6, c: 104, o: 101 } });
+  assert.equal(E.liq(A, GF({ lq: 1, d: -1 }))[30], true, 'Short: прокол зони максимумів і закриття нижче');
+});
+test('Ліквідність, рух до ліквідності: зона максимумів у межах lqd — Long; далі чи знята — ні', () => {
+  const A = LQ(31, { 10: { h: 105 }, 20: { h: 105.1 }, 30: { c: 103, h: 103.5, o: 102 } });   // 105.1 / 103 − 1 = 2,04 %
+  assert.equal(E.liq(A, GF({ lq: 2, lqd: 0.03 }))[30], true);
+  assert.equal(E.liq(A, GF({ lq: 2, lqd: 0.02 }))[30], false, 'далі за 2 %');
+  const B = LQ(31, { 10: { h: 105 }, 20: { h: 105.1 }, 25: { h: 105.5 }, 30: { c: 103, h: 103.5, o: 102 } });
+  assert.equal(E.liq(B, GF({ lq: 2 }))[30], false, 'зону вже знято');
+});
+test('Сплеск активності проти свічки: червоний вибух — Long, не Short; угоди замало — ні; без кількості угод — за об\'ємом', () => {
+  const spike = (nt, v = 30) => LQ(26, { 25: { o: 100, c: 96, h: 100.5, l: 95.5, v, nt } });          // розмах 5 = 5× середнього 1
+  assert.equal(E.act(spike(300), GF({ ak: 2.5 }))[25], true);
+  assert.equal(E.act(spike(300), GF({ ak: 2.5, d: -1 }))[25], false, 'Short після червоної — ні');
+  assert.equal(E.act(spike(200), GF({ ak: 2.5 }))[25], false, 'угод 200 < 2,5 × 100');
+  const noNt = spike(300).map(c => { const x = { ...c }; delete x.nt; return x; });
+  assert.equal(E.act(noNt, GF({ ak: 2.5 }))[25], true, 'без nt — об\'єм 30 ≥ 2,5 × 10');
+  assert.equal(E.act(spike(300), GF({ ak: 6 }))[25], false, 'розмах 5 < 6 × 1');
+});
+test('Каскад ліквідацій: новий мінімум + сплеск об\'єму + закриття вгорі — Long; без будь-якої умови — ні', () => {
+  const k = (X) => E.casc(LQ(26, { 25: { o: 99.8, h: 100.5, l: 97, c: 100, v: 30, ...X } }), GF({ lk: 2.5 }))[25];
+  assert.equal(k({}), true);
+  assert.equal(k({ v: 20 }), false, 'об\'єм 20 < 25');
+  assert.equal(k({ c: 97.5 }), false, 'закриття внизу — каскад не викуплено');
+  assert.equal(k({ l: 99.6, c: 100.4 }), false, 'не новий мінімум (хоча закриття вгорі й об\'єм великий)');
+  assert.equal(E.casc(LQ(26, { 25: { o: 100.2, h: 103, l: 99.5, c: 99.7, v: 30 } }), GF({ lk: 2.5, d: -1 }))[25], true, 'Short дзеркально');
+});
+test('Нові фільтри не зазирають у майбутнє: сигнал на свічці i не залежить від свічок після i', () => {
+  let s = 7; const R = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  let p = 100; const A = Array.from({ length: 400 }, (_, i) => { const o = p, sp = R() < 0.06 ? 4 : 1, c = o * (1 + (R() - 0.5) * 0.02 * sp); p = c;
+    return { t: T0 + i * H1, o, c, h: Math.max(o, c) * (1 + R() * 0.006 * sp), l: Math.min(o, c) * (1 - R() * 0.006 * sp), v: 10 * (1 + R() * sp * 2), nt: Math.round(100 * (1 + R() * sp * 2)) }; });
+  for (const [f, g] of [[E.liq, GF({ lq: 1, lqt: 0.01 })], [E.liq, GF({ lq: 2, lqt: 0.01, d: -1 })], [E.act, GF({ ak: 2 })], [E.casc, GF({ lk: 1.5 })]]) {
+    const full = f(A, g); assert.ok(full.some((x, i) => x && i < 390), 'фільтр спрацьовує хоч раз');
+    for (let i = 30; i < A.length; i += 9) assert.equal(f(A.slice(0, i + 1), g)[i], full[i], `свічка ${i}`);
+  }
+});
+test('Нові фільтри вимкнені — вхід такий самий, як без них; увімкнені лише звужують входи', () => {
+  let s = 11; const R = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  let p = 100; const A = Array.from({ length: 300 }, (_, i) => { const o = p, c = o * (1 + (R() - 0.5) * 0.03); p = c; return { t: T0 + i * H1, o, c, h: Math.max(o, c) * 1.004, l: Math.min(o, c) * 0.996, v: 10 + R() * 20, nt: 100 }; });
+  const g0 = G({ sg: ['rsi'], k: 1, rp: 5, rm: 45 }), base = E.entry(A, g0);
+  assert.equal(JSON.stringify(E.entry(A, { ...g0, lq: 0, ak: 0, lk: 0, htf: 0 })), JSON.stringify(base));
+  const nb = base.filter(Boolean).length; assert.ok(nb > 20, 'базових входів досить');
+  for (const x of [{ lq: 1, lqt: 0.01 }, { lq: 2, lqt: 0.01 }, { ak: 1.5 }, { lk: 1.2 }, { htf: 4, hte: 5 }]) { const e = E.entry(A, { ...g0, ...x }); e.forEach((v, i) => { if (v) assert.ok(base[i], `${JSON.stringify(x)}: вхід ${i} без базового сигналу`); }); assert.ok(e.filter(Boolean).length < nb, `${JSON.stringify(x)}: фільтр мав прибрати частину входів`); }
+});
+test('Кількість угод підсумовується при агрегації таймфреймів', () => {
+  const a = [0, 1, 2, 3].map(i => ({ t: T0 + i * H1, o: 1, h: 1, l: 1, c: 1, v: 1, nt: 10 + i }));
+  assert.equal(E.agg(a, 4)[0].nt, 46);
+  const b = a.map((x, i) => { const y = { ...x }; if (i === 1) delete y.nt; return y; });
+  assert.equal(E.agg(b, 4)[0].nt, undefined);
+});
+
+// ---------- тренд старшого таймфрейму ----------
+// годинні свічки від понеділка 00:00 UTC; ціна за годину h: up — росте, далі падає
+const HT = (days, f, start = 0) => Array.from({ length: days * 24 - start }, (_, k) => { const i = k + start, c = f(i); return { t: T0 + i * H1, o: c, h: c * 1.001, l: c * 0.999, c, v: 10 }; });
+const upDown = i => i < 30 * 24 ? 100 + i * 0.1 : 100 + 30 * 24 * 0.1 - (i - 30 * 24) * 0.2;
+test('Тренд старшого ТФ: Long дозволено у висхідному тренді й заборонено після розвороту вниз; Short — навпаки', () => {
+  const A = HT(45, upDown), gL = G({ htf: 24, hte: 10, tf: 1 }), gS = G({ htf: 24, hte: 10, tf: 1, d: -1 });
+  const L = E.htf(A, gL), S = E.htf(A, gS);
+  assert.equal(L[9 * 24 + 22], false, 'до 10 закритих днів EMA ще не готова');
+  assert.equal(L[9 * 24 + 23], true, 'на закритті 10-го дня — готова, тренд вгору');
+  assert.equal(L[25 * 24], true); assert.equal(S[25 * 24], false);
+  assert.equal(L[44 * 24], false, 'після 14 днів падіння — Long заборонено'); assert.equal(S[44 * 24], true);
+});
+test('Тренд старшого ТФ: свічка старшого ТФ враховується лише після закриття; неповна перша доба відкидається', () => {
+  const A = HT(20, i => 100 + i * 0.1), g = G({ htf: 24, hte: 5, tf: 1 });
+  const o = E.htf(A, g);
+  // зміна закриття свічок усередині доби (не останньої години) нічого не змінює — свічка доби закривається о 23:00
+  const B = A.map((c, i) => (i % 24 === 12 ? { ...c, c: c.c * 0.5 } : c));
+  assert.equal(JSON.stringify(E.htf(B, g)), JSON.stringify(o));
+  // перша доба неповна (дані з 05:00) — EMA готова на добу пізніше
+  const C = HT(20, i => 100 + i * 0.1, 5), oc = E.htf(C, g);
+  assert.equal(oc[4 * 24 + 23 - 5], false, 'без неповної першої доби 5 повних — лише на кінці 6-ї');
+  assert.equal(oc[5 * 24 + 23 - 5], true);
+  assert.equal(o[4 * 24 + 23], true, 'з повною першою добою — на кінці 5-ї');
+});
+test('Тренд старшого ТФ не зазирає в майбутнє; старший ТФ ≤ ТФ бота — фільтр не діє; потрібна історія для сервера', () => {
+  let s = 5; const R = () => (s = (s * 16807) % 2147483647) / 2147483647; let p = 100;
+  const A = Array.from({ length: 24 * 30 }, (_, i) => { const o = p, c = o * (1 + (R() - 0.5) * 0.02); p = c; return { t: T0 + i * H1, o, c, h: Math.max(o, c) * 1.002, l: Math.min(o, c) * 0.998, v: 10 }; });
+  const g = G({ htf: 4, hte: 8, tf: 1 }), full = E.htf(A, g);
+  assert.ok(full.some(Boolean) && full.some((x, i) => !x && i > 100), 'фільтр і дозволяє, і забороняє');
+  for (let i = 40; i < A.length; i += 7) assert.equal(E.htf(A.slice(0, i + 1), g)[i], full[i], `свічка ${i}`);
+  assert.ok(E.htf(A, G({ htf: 1, hte: 8, tf: 1 })).every(Boolean), 'htf = tf — без обмежень');
+  assert.equal(E.htfNeed(G({ htf: 24, hte: 50, tf: 1 })), 1248); assert.equal(E.htfNeed(G({ htf: 0 })), 0);
+});
