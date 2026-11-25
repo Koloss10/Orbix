@@ -229,3 +229,13 @@ test('Недовірений текст: ключі й токени маскую
   assert.equal(untrusted('Order qty too small: ETHUSDT 0.0171'), 'Order qty too small: ETHUSDT 0.0171');
   assert.equal(untrusted(null), null);
 });
+
+test("ai_messages: кожен рядок запису має metadata (інакше supabase-js підставить null, а стовпець not null)", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile(new URL("../supabase/functions/ai-assistant/index.ts", import.meta.url), "utf8");
+  const m = src.match(/from\("ai_messages"\)\.insert\(\[([\s\S]*?)\]\)/);
+  assert.ok(m, "знайдено запис у ai_messages");
+  const rows = m[1].split("\n").filter((l) => l.includes("role:"));
+  assert.ok(rows.length >= 2);
+  for (const r of rows) assert.match(r, /metadata:/, r.trim());
+});
