@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     const dataAt = tools.dataAt();
     const meta = { tools: out.tools, data_at: dataAt, model };
     const ins = await admin.from("ai_messages").insert([
-      { conversation_id: convId, user_id: uid, role: "user", content: p.message },
+      { conversation_id: convId, user_id: uid, role: "user", content: p.message, metadata: {} }, // однакові поля в обох рядках: інакше supabase-js підставить metadata = null (not null у таблиці)
       { conversation_id: convId, user_id: uid, role: "assistant", content: out.text.slice(0, 20000), metadata: meta },
     ]);
     if (ins.error) console.error("ai-assistant: messages", ins.error.message);
