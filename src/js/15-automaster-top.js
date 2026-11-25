@@ -1,6 +1,6 @@
 /* ---------- Авто-майстер ---------- */
 const AWP=[[168,'1 тиждень'],[720,'1 місяць'],[4380,'6 місяців'],[8760,'1 рік'],[26208,'3 роки']];
-$('#awf').innerHTML=sel('awe','Біржа',[])+sel('awp','Пара',PK.map(k=>[k,k]),'BTC/USDT')+'<label>Депозит, USDT (0 = підібрати)<input id="awa" type="number" inputmode="decimal" step="any" value="1000"></label>'+sel('awr2','Період бектесту',AWP,8760)+sel('awt','Таймфрейм свічок',[[0,'Авто (1г, 4г, 12г, 1д, 1т)'],...TFS])+sel('awd','Напрямок',[[0,'Авто'],[1,'Long'],[-1,'Short'],[9,'Нейтральний']])+sel('awm','Ринок',[[1,'Futures'],[0,'Spot']])+sel('awl','Плече',[[0,'Авто (1–3×)'],[1,'1×'],[2,'2×'],[3,'3×'],[5,'5×'],[10,'10×']]);
+$('#awf').innerHTML=sel('awe','Біржа',[])+sel('awp','Пара',PK.map(k=>[k,k]),'BTC/USDT')+'<label>Депозит, USDT (0 = підібрати)<input id="awa" type="number" inputmode="decimal" step="any" value="1000"></label>'+sel('awr2','Період бектесту',AWP,8760)+sel('awt','Таймфрейм свічок',[[0,'Авто (1г, 4г, 12г, 1д, 1т)'],...TFS])+sel('awd','Напрямок',[[0,'Авто'],[1,'Long'],[-1,'Short'],[9,'Нейтральний']])+sel('awtr','Лише за денним трендом',[[1,'Так — менше угод, менше збитків'],[0,'Ні']])+sel('awm','Ринок',[[1,'Futures'],[0,'Spot']])+sel('awl','Плече',[[0,'Авто (1–3×)'],[1,'1×'],[2,'2×'],[3,'3×'],[5,'5×'],[10,'10×']]);
 let AW={r:[],c:null},awi=0;
 /* walk-forward у фоні: крок за кроком, щоб не блокувати екран */
 function awWF(c){const tok=AW.tok={},plan=wfPlan(c);if(!plan){AW.wf={err:'Замало історії для walk-forward перевірки: потрібно щонайменше кілька тижнів даних.'};wfR();return}
@@ -31,7 +31,7 @@ if(c.tf&&Math.floor(c.per/c.tf)<60)return o.innerHTML='<p class="dn">Для ць
 withData(dk(c),o,()=>{o.innerHTML='<p class="mu">Підбираю конфігурацію…</p>';
 setTimeout(()=>{try{const t=auto(c,0);if(!t.length)return o.innerHTML='<p class="dn">Не знайшлося конфігурації з достатньою кількістю угод. Спробуйте більший період, більшу суму (мінімальний ордер 5 USDT) або інший таймфрейм.</p>';
 AW={r:t.map(x=>evalC(x,c)),c,wf:null,wfp:''};awi=0;awShow(0);awWF(c)}catch(e){o.innerHTML='<p class="dn">Помилка розрахунку: '+e.message+'</p>'}},30)},c.per+300)}
-$('#awb').onclick=()=>{let p=$('#awp').value.trim().toUpperCase();if(!p.includes('/'))p+='/USDT';awRun({pair:p,ex:$('#awe').value,amt:+$('#awa').value||0,per:+$('#awr2').value,tf:+$('#awt').value,dr:+$('#awd').value,fut:+$('#awm').value,lev:+$('#awl').value})};
+$('#awb').onclick=()=>{let p=$('#awp').value.trim().toUpperCase();if(!p.includes('/'))p+='/USDT';awRun({pair:p,ex:$('#awe').value,amt:+$('#awa').value||0,per:+$('#awr2').value,tf:+$('#awt').value,dr:+$('#awd').value,trend:+$('#awtr').value,fut:+$('#awm').value,lev:+$('#awl').value})};
 $('#awr').onclick=e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.v!=null){awi=+t.dataset.v;awShow(awi);return}
 const E=AW.r[awi],c=AW.c;if(t.dataset.a==='a'){withData(dk(E.g),null,()=>{mk(E.g,c.ex);sbots();lst();go(VARIANT===2?'bots':'ov')})}else if(t.dataset.a==='f'){addFav(E,c.ex);t.textContent='Додано в топові'}else{fill(E.g,c.ex);$('#fper').value=c.per;$('#fdp').value=Math.round(c.amt||E.need);go('bd')}};
 $('#awg').onclick=()=>go('aw');

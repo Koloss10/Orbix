@@ -741,6 +741,10 @@ function amMut(R,g,c,LV){const k=pick(R,Object.keys(AMG).concat(LV.length>1?['le
 const n={...g,[k]:L[j]};n.base=amBase(c,n);return n.base?n:null}
 function amFlt(g){const V=[],H=g.tf<4?4:g.tf<24?24:g.tf<168?168:0;if(H)V.push({htf:H,hte:50});V.push({wk:2.5,wn:0,wb:.6},{ak:2},{lk:2},{xs:g.sg[0]});return V}
 /* напрями пошуку: c.dr = 1 / −1 — лише він, 9 — лише нейтральний, 0 — Long і Short (на споті лише Long) */
+/* «Лише за денним трендом» (c.trend, за замовчуванням увімкнено): підібраному боту на таймфреймі до 12 год додається
+   фільтр денного тренду (EMA 50) — угоди лише в бік тренду. Реальні свічки Bybit (10 пар, рік), непобачена перевірка:
+   Long/Short — 68 % ботів у плюсі замість 53 %, нейтральні — 75 % замість 50 %, великих збитків 0 замість 5; угод удвічі менше */
+function amTrend(c,o){if(c.trend===0||o.g.tf>=24||o.g.htf)return o;const g={...o.g,htf:24,hte:50};return{...o,g,e:entry(o.A,g).slice(-o.k)}}
 const amDirs=c=>c.dr===9?(c.fut===0?[]:[0]):c.dr?[c.dr]:c.fut===0?[1]:[1,-1];
 function auto(c,salt=0){const H=hist(dk(c)),R=rng((c.amt|0)*7+c.pair.length*7919+salt),cand=[],mxL=c.fut===0?1:maxLev(c.pair,c.ex),LV=c.lev?[Math.min(c.lev,mxL)]:[1,2,3].filter(x=>x<=mxL);
 for(const tf of c.tf?[c.tf]:[1,4,12,24,168]){const A=aggC(H,tf),k=Math.floor(c.per/tf);if(k<60||k>A.length)continue;const t1=Math.floor(k*.5),tr=Math.floor(k*.7),cs=A.slice(-k),off=(A.length-k)*tf;
@@ -750,7 +754,7 @@ const r=amEval(o,g);if(r&&(!best||r.sc>best.sc))best=r}if(best)cand.push({...o,.
 cand.sort((a,b)=>b.sc-a.sc);const top=cand.slice(0,12);
 for(const o of top){for(let j=0;j<14;j++){const g=amMut(R,o.g,c,LV);if(!g)continue;const r=amEval(o,g);if(r&&r.sc>o.sc){o.g=g;o.s=r.s;o.sc=r.sc}}
 amRob(o);for(const f of amFlt(o.g)){const g={...o.g,...f},e=entry(o.A,g).slice(-o.k),q={...o,e},r=amEval(q,g);if(!r)continue;Object.assign(q,r);amRob(q);if(q.rob>o.rob+1){o.g=g;o.e=e;o.s=r.s;o.sc=r.sc;o.v=q.v;o.ok=q.ok;o.rob=q.rob}}}
-top.sort((a,b)=>b.rob-a.rob);const good=top.filter(o=>o.ok),seen={},out=[];for(const o of good.length?good:top.slice(0,1)){const key=o.g.name+o.g.tf+o.g.d;if(seen[key])continue;seen[key]=1;out.push({g:o.g,cs:o.cs,e:o.e,tr:o.tr,off:o.off,sc:o.rob});if(out.length==3)break}return out}
+top.sort((a,b)=>b.rob-a.rob);const good=top.filter(o=>o.ok),seen={},out=[];for(const o of good.length?good:top.slice(0,1)){const key=o.g.name+o.g.tf+o.g.d;if(seen[key])continue;seen[key]=1;out.push(amTrend(c,{g:o.g,cs:o.cs,e:o.e,tr:o.tr,off:o.off,sc:o.rob,A:o.A,k:o.k}));if(out.length==3)break}return out}
 function evalC(o,c){const g=o.g,M=g.base*ladder(g),d0=c.amt>0?c.amt:2*M,Rf=run(o.cs,o.e,g,o.off,1,d0),Rt=run(o.cs.slice(o.tr),o.e.slice(o.tr),g,o.off+o.tr*g.tf,0,d0),sx=stress(g),worst=Math.min(...sx.map(x=>x.mn)),sf0=summ(Rf,d0),reserve=Math.max(1.5*-sf0.dd,-worst),need=M+reserve,dep=c.amt>0?c.amt:need,sf=summ(Rf,dep),st=summ(Rt,dep);
 return{g,sf,st,sx,M,dep,reserve,need,fund:PAIRS[g.pair].f}}
 
@@ -1373,7 +1377,7 @@ const gone=BT.splice(i,1)[0];sv('zbt',BT);bsl();if(CLOUD.u&&gone&&gone.rid)SB.fr
 
 /* ---------- Авто-майстер ---------- */
 const AWP=[[168,'1 тиждень'],[720,'1 місяць'],[4380,'6 місяців'],[8760,'1 рік'],[26208,'3 роки']];
-$('#awf').innerHTML=sel('awe','Біржа',[])+sel('awp','Пара',PK.map(k=>[k,k]),'BTC/USDT')+'<label>Депозит, USDT (0 = підібрати)<input id="awa" type="number" inputmode="decimal" step="any" value="1000"></label>'+sel('awr2','Період бектесту',AWP,8760)+sel('awt','Таймфрейм свічок',[[0,'Авто (1г, 4г, 12г, 1д, 1т)'],...TFS])+sel('awd','Напрямок',[[0,'Авто'],[1,'Long'],[-1,'Short'],[9,'Нейтральний']])+sel('awm','Ринок',[[1,'Futures'],[0,'Spot']])+sel('awl','Плече',[[0,'Авто (1–3×)'],[1,'1×'],[2,'2×'],[3,'3×'],[5,'5×'],[10,'10×']]);
+$('#awf').innerHTML=sel('awe','Біржа',[])+sel('awp','Пара',PK.map(k=>[k,k]),'BTC/USDT')+'<label>Депозит, USDT (0 = підібрати)<input id="awa" type="number" inputmode="decimal" step="any" value="1000"></label>'+sel('awr2','Період бектесту',AWP,8760)+sel('awt','Таймфрейм свічок',[[0,'Авто (1г, 4г, 12г, 1д, 1т)'],...TFS])+sel('awd','Напрямок',[[0,'Авто'],[1,'Long'],[-1,'Short'],[9,'Нейтральний']])+sel('awtr','Лише за денним трендом',[[1,'Так — менше угод, менше збитків'],[0,'Ні']])+sel('awm','Ринок',[[1,'Futures'],[0,'Spot']])+sel('awl','Плече',[[0,'Авто (1–3×)'],[1,'1×'],[2,'2×'],[3,'3×'],[5,'5×'],[10,'10×']]);
 let AW={r:[],c:null},awi=0;
 /* walk-forward у фоні: крок за кроком, щоб не блокувати екран */
 function awWF(c){const tok=AW.tok={},plan=wfPlan(c);if(!plan){AW.wf={err:'Замало історії для walk-forward перевірки: потрібно щонайменше кілька тижнів даних.'};wfR();return}
@@ -1404,7 +1408,7 @@ if(c.tf&&Math.floor(c.per/c.tf)<60)return o.innerHTML='<p class="dn">Для ць
 withData(dk(c),o,()=>{o.innerHTML='<p class="mu">Підбираю конфігурацію…</p>';
 setTimeout(()=>{try{const t=auto(c,0);if(!t.length)return o.innerHTML='<p class="dn">Не знайшлося конфігурації з достатньою кількістю угод. Спробуйте більший період, більшу суму (мінімальний ордер 5 USDT) або інший таймфрейм.</p>';
 AW={r:t.map(x=>evalC(x,c)),c,wf:null,wfp:''};awi=0;awShow(0);awWF(c)}catch(e){o.innerHTML='<p class="dn">Помилка розрахунку: '+e.message+'</p>'}},30)},c.per+300)}
-$('#awb').onclick=()=>{let p=$('#awp').value.trim().toUpperCase();if(!p.includes('/'))p+='/USDT';awRun({pair:p,ex:$('#awe').value,amt:+$('#awa').value||0,per:+$('#awr2').value,tf:+$('#awt').value,dr:+$('#awd').value,fut:+$('#awm').value,lev:+$('#awl').value})};
+$('#awb').onclick=()=>{let p=$('#awp').value.trim().toUpperCase();if(!p.includes('/'))p+='/USDT';awRun({pair:p,ex:$('#awe').value,amt:+$('#awa').value||0,per:+$('#awr2').value,tf:+$('#awt').value,dr:+$('#awd').value,trend:+$('#awtr').value,fut:+$('#awm').value,lev:+$('#awl').value})};
 $('#awr').onclick=e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.v!=null){awi=+t.dataset.v;awShow(awi);return}
 const E=AW.r[awi],c=AW.c;if(t.dataset.a==='a'){withData(dk(E.g),null,()=>{mk(E.g,c.ex);sbots();lst();go(VARIANT===2?'bots':'ov')})}else if(t.dataset.a==='f'){addFav(E,c.ex);t.textContent='Додано в топові'}else{fill(E.g,c.ex);$('#fper').value=c.per;$('#fdp').value=Math.round(c.amt||E.need);go('bd')}};
 $('#awg').onclick=()=>go('aw');
