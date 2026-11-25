@@ -8,7 +8,7 @@
 - Лише **Bybit Demo** (`api-demo.bybit.com`) і **Binance Futures Testnet**. Реальні рахунки не підключати, адреси бірж не змінювати.
 - Ключі й секрети ніколи не просити в чаті: користувач вносить їх лише через форми Orbix. Ключі з правом виведення відхиляються.
 - Лише безкоштовні сервіси, без SMS.
-- Дані користувача (email тощо) не передавати зовнішнім сервісам.
+- Дані користувача (email тощо) не передавати зовнішнім сервісам. Виняток, погоджений 23.11: Orbix AI передає AI-провайдеру **лише торгові дані** (налаштування, угоди, PnL, ризики, бектести) — без пошти, імен, ID акаунта/ботів/ордерів, назв і ключів (білий список у `ai-assistant/tools.js`, тест у `tests/ai.test.mjs`). Провайдер — безкоштовний тариф (Groq за замовчуванням).
 - До завершення поточного етапу не додавати великих нових функцій; не ламати наявне.
 
 ## Команди
@@ -23,8 +23,9 @@ npm run verify   # check + test
 - `orbix.html` ← `src/orbix.template.html`, `src/orbix.css`, `src/js/*`, `src/vendor/*`
 - `supabase/functions/runner/engine.js` ← `src/js/01–06`
 - `supabase/functions/{exchange,runner}/{exchanges.ts,sign.js}` ← `supabase/functions/_shared/`
+- `supabase/functions/ai-assistant/{engine.js,risk.js}` ← `runner/engine.js`, `runner/risk.js` (Orbix AI рахує ризик тією самою логікою)
 
-Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`.
+Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`, `ai-assistant/{index.ts,agent.js,provider.js,tools.js,docs.js}`.
 
 ## Процес
 - Робота в гілці, злиття в `main` лише через PR після зеленого CI «Validate Orbix» (`.github/workflows/validate.yml`), злиття з `expectedHeadSha`, потім fast-forward робочої гілки до `main`.
@@ -56,6 +57,7 @@ npm run verify   # check + test
 - `docs/engine-audit.md` — аудит рушія й усі знайдені розбіжності.
 - `docs/exchange-review.md` — порівняння роботи з біржами з Hummingbot і Freqtrade, прогалини за пріоритетом.
 - `docs/veles-comparison.md` — функції Orbix у порівнянні з Veles (за публічною довідкою), план за пріоритетом.
+- `docs/orbix-ai.md` — Orbix AI: рішення, архітектура, безпека, секрети, план викладання (етап 1 готовий у гілці `feature/orbix-ai-core`, викладання після 25.11).
 - `archive/` — старі версії (Zorya, старі гілки, знімки Orbix) і правила відкату. Збирання й CI його не чіпають.
 
 ## Поточний етап
@@ -64,6 +66,7 @@ npm run verify   # check + test
 - етап B (ліміти ризику, аварійна зупинка) завершено — PR #36, `runner` v16;
 - етап C (7-денний тест 18.11–25.11) завершено без збоїв — журнал `docs/soak-test.md`; 25.11 повернуто відкладені зміни рушія (PR #66) і розгорнуто `runner` v17.
 - **бета-тест з друзями (з 18.11)**: у Supabase вимкнено «Confirm email» — реєстрація поштою й паролем без листа; листи (коди, «Забули пароль?») доходять лише членам команди проєкту. **Перед релізом**: налаштувати власний SMTP (Brevo тощо) і ввімкнути «Confirm email» назад.
+- **Orbix AI, етап 1 — викладається 25.11**: PR #65 (таблиці AI, функція `ai-assistant`, розділ «Orbix AI»), `apply_migration`, ключ Groq у секреті `AI_API_KEY` (вносить власник), розгортання — `docs/orbix-ai.md`, розділ «Викладання». Етапи 2–5 — лише після перевірки етапу 1.
 - ~~чекає на 25.11~~ **зроблено 25.11 (PR #66, `runner` v17)**: фільтр китів, часткове виставлення ордерів, фільтри ліквідності / сплеску активності / каскаду ліквідацій і тренду старшого таймфрейму (змінюють рушій і `runner`, зокрема історію до 1000 свічок) збережено в історії й тимчасово скасовано комітом `dc1053f` (`git revert`, без переписування історії). Після тесту: `git revert dc1053f`, `npm run verify`, PR, злиття й одразу `runner` v17 (скіл `orbix-deploy`).
   - Конфлікт revert у `src/js/14-builder-backtests.js` (перевірено пробним запуском): рядки `cfg`/`bad`/`fill`/`pv` взяти з версії з фільтрами, блок від `/* округлення кількості` до `minR` лишити перед `function pv(){`; у `bad()` перед `return''}` додати `{const r=minFirst(g);if(r&&g.base<r.min-1e-9)return minText(r)}`; у `pv()` після `fgSum(c);` — `minLoad(c.g);minR(c.g);`. `orbix.html` — `npm run build`. Підказки [?] і Вікі для фільтрів (`19-hints.js`) з'являться самі.
   - Того ж оновлення: модель (сервер і бектест) рахує кількість за правилами біржі бота — крок кількості, мінімум, крок ціни Bybit Demo / Binance Testnet (`MD.xflt`, `xRules`; на сервері — правила з біржі), щоб ордери моделі й біржі збігались (знахідка тесту: ETH 0,0171 → 0,01).
