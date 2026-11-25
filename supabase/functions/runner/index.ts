@@ -8,7 +8,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { botConfig, INTERVAL, processBot } from "./core.js";
 import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
-import { limitsOf, riskBlock } from "./risk.js";
+import { addCap, limitsOf, riskBlock } from "./risk.js";
 import { htfNeed, tfMs } from "./engine.js";
 import { applyCommands, CMD_TTL } from "./commands.js";
 import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
   await admin.from("bot_commands").update({ status: "skipped", result: "команда застаріла: сервер не обробив її за 30 хв", done_at: new Date().toISOString() })
     .eq("status", "new").lt("created_at", new Date(started - CMD_TTL).toISOString());
   if (ids.length) {
-    const { data: cs, error: ce } = await admin.from("bot_commands").select("id,bot_id,kind,created_at").eq("status", "new").in("bot_id", ids).order("id");
+    const { data: cs, error: ce } = await admin.from("bot_commands").select("id,bot_id,kind,amount,created_at").eq("status", "new").in("bot_id", ids).order("id");
     if (ce) console.warn("runner: bot_commands", ce.message);
     for (const c of cs ?? []) { if (!cmdsOf.has(c.bot_id)) cmdsOf.set(c.bot_id, []); cmdsOf.get(c.bot_id)!.push(c); }
   }
@@ -166,13 +166,14 @@ Deno.serve(async (req) => {
       // ручні команди: застосовуються до збереженого стану до прогону рушія; позначка «виконано» — після першого збереження
       let cmdRes: any[] = [], cmdNotes: any[] = [];
       const cmds = cmdsOf.get(bot.id) ?? [];
+      // ліміт ризику: перевищено — нових угод не відкривати (позиції, що вже є, бот веде далі); стеля — і для «Докупити зараз»
+      const peers = mirror ? [...tnBots.entries()].filter(([id, x]) => id !== bot.id && x.uid === bot.user_id).map(([, x]) => x) : [];
       if (cmds.length) {
         const live = m.candles[m.candles.length - 1];
-        const a = applyCommands({ cmds, state: bot.state, g, botId: bot.id, mirror: mirror && !!ex, native: !!ex?.native, price: live ? live.c : 0, now: Date.now() });
+        const cap = mirror ? addCap(limitsOf(lims.get(bot.user_id)), peers) : 0;
+        const a = applyCommands({ cmds, state: bot.state, g, botId: bot.id, mirror: mirror && !!ex, native: !!ex?.native, price: live ? live.c : 0, now: Date.now(), addCap: cap });
         bot.state = a.state; cmdRes = a.results; cmdNotes = a.notes;
       }
-      // ліміт ризику: перевищено — нових угод не відкривати (позиції, що вже є, бот веде далі)
-      const peers = mirror ? [...tnBots.entries()].filter(([id, x]) => id !== bot.id && x.uid === bot.user_id).map(([, x]) => x) : [];
       const blk = mirror ? riskBlock({ limits: limitsOf(lims.get(bot.user_id)), self: { g, state: bot.state }, peers, now: Date.now() }) : null;
       const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk && !bot.state?.fl?.sa }); // fl.sa — «Пауза до кінця угоди»
       evCount += r.events.length;
