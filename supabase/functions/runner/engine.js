@@ -337,4 +337,4 @@ function qualityWF(g,ex,per,o={folds:6,ns:4}){normG(g);const c={pair:g.pair,ex,f
 const tS=w.F[0].trE,A=aggC(hist(dk(g)),g.tf||1),e=entry(A,g),j0=lbT(A,tS),dep=g.base*ladder(g),s=summ(run(A.slice(j0),e.slice(j0),g,0,0,dep),dep);
 return{...w,mine:s.roi,dep}}
 
-export { Bot, entry, aggT, aggC, normG, tfMs, tfOff, DEF, rnd, lbT, lv, htfNeed };
+export { Bot, entry, aggT, aggC, normG, tfMs, tfOff, DEF, rnd, lbT, lv, htfNeed, SIG, SGN, ema, rsi, bbands, cci, stoch, macdH, whale, liq, act, casc, htf, WHL };

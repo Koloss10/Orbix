@@ -9,7 +9,8 @@ import { botConfig, INTERVAL, processBot } from "./core.js";
 import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
 import { limitsOf, riskBlock } from "./risk.js";
-import { htfNeed } from "./engine.js";
+import { htfNeed, tfMs } from "./engine.js";
+import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 const BYIV: Record<string, string> = { "1h": "60", "4h": "240", "12h": "720", "1d": "D", "1w": "W" };
@@ -77,6 +78,16 @@ Deno.serve(async (req) => {
     }));
     return keys.get(k)!;
   };
+  // налаштування карток сигналів (v18): що надсилати й як; немає рядка — значення за замовчуванням
+  const cprefs = new Map<string, any>();
+  {
+    const uids = [...new Set((all ?? []).map((b: any) => b.user_id))];
+    const { data: cp, error: cpe } = uids.length ? await admin.from("tg_card_prefs").select("*").in("user_id", uids) : { data: [], error: null };
+    if (cpe) console.warn("runner: tg_card_prefs", cpe.message); // таблиці ще немає або збій — усе як раніше, текстом
+    for (const p of cp ?? []) cprefs.set(p.user_id, p);
+  }
+  const prefsOf = (uid: string) => cardPrefs(cprefs.get(uid));
+  const runnerSecret = req.headers.get("x-runner-secret") ?? "";
   const tgFor = (uid: string) => {
     if (!tgs.has(uid)) tgs.set(uid, admin.rpc("tg_secret_for", { p_uid: uid }).then(({ data }) => (Array.isArray(data) ? data[0] : data) ?? null));
     return tgs.get(uid)!;
@@ -139,7 +150,29 @@ Deno.serve(async (req) => {
         bot, g, r, symbol, mirror, native: !!ex?.native, ex, risk: mirror ? { blk } : null,
         save: saver(bot),
         log: (level: string, text: string, data: unknown = null) => log(bot, level, text, data && typeof data === "object" ? { ...(data as object), src: m.src } : data),
-        notify: async (text: string) => {
+        card: async (ev: any, text: string) => {
+          const pf = prefsOf(bot.user_id);
+          if (!wantMsg(pf, ev.kind)) return true; // подію вимкнено в налаштуваннях — нічого не надсилаємо
+          if (!wantCard(pf, bot.id, ev.kind)) return false;
+          try {
+            const t = await tgFor(bot.user_id);
+            if (!t?.token || !t?.chat_id) return true;
+            const W = tfMs(g.tf || 1), A = m.candles.filter((c: C) => c.t + W <= (ev.t || Date.now()));
+            const st: any = r.state?.b || {}, pos = ev.kind === "open" || ev.kind === "dca" ? st.pos : null;
+            const trade = ev.trade || (["close", "sl", "liq"].includes(ev.kind) ? st.tr?.[st.tr.length - 1] : null);
+            const reasons = ev.kind === "open" && pf.parts.logic ? entryReasons(A, g) : [];
+            const spec = cardSpec({ g, ev, pos, trade, candles: A, reasons, exchange: mirror ? (exName === "binance" ? "Binance Testnet" : "Bybit Demo") : "модель Orbix",
+              theme: themeFor(pf), n: pf.candles, parts: pf.parts });
+            const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/tg-card`, { method: "POST",
+              headers: { "content-type": "application/json", "x-runner-secret": runnerSecret },
+              body: JSON.stringify({ uid: bot.user_id, spec, caption: cardCaption(text, reasons.slice(1)) }) });
+            if (res.ok) return true;
+            console.warn("runner: tg-card", res.status);
+          } catch (e) { console.warn("runner: tg-card", (e as Error).message); }
+          return false; // картка не вийшла — надішлемо текстом
+        },
+        notify: async (text: string, cat = "other") => {
+          if (!wantMsg(prefsOf(bot.user_id), cat)) return;
           try {
             const t = await tgFor(bot.user_id);
             if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text, disable_web_page_preview: true }) });
@@ -167,7 +200,7 @@ Deno.serve(async (req) => {
       parked++;
       if (msg && !busy) {
         await log(bot, "warn", msg);
-        try {
+        if (wantMsg(prefsOf(bot.user_id), "other")) try {
           const t = await tgFor(bot.user_id);
           if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text: `Orbix (сервер): ${cfg.pair} — ${msg}`, disable_web_page_preview: true }) });
         } catch (_e) { /* сповіщення не критичні */ }

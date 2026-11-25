@@ -25,7 +25,7 @@ if(CLOUD.u&&!TG.loaded)tgLoad().then(()=>{if(CUR==='pf')pfr()}).catch(()=>{});
 $('#msg').innerHTML=Object.entries(MSN).map(([k,n])=>{const c=MS[k];return`<div class="bc ${c.on?'on':'off'}"><div class="bh"><b>${n}</b><span class="st" style="margin-left:auto">${c.on?'Увімкнено':'Вимкнено'}</span></div>
 <div class="fg" style="margin-bottom:8px">${tgF()}${sel(k+'-tpl','Формат повідомлень',[['short','Короткий'],['normal','Звичайний'],['detailed','Детальний']],c.tpl)}</div>
 <h3>Події</h3><div class="sgr">${Object.entries(EVN).map(([e,l])=>`<label class="ck"><input type="checkbox" data-ms="${k}" data-ev="${e}"${(c.ev||SET.ev)[e]?' checked':''}>${l}</label>`).join('')}</div>
-<div class="ac"><button class="b sm ${c.on?'d':'p'}" data-ms-on="${k}">${c.on?'Вимкнути':'Увімкнути'}</button><button class="b sm" data-ms-t="${k}">Надіслати тест</button></div><pre class="mu" id="${k}-pv" style="white-space:pre-wrap;font:400 12px Inter,sans-serif;margin:6px 0 0"></pre></div>`}).join('');
+${k==='tg'?tcF():''}<div class="ac"><button class="b sm ${c.on?'d':'p'}" data-ms-on="${k}">${c.on?'Вимкнути':'Увімкнути'}</button><button class="b sm" data-ms-t="${k}">Надіслати тест</button></div><pre class="mu" id="${k}-pv" style="white-space:pre-wrap;font:400 12px Inter,sans-serif;margin:6px 0 0"></pre></div>`}).join('');
 secR();secLoad().catch(()=>{});tnR();rkR();accR()}
 /* вкладки профілю: Акаунт / Біржі й ризик / Сповіщення; вхід, 2FA і відновлення пароля — завжди «Акаунт» */
 let PFT=ld('zpft','a');
