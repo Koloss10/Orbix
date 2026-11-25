@@ -25,3 +25,29 @@ function psar(A,st=.02,mx=.2){const o=[1];if(!A.length)return[];let up=true,sar=
 for(let i=1;i<A.length;i++){const x=A[i],p=A[i-1];sar=sar+af*(ep-sar);if(up){sar=Math.min(sar,p.l,i>1?A[i-2].l:p.l);if(x.l<sar){up=false;sar=ep;ep=x.l;af=st}else if(x.h>ep){ep=x.h;af=Math.min(mx,af+st)}}
 else{sar=Math.max(sar,p.h,i>1?A[i-2].h:p.h);if(x.h>sar){up=true;sar=ep;ep=x.h;af=st}else if(x.l<ep){ep=x.l;af=Math.min(mx,af+st)}}o.push(up?1:-1)}return o}
 function macdH(c){const f=ema(c,12),s=ema(c,26),m=f.map((x,i)=>x-s[i]),g=ema(m,9);return m.map((x,i)=>x-g[i])}
+/* ---------- індикатори з Veles і TradingView (усі лише за закритими свічками ≤ i, без зазирання вперед) ---------- */
+const smaA=(a,n)=>{const o=[];let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];o.push(i>=n-1?s/n:a[i])}return o};
+const hhv=(A,i,n,k='h')=>{let m=-1/0;for(let j=Math.max(0,i-n+1);j<=i;j++)m=Math.max(m,A[j][k]);return m};
+const llv=(A,i,n,k='l')=>{let m=1/0;for(let j=Math.max(0,i-n+1);j<=i;j++)m=Math.min(m,A[j][k]);return m};
+/* Money Flow Index: RSI, зважений об'ємом (типова ціна × об'єм) */
+function mfi(A,n=14){const o=new Array(A.length).fill(50);let p=0,q=0;const tp=A.map(x=>(x.h+x.l+x.c)/3),f=A.map((x,i)=>i?tp[i]*(+x.v||0)*(tp[i]>tp[i-1]?1:tp[i]<tp[i-1]?-1:0):0);
+for(let i=1;i<A.length;i++){if(f[i]>0)p+=f[i];else q-=f[i];if(i>n){const z=f[i-n];if(z>0)p-=z;else q+=z}if(i>=n)o[i]=p+q>0?100*p/(p+q):50}return o}
+/* Williams %R: −100…0 */
+const willr=(A,n=14)=>A.map((x,i)=>{if(i<n-1)return-50;const h=hhv(A,i,n),l=llv(A,i,n);return h>l?(h-x.c)/(h-l)*-100:-50});
+/* Stochastic RSI (14, 14, %K = SMA 3) */
+function stochRsi(c,n=14){const r=rsi(c,n),k=r.map((x,i)=>{if(i<2*n)return 50;let h=-1/0,l=1/0;for(let j=i-n+1;j<=i;j++){h=Math.max(h,r[j]);l=Math.min(l,r[j])}return h>l?(x-l)/(h-l)*100:50});return smaA(k,3)}
+/* Connors RSI: (RSI(3) + RSI серії зростань/падінь (2) + процентний ранг зміни за 100) / 3 */
+function crsi(c){const st=[0];for(let i=1;i<c.length;i++){const p=st[i-1];st.push(c[i]>c[i-1]?(p>0?p+1:1):c[i]<c[i-1]?(p<0?p-1:-1):0)}
+const r3=rsi(c,3),rs=rsi(st,2),rc=c.map((x,i)=>i?x/c[i-1]-1:0);return c.map((_,i)=>{if(i<101)return 50;let k=0;for(let j=i-100;j<i;j++)if(rc[j]<rc[i])k++;return(r3[i]+rs[i]+k)/3})}
+/* WaveTrend (LazyBear, основа VuManChu Cipher B): [wt1, wt2] */
+function waveTrend(A,n1=10,n2=21){const ap=A.map(x=>(x.h+x.l+x.c)/3),es=ema(ap,n1),d=ema(ap.map((x,i)=>Math.abs(x-es[i])),n1),ci=ap.map((x,i)=>d[i]?(x-es[i])/(.015*d[i]):0),w1=ema(ci,n2);return[w1,smaA(w1,4)]}
+/* Squeeze Momentum (LazyBear): стиснення — Bollinger (20, 2) усередині Keltner (20, 1,5 × середній діапазон); імпульс — лінійна регресія */
+function squeeze(A,n=20){const c=cl(A),B=bbands(c,n,2),m=smaA(c,n),rg=smaA(A.map((x,i)=>i?Math.max(x.h-x.l,Math.abs(x.h-A[i-1].c),Math.abs(x.l-A[i-1].c)):x.h-x.l),n);
+const on=A.map((_,i)=>i>=n&&B[0][i]>m[i]-1.5*rg[i]&&B[1][i]<m[i]+1.5*rg[i]),dv=A.map((x,i)=>x.c-((hhv(A,i,n)+llv(A,i,n))/2+m[i])/2);
+const val=A.map((_,i)=>{if(i<2*n)return 0;let sx=0,sy=0,sxy=0,sxx=0;for(let k=0;k<n;k++){const y=dv[i-n+1+k];sx+=k;sy+=y;sxy+=k*y;sxx+=k*k}const b=(n*sxy-sx*sy)/(n*sxx-sx*sx);return(sy-b*sx)/n+b*(n-1)});return{on,val}}
+/* Ichimoku: tenkan 9, kijun 26, хмара (senkou A/B) зсунута на 26 вперед — на свічці i беремо значення з i − 26 */
+function ichimoku(A){const mid=(i,n)=>(hhv(A,i,n)+llv(A,i,n))/2;return A.map((x,i)=>{if(i<78)return 0;const t=mid(i,9),k=mid(i,26),j=i-26,a=(mid(j,9)+mid(j,26))/2,b=mid(j,52),top=Math.max(a,b),bot=Math.min(a,b);
+return x.c>top&&t>k?1:x.c<bot&&t<k?-1:0})}
+/* ADX (Wilder, 14): сила тренду */
+function adx(A,n=14){const o=new Array(A.length).fill(0);let tr=0,pd=0,md=0,ax=0;for(let i=1;i<A.length;i++){const x=A[i],p=A[i-1],up=x.h-p.h,dn=p.l-x.l,t=Math.max(x.h-x.l,Math.abs(x.h-p.c),Math.abs(x.l-p.c));
+tr=tr-tr/n+t;pd=pd-pd/n+(up>dn&&up>0?up:0);md=md-md/n+(dn>up&&dn>0?dn:0);const pi=tr?100*pd/tr:0,mi=tr?100*md/tr:0,dx=pi+mi?100*Math.abs(pi-mi)/(pi+mi):0;ax=i<=n?dx:(ax*(n-1)+dx)/n;o[i]=i>=2*n?ax:0}return o}

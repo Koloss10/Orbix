@@ -128,6 +128,32 @@ function psar(A,st=.02,mx=.2){const o=[1];if(!A.length)return[];let up=true,sar=
 for(let i=1;i<A.length;i++){const x=A[i],p=A[i-1];sar=sar+af*(ep-sar);if(up){sar=Math.min(sar,p.l,i>1?A[i-2].l:p.l);if(x.l<sar){up=false;sar=ep;ep=x.l;af=st}else if(x.h>ep){ep=x.h;af=Math.min(mx,af+st)}}
 else{sar=Math.max(sar,p.h,i>1?A[i-2].h:p.h);if(x.h>sar){up=true;sar=ep;ep=x.h;af=st}else if(x.l<ep){ep=x.l;af=Math.min(mx,af+st)}}o.push(up?1:-1)}return o}
 function macdH(c){const f=ema(c,12),s=ema(c,26),m=f.map((x,i)=>x-s[i]),g=ema(m,9);return m.map((x,i)=>x-g[i])}
+/* ---------- індикатори з Veles і TradingView (усі лише за закритими свічками ≤ i, без зазирання вперед) ---------- */
+const smaA=(a,n)=>{const o=[];let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];o.push(i>=n-1?s/n:a[i])}return o};
+const hhv=(A,i,n,k='h')=>{let m=-1/0;for(let j=Math.max(0,i-n+1);j<=i;j++)m=Math.max(m,A[j][k]);return m};
+const llv=(A,i,n,k='l')=>{let m=1/0;for(let j=Math.max(0,i-n+1);j<=i;j++)m=Math.min(m,A[j][k]);return m};
+/* Money Flow Index: RSI, зважений об'ємом (типова ціна × об'єм) */
+function mfi(A,n=14){const o=new Array(A.length).fill(50);let p=0,q=0;const tp=A.map(x=>(x.h+x.l+x.c)/3),f=A.map((x,i)=>i?tp[i]*(+x.v||0)*(tp[i]>tp[i-1]?1:tp[i]<tp[i-1]?-1:0):0);
+for(let i=1;i<A.length;i++){if(f[i]>0)p+=f[i];else q-=f[i];if(i>n){const z=f[i-n];if(z>0)p-=z;else q+=z}if(i>=n)o[i]=p+q>0?100*p/(p+q):50}return o}
+/* Williams %R: −100…0 */
+const willr=(A,n=14)=>A.map((x,i)=>{if(i<n-1)return-50;const h=hhv(A,i,n),l=llv(A,i,n);return h>l?(h-x.c)/(h-l)*-100:-50});
+/* Stochastic RSI (14, 14, %K = SMA 3) */
+function stochRsi(c,n=14){const r=rsi(c,n),k=r.map((x,i)=>{if(i<2*n)return 50;let h=-1/0,l=1/0;for(let j=i-n+1;j<=i;j++){h=Math.max(h,r[j]);l=Math.min(l,r[j])}return h>l?(x-l)/(h-l)*100:50});return smaA(k,3)}
+/* Connors RSI: (RSI(3) + RSI серії зростань/падінь (2) + процентний ранг зміни за 100) / 3 */
+function crsi(c){const st=[0];for(let i=1;i<c.length;i++){const p=st[i-1];st.push(c[i]>c[i-1]?(p>0?p+1:1):c[i]<c[i-1]?(p<0?p-1:-1):0)}
+const r3=rsi(c,3),rs=rsi(st,2),rc=c.map((x,i)=>i?x/c[i-1]-1:0);return c.map((_,i)=>{if(i<101)return 50;let k=0;for(let j=i-100;j<i;j++)if(rc[j]<rc[i])k++;return(r3[i]+rs[i]+k)/3})}
+/* WaveTrend (LazyBear, основа VuManChu Cipher B): [wt1, wt2] */
+function waveTrend(A,n1=10,n2=21){const ap=A.map(x=>(x.h+x.l+x.c)/3),es=ema(ap,n1),d=ema(ap.map((x,i)=>Math.abs(x-es[i])),n1),ci=ap.map((x,i)=>d[i]?(x-es[i])/(.015*d[i]):0),w1=ema(ci,n2);return[w1,smaA(w1,4)]}
+/* Squeeze Momentum (LazyBear): стиснення — Bollinger (20, 2) усередині Keltner (20, 1,5 × середній діапазон); імпульс — лінійна регресія */
+function squeeze(A,n=20){const c=cl(A),B=bbands(c,n,2),m=smaA(c,n),rg=smaA(A.map((x,i)=>i?Math.max(x.h-x.l,Math.abs(x.h-A[i-1].c),Math.abs(x.l-A[i-1].c)):x.h-x.l),n);
+const on=A.map((_,i)=>i>=n&&B[0][i]>m[i]-1.5*rg[i]&&B[1][i]<m[i]+1.5*rg[i]),dv=A.map((x,i)=>x.c-((hhv(A,i,n)+llv(A,i,n))/2+m[i])/2);
+const val=A.map((_,i)=>{if(i<2*n)return 0;let sx=0,sy=0,sxy=0,sxx=0;for(let k=0;k<n;k++){const y=dv[i-n+1+k];sx+=k;sy+=y;sxy+=k*y;sxx+=k*k}const b=(n*sxy-sx*sy)/(n*sxx-sx*sx);return(sy-b*sx)/n+b*(n-1)});return{on,val}}
+/* Ichimoku: tenkan 9, kijun 26, хмара (senkou A/B) зсунута на 26 вперед — на свічці i беремо значення з i − 26 */
+function ichimoku(A){const mid=(i,n)=>(hhv(A,i,n)+llv(A,i,n))/2;return A.map((x,i)=>{if(i<78)return 0;const t=mid(i,9),k=mid(i,26),j=i-26,a=(mid(j,9)+mid(j,26))/2,b=mid(j,52),top=Math.max(a,b),bot=Math.min(a,b);
+return x.c>top&&t>k?1:x.c<bot&&t<k?-1:0})}
+/* ADX (Wilder, 14): сила тренду */
+function adx(A,n=14){const o=new Array(A.length).fill(0);let tr=0,pd=0,md=0,ax=0;for(let i=1;i<A.length;i++){const x=A[i],p=A[i-1],up=x.h-p.h,dn=p.l-x.l,t=Math.max(x.h-x.l,Math.abs(x.h-p.c),Math.abs(x.l-p.c));
+tr=tr-tr/n+t;pd=pd-pd/n+(up>dn&&up>0?up:0);md=md-md/n+(dn>up&&dn>0?dn:0);const pi=tr?100*pd/tr:0,mi=tr?100*md/tr:0,dx=pi+mi?100*Math.abs(pi-mi)/(pi+mi):0;ax=i<=n?dx:(ax*(n-1)+dx)/n;o[i]=i>=2*n?ax:0}return o}
 const SIG={
 rsi:(A,g)=>memo(A,'r'+g.rp,()=>rsi(cl(A),g.rp)).map(x=>x<g.rm?1:x>100-g.rm?-1:0),
 bb:(A,g)=>{const B=memo(A,'b'+g.bn+'_'+g.bk,()=>bbands(cl(A),g.bn,g.bk));return A.map((x,i)=>x.c<B[0][i]?1:x.c>B[1][i]?-1:0)},
@@ -145,10 +171,18 @@ kc:A=>{const E=memo(A,'e20',()=>ema(cl(A),20)),T=memo(A,'atr10',()=>atr(A,10));r
 psar:A=>memo(A,'psar',()=>psar(A)),
 hma:A=>{const H=memo(A,'h50',()=>hma(cl(A),50));return A.map((x,i)=>i&&H[i]>H[i-1]?1:i&&H[i]<H[i-1]?-1:0)},
 pc:A=>A.map((x,i)=>{if(i<24)return 0;const r=x.c/A[i-24].c-1;return r<=-.03?1:r>=.03?-1:0}),
+mfi:A=>memo(A,'mfi',()=>mfi(A,14)).map(x=>x<20?1:x>80?-1:0),
+wr:A=>memo(A,'wr',()=>willr(A,14)).map(x=>x<-80?1:x>-20?-1:0),
+srsi:A=>memo(A,'srsi',()=>stochRsi(cl(A),14)).map(x=>x<20?1:x>80?-1:0),
+crsi:A=>memo(A,'crsi',()=>crsi(cl(A))).map(x=>x<10?1:x>90?-1:0),
+wt:A=>{const[a,b]=memo(A,'wt',()=>waveTrend(A));return A.map((_,i)=>i<40?0:a[i]>b[i]&&a[i-1]<=b[i-1]&&a[i]<-53?1:a[i]<b[i]&&a[i-1]>=b[i-1]&&a[i]>53?-1:0)},
+sqz:A=>{const S=memo(A,'sqz',()=>squeeze(A));return A.map((_,i)=>i<41||!S.on[i-1]||S.on[i]?0:S.val[i]>0&&S.val[i]>S.val[i-1]?1:S.val[i]<0&&S.val[i]<S.val[i-1]?-1:0)},
+ichi:A=>memo(A,'ichi',()=>ichimoku(A)),
+don:A=>A.map((x,i)=>{if(i<21)return 0;const h=hhv(A,i-1,20),l=llv(A,i-1,20);return x.c>h?1:x.c<l?-1:0}),
 ta:A=>{const c=cl(A),R=memo(A,'r14',()=>rsi(c,14)),S=memo(A,'s',()=>stoch(A)),C=memo(A,'c20',()=>cci(A,20)),M=memo(A,'m',()=>macdH(c)),E1=memo(A,'e20',()=>ema(c,20)),E2=memo(A,'e50',()=>ema(c,50));
 return A.map((x,i)=>{const v=(R[i]<30?1:R[i]>70?-1:0)+(S[i]<20?1:S[i]>80?-1:0)+(C[i]<-100?1:C[i]>100?-1:0)+(M[i]>0?1:-1)+(x.c>E1[i]?1:-1)+(E1[i]>E2[i]?1:-1);return v>=3?1:v<=-3?-1:0})}};
-const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг',st:'SuperTrend',kc:'Keltner Channel',psar:'Parabolic SAR',hma:'Hull MA',pc:'% зміни ціни'};
-const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
+const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг',st:'SuperTrend',kc:'Keltner Channel',psar:'Parabolic SAR',hma:'Hull MA',pc:'% зміни ціни',mfi:'Money Flow Index',wr:'Williams %R',srsi:'Stochastic RSI',crsi:'Connors RSI',wt:'WaveTrend (VuManChu)',sqz:'Squeeze Momentum',ichi:'Ichimoku',don:'Donchian (пробій)'};
+const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,adx:0,adxm:1,avl:0,avh:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
 /* Фільтр китів (сплеск об'єму): свічка i — «кит», якщо її об'єм ≥ wk × середнього за попередні WHL свічок,
    оборот (об'єм × ціна) ≥ wn USDT і переважають покупці (Long) чи продавці (Short): частка taker-buy об'єму
    ≥ wb (Long) або ≤ 1 − wb (Short). Якщо біржа не дає taker-buy об'єму (Bybit, демо-дані), напрям — за кольором свічки.
@@ -214,11 +248,15 @@ function reinvestFactor(g,cum){if(!(g.rv>0)||!(cum>0))return 1;const M=g.base*(g
    вхід лише туди, куди сходяться; суперечливі сигнали — без входу. Напрям угоди — pos.d; gOf дає налаштування угоди. */
 const dOf=(g,p)=>p&&p.d||g.d||1;
 const gOf=(g,p)=>!g.d&&p&&p.d?{...g,d:p.d}:g;
+/* Режим ринку (як у професійного трейдера): ADX (14) — adxm 1: лише боковик (ADX < adx), 2: лише тренд (ADX > adx);
+   ATR (14) у % від ціни в межах [avl, avh] (0 — без межі): не входити, коли ринок завмер чи надто «дикий» */
+function adxF(A,g){const X=memo(A,'adx',()=>adx(A,14)),t=+g.adx,m=+g.adxm===2?2:1;return X.map((x,i)=>i>=28&&(m===1?x<t:x>t))}
+function atrF(A,g){const T=memo(A,'atr14',()=>atr(A,14)),lo=+g.avl||0,hi=+g.avh||0;return A.map((x,i)=>{if(i<14)return false;const p=T[i]/x.c*100;return(!lo||p>=lo)&&(!hi||p<=hi)})}
 function entry(A,g){if(!g.d){const L=entry(A,{...g,d:1}),S=entry(A,{...g,d:-1}),o=L.map((v,i)=>v&&!S[i]?1:S[i]&&!v?-1:0);
 return L.x?withX(o,L.x.map((v,i)=>v?-1:S.x[i]?1:0)):o}
 const S=g.sg.map(k=>SIG[k](A,g)),n=A.length,o=new Array(n).fill(false),f=PAIRS[g.pair],
-w=Math.max(g.rp,g.bn,g.cn,30,g.sg.includes('ema')?100:0,g.sg.includes('lvl')?100:0,g.sg.includes('fib')?50:0,g.sg.includes('hma')||g.sg.includes('kc')||g.sg.includes('st')?60:0),k=Math.min(g.k||S.length,S.length);
-if(!S.length||(g.fm&&f&&f.f<g.fm))return o;const WH=+g.wk>0?whale(A,g):null,FL=[+g.lq>0?liq(A,g):null,+g.ak>0?act(A,g):null,+g.lk>0?casc(A,g):null,+g.htf>0?htf(A,g):null].filter(Boolean);
+w=Math.max(g.rp,g.bn,g.cn,30,g.sg.includes('ema')?100:0,g.sg.includes('lvl')?100:0,g.sg.includes('fib')?50:0,g.sg.includes('hma')||g.sg.includes('kc')||g.sg.includes('st')?60:0,g.sg.some(k=>k==='crsi'||k==='ichi'||k==='sqz')?101:g.sg.some(k=>k==='wt'||k==='srsi')?45:0),k=Math.min(g.k||S.length,S.length);
+if(!S.length||(g.fm&&f&&f.f<g.fm))return o;const WH=+g.wk>0?whale(A,g):null,FL=[+g.lq>0?liq(A,g):null,+g.ak>0?act(A,g):null,+g.lk>0?casc(A,g):null,+g.htf>0?htf(A,g):null,+g.adx>0?adxF(A,g):null,+g.avl>0||+g.avh>0?atrF(A,g):null].filter(Boolean);
 for(let i=Math.max(w,WH?WHL:0,FL.length?AVN:0);i<n;i++){let c=0;for(const s of S)if(s[i]===g.d)c++;o[i]=c>=k&&(!WH||WH[i])&&FL.every(F=>F[i])}return hasXs(g)?withX(o,exitArr(A,g,w)):o}
 /* Комісії: ftk — тейкер (ринковий вхід, стоп, трейлінг, ліквідація), fmk — мейкер (лімітні DCA і TP).
    Funding: події fr={t,r}; при r>0 Long платить, Short отримує, сума = r·кількість·ціна.
@@ -294,7 +332,7 @@ function amEval(o,g){const s=amRun(o,g,0,o.t1);return s.n<10?null:{g,s,sc:amSc(s
 function amRob(o){const h=o.t1>>1,a=amRun(o,o.g,0,h),b=amRun(o,o.g,h,o.t1),v=amRun(o,o.g,o.t1,o.tr),T=o.g.tf;o.v=v;o.ok=v.n>=3&&v.pnl>0&&a.pnl>0&&b.pnl>0;o.rob=!o.ok?-1e9+amSc(v):Math.min(amSc(a)/(h*T),amSc(b)/((o.t1-h)*T),amSc(v)/((o.tr-o.t1)*T))*1e3}
 function amMut(R,g,c,LV){const k=pick(R,Object.keys(AMG).concat(LV.length>1?['lev']:[])),L=k==='lev'?LV:AMG[k],i=L.indexOf(g[k]),j=i<0?R()*L.length|0:Math.max(0,Math.min(L.length-1,i+(R()<.5?-1:1)));
 const n={...g,[k]:L[j]};n.base=amBase(c,n);return n.base?n:null}
-function amFlt(g){const V=[],H=g.tf<4?4:g.tf<24?24:g.tf<168?168:0;if(H)V.push({htf:H,hte:50});V.push({wk:2.5,wn:0,wb:.6},{ak:2},{lk:2},{xs:g.sg[0]});return V}
+function amFlt(g){const V=[],H=g.tf<4?4:g.tf<24?24:g.tf<168?168:0;if(H)V.push({htf:H,hte:50});V.push({wk:2.5,wn:0,wb:.6},{ak:2},{lk:2},{xs:g.sg[0]},{avl:.3,avh:3});if(!g.adx)V.push({adx:25,adxm:1},{adx:20,adxm:2});return V}
 /* напрями пошуку: c.dr = 1 / −1 — лише він, 9 — лише нейтральний, 0 — Long і Short (на споті лише Long) */
 /* «Лише за денним трендом» (c.trend, за замовчуванням увімкнено): підібраному боту на таймфреймі до 12 год додається
    фільтр денного тренду (EMA 50) — угоди лише в бік тренду. Реальні свічки Bybit (10 пар, рік), непобачена перевірка:
@@ -303,7 +341,7 @@ function amTrend(c,o){if(c.trend===0||o.g.tf>=24||o.g.htf)return o;const g={...o
 const amDirs=c=>c.dr===9?(c.fut===0?[]:[0]):c.dr?[c.dr]:c.fut===0?[1]:[1,-1];
 function auto(c,salt=0){const H=hist(dk(c)),R=rng((c.amt|0)*7+c.pair.length*7919+salt),cand=[],mxL=c.fut===0?1:maxLev(c.pair,c.ex),LV=c.lev?[Math.min(c.lev,mxL)]:[1,2,3].filter(x=>x<=mxL);
 for(const tf of c.tf?[c.tf]:[1,4,12,24,168]){const A=aggC(H,tf),k=Math.floor(c.per/tf);if(k<60||k>A.length)continue;const t1=Math.floor(k*.5),tr=Math.floor(k*.7),cs=A.slice(-k),off=(A.length-k)*tf;
-for(const [name,sg,kk] of STR)for(const d of amDirs(c)){const g0=normG({...DEF,pair:c.pair,ex:c.ex,sg,k:kk,d,tf,rm:pick(R,[30,35,40]),fut:c.fut,name}),o={c,A,cs,off,t1,tr,k,e:entry(A,g0).slice(-k)};let best=null;
+for(const [name,sg,kk,fx] of STR)for(const d of amDirs(c)){const g0=normG({...DEF,pair:c.pair,ex:c.ex,sg,k:kk,d,tf,rm:pick(R,[30,35,40]),fut:c.fut,name,...(fx||{})}),o={c,A,cs,off,t1,tr,k,e:entry(A,g0).slice(-k)};let best=null;
 for(let j=0;j<8;j++){const g={...g0,orders:3+(R()*6|0),mult:pick(R,AMG.mult),lev:pick(R,LV),step:pick(R,AMG.step.slice(1,6)),smul:pick(R,AMG.smul),tp:pick(R,AMG.tp.slice(1,5)),sl:pick(R,AMG.sl.slice(1,5)),trail:pick(R,AMG.trail)};g.base=amBase(c,g);if(!g.base)continue;
 const r=amEval(o,g);if(r&&(!best||r.sc>best.sc))best=r}if(best)cand.push({...o,...best})}}
 cand.sort((a,b)=>b.sc-a.sc);const top=cand.slice(0,12);
