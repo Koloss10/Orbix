@@ -35,9 +35,9 @@ export const dealId = (pos) => (pos ? (pos.f && pos.f[0] && pos.f[0].t) || pos.f
 
 /* закрити позицію моделі за ціною px у момент t: той самий розрахунок, що й вихід рушія (тейкер) */
 export function closeModel(b, g, { px, t, tag }) {
-  const p = b.pos, d = g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
+  const p = b.pos, d = p.d || g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
   const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
-  const tr = [...(b.tr || []), { i, ts: t, pnl, n: p.n, liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
+  const tr = [...(b.tr || []), { i, ts: t, pnl, n: p.n, ...(p.d ? { d: p.d } : {}), liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
   return { ...b, pos: null, tr, cum: (b.cum || 0) + pnl, cd: i + (g.cd || 0) + 1 };
 }
 /* дані сітки на біржі після кінця угоди не потрібні */

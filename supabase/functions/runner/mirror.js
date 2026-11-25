@@ -298,9 +298,9 @@ export function exchangeExit(xr, mp, g) {
 }
 /* закрити позицію моделі за ціною px у момент t: той самий розрахунок, що й вихід рушія (v. Bot.step), зі збереженням угоди в b.tr */
 export function closeByExchange(b, g, { px, t, tag = "xc" }) {
-  const p = b.pos, d = g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
+  const p = b.pos, d = p.d || g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
   const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
-  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
+  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, ...(p.d ? { d: p.d } : {}), liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
   return { ...b, pos: null, tr, cum: b.cum + pnl, cd: i + g.cd + 1 };
 }
 /* ручна докупівля в моделі: кількість q за ціною px (тейкер), рівні драбини не змінюються */
@@ -439,6 +439,8 @@ export async function results(ex, { symbol, xr }) {
 export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, card = null, risk = null, now = Date.now() }) {
   const pend = [...(Array.isArray(bot.state?.pend) ? bot.state.pend : []), ...(mirror ? actionsFor(r.events, bot.id, native) : [])];
   const fl = { ...(bot.state?.fl || {}) }, fl0 = JSON.stringify(fl);
+  // нейтральний бот (g.d = 0): біржа працює в напрямі поточної угоди моделі; fl.dd пам'ятає його, поки біржа ще закриває угоду
+  if (!g.d) { const pd = r.state?.b?.pos?.d || bot.state?.b?.pos?.d; if (pd) fl.dd = pd; g = { ...g, d: pd || fl.dd || 1 }; }
   if (fl.parked && native) fl.rs = 1; // бот знято з паузи — відновити драбину на біржі (повторюється, доки не вдасться)
   delete fl.parked; // бот знову працює
   if (!(mirror && native && ex)) clearMis(fl); // звірки немає — давнє попередження не лишається на картці
@@ -483,7 +485,7 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       if (a.kind === "mclose") man = { a, px: out.px > 0 ? out.px : a.price };
       if (a.kind === "madd" && out.qty > 0 && out.px > 0) adds.push({ a, px: out.px, q: out.qty });
       // прослизання входу: ціна моделі (закриття свічки) проти фактичної середньої ціни на біржі
-      if (a.kind === "open" && st.xr && a.price > 0 && fl.ex > 0) st.xr.en = [...st.xr.en, { t: a.t, m: a.price, x: fl.ex }].slice(-XR_KEEP);
+      if (a.kind === "open" && st.xr && a.price > 0 && fl.ex > 0) st.xr.en = [...st.xr.en, { t: a.t, m: a.price, x: fl.ex, d: g.d }].slice(-XR_KEEP);
     }
     catch (e) {
       const b = { ...a, tries: (a.tries || 0) + 1 };

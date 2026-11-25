@@ -1025,3 +1025,29 @@ test('Перезапустити угоду: ордери бота поверт�
   const err = applyCommands({ cmds: [cmd(13, 'resync', E0)], state: { b: { pos: null, tr: [] }, pend: [], fl: {}, xe: { m: 'x', at: E0 } }, g, botId: BOT, mirror: true, native: true, price: 2.5, now: E0 });
   assert.equal(err.state.xe, undefined); assert.match(err.results[0].text, /^Помилку скинуто$/);
 });
+
+/* ---------- Нейтральний бот (g.d = 0): біржа працює в напрямі угоди моделі ---------- */
+test('Нейтральний бот: угода Short — на біржі Short, докупівлі вище ціни, стоп вище входу; закриття — за ціною біржі', async () => {
+  const g0 = { ...g, d: 0 }, h = xcHarness(g0);
+  const b = new Bot(g0, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, -1);
+  assert.equal(b.pos.d, -1);
+  await h.go(null, b.pos, [{ kind: 'open', notional: b.pos.cost, price: 2.5, t: E0, d: -1 }], E0);
+  assert.ok(h.ex.S.pos && h.ex.S.pos.amt < 0, 'позиція Short');
+  const lim = h.ex.S.orders.filter((o) => o.status === 'New' && !o.reduceOnly);
+  assert.ok(lim.length > 0 && lim.every((o) => o.side === 'SELL' && o.price > 2.5), 'докупівлі Short — продаж вище входу');
+  assert.ok(h.ex.S.pos.sl > 2.5, 'SL Short — вище входу');
+  const st = h.saved.at(-1); assert.equal(st.fl.dd, -1);
+  // біржа закрила за TP — модель закривається за ціною біржі з PnL Short
+  h.ex.S.pos = null; h.ex.S.closed.push({ id: 'n1', t: E0 + 3600e3, pnl: 1, q: Math.abs(b.pos.q), px: 2.45 });
+  for (const o of h.ex.S.orders) if (o.status === 'New') o.status = 'Cancelled';
+  await h.go(st, b.pos, [], E0 + 2 * 3600e3); let s2 = h.saved.at(-1);
+  for (let i = 3; i < 8 && s2.b.pos; i++) { await h.go(s2, s2.b.pos, [], E0 + i * 3600e3); s2 = h.saved.at(-1); }
+  assert.equal(s2.b.pos, null, 'модель закрила угоду');
+  assert.ok(s2.b.tr.at(-1).pnl > 0, 'Short у плюсі при падінні ціни');
+});
+
+test('Нейтральний бот: ручне закриття Short без біржі — PnL за напрямом угоди', () => {
+  const g0 = { ...g, d: 0 }, b = new Bot(g0, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, -1);
+  const a = applyCommands({ cmds: [cmd(1, 'close', E0)], state: { b: { pos: b.pos, tr: [], cd: 0, cum: 0 }, pend: [], fl: {} }, g: g0, botId: BOT, mirror: false, native: false, price: 2.4, now: E0 });
+  assert.ok(a.state.b.tr[0].pnl > 0, 'ціна впала — Short у плюсі');
+});
