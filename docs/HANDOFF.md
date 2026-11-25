@@ -4,7 +4,7 @@
 
 ## Коротко
 - Платформа DCA-ботів Orbix: інтерфейс `orbix.html` (GitHub Pages) і серверні функції Supabase (`runner`, `exchange`, `tg-notify`, `tg-card`, `ai-assistant`). Лише Bybit Demo і Binance Futures Testnet.
-- Сервер зараз: `runner` v21 (лічильник версій Supabase — 23, `tg-card` — 3; викладено кнопкою GitHub Actions «Deploy Supabase function»), `exchange` v8, `ai-assistant` (Supabase 3, етап 2 увімкнено), `tg-card` v1. Проєкт Supabase `krmnaypaitruhqgaxkfw`.
+- Сервер зараз: `runner` v22 (лічильник версій Supabase — 24, `tg-card` — 3; викладено кнопкою GitHub Actions «Deploy Supabase function»), `exchange` v8, `ai-assistant` (Supabase 3, етап 2 увімкнено), `tg-card` v1. Проєкт Supabase `krmnaypaitruhqgaxkfw`.
 - Останній злитий у `main` PR — #69 (картки сигналів у Telegram). Тести: 187 зелених (`npm run verify`).
 
 ## Етап C завершено (25.11)
