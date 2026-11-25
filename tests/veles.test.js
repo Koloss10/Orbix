@@ -119,3 +119,17 @@ test('Вихід за сигналом: Short закривається прот�
   const A = pcSeries().map((r, i) => C(i, 200 - r.o, 200 - r.l, 200 - r.h, 200 - r.c)), g = gx({ d: -1 }), R = E.run(A, E.entry(A, g), g, 0, 0, 0);
   assert.equal(R.b.tr.length, 1); assert.equal(R.b.tr[0].xs, 1);
 });
+
+// ---------- Авто-майстер: нові індикатори в пошуку і жодного зазирання в перевірку ----------
+test('Авто-майстер: пошук включає нові індикатори', () => {
+  const names = E.STR.map((s) => s[1].join());
+  for (const k of ['st', 'kc', 'psar', 'hma', 'pc']) assert.ok(names.some((n) => n.split(',').includes(k)), k);
+});
+test('Авто-майстер: вибір не залежить від свічок періоду перевірки (останні 30 %)', () => {
+  const E2 = loadEngine(); E2.MD.mode = 'demo';
+  const c = { pair: 'BTC/USDT', ex: 'Binance', amt: 0, per: 2400, tf: 1, dr: 1, fut: 1, lev: 0 };
+  const a = E2.auto(c, 3).map((o) => JSON.stringify(o.g));
+  const H = E2.DT['BTC/USDT'] || (E2.auto(c, 3), E2.DT['BTC/USDT']), from = H.length - Math.floor(2400 * 0.3) + 1;
+  for (let i = from; i < H.length; i++) { const k = 1 + Math.sin(i) * 0.05; H[i] = { ...H[i], o: H[i].o * k, h: H[i].h * k * 1.01, l: H[i].l * k * 0.99, c: H[i].c * k }; }
+  assert.deepEqual(E2.auto(c, 3).map((o) => JSON.stringify(o.g)), a);
+});
