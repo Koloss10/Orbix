@@ -63,3 +63,6 @@
 - **Після 25.11, разом із `runner` v17:** повернення `dc1053f` (часткова сітка й фільтри), «біржа головна», ручне керування угодою (п. 1), зупинка після N угод (п. 2), реінвест (п. 3).
 - **Далі:** відступ першого ордера й підтягування сітки (п. 5), фільтри на докупівлі й вихід за сигналом (п. 6), нові індикатори (п. 7), статуси з помилкою (п. 9), тип маржі (п. 10).
 - **Окремим проєктом:** мультипар і grid-бот.
+
+## Додано 26.11
+- З фільтрів Veles: ADX, ATR, Money Flow Index, Williams %R, Stochastic RSI, Connors RSI, Ichimoku, Donchian, VuManChu (WaveTrend). З TradingView: Squeeze Momentum (LazyBear). Ще немає: Awesome Oscillator, Vortex, Chaikin, CMO, RVI, Mean Reversion Channel, Turtle Zone, Liquidation Heatmap, фільтр за розкладом і ціною.
