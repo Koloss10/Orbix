@@ -208,6 +208,15 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
     const n = native ? await cancelMine(ex, symbol, botId) : 0;
     return { msg: `${name}: угоду скасовано вручну — знято ${n} лімітн. ордер(ів) бота, позиція лишилась на біржі`, px: null };
   }
+  if (a.kind === "madd") { // «Докупити зараз»: ринковий ордер; лімітна драбина бота лишається як є
+    const p = (await ex.positions(symbol))[0];
+    if (!p || Math.sign(p.amt) !== Math.sign(g.d)) return { msg: `${name}: позиції бота на біржі немає — докупівлю пропущено`, px: null, qty: 0 };
+    let o;
+    try { o = await once(ex, symbol, a.id, () => marketNotional(ex, symbol, g.d > 0 ? "BUY" : "SELL", a.notional, a.id)); }
+    catch (e) { if (/^ордер замалий/.test(e.message)) return { msg: `${name}: докупівлю не виконано — ${e.message}`, px: null, qty: 0 }; throw e; }
+    const px = o.price > 0 ? o.price : a.price;
+    return { msg: `${name}: докуплено вручну ${o.qty} за ${o.approx ? "≈" : ""}${px}`, px, qty: +o.qty || 0 };
+  }
   if (a.kind === "mclose") {
     if (native) await cancelMine(ex, symbol, botId);
     const had = await ex.byLink(symbol, a.id);
@@ -293,6 +302,11 @@ export function closeByExchange(b, g, { px, t, tag = "xc" }) {
   const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
   const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
   return { ...b, pos: null, tr, cum: b.cum + pnl, cd: i + g.cd + 1 };
+}
+/* ручна докупівля в моделі: кількість q за ціною px (тейкер), рівні драбини не змінюються */
+export function addModel(b, g, { px, q, t }) {
+  const p = b.pos, ft = g.ftk != null ? g.ftk : g.fee, s = q * px;
+  return { ...b, pos: { ...p, q: p.q + q, cost: p.cost + s, real: p.real - ft * s, f: [...p.f, { t, p: px, k: "m" }] } };
 }
 /* угода моделі, до якої належать прапорці звірки */
 const tidOf = (mp) => (mp ? (mp.f && mp.f[0] && mp.f[0].t) || mp.first || 1 : null);
@@ -459,6 +473,7 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   }
   const left = [];
   let stop = false, changed = false, man = null;
+  const adds = [];
   for (const a of pend) {
     if (stop) { left.push(a); continue; }
     if (a.kind !== "close" && a.kind !== "part" && a.kind !== "mclose" && a.kind !== "mcancel" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
@@ -466,6 +481,7 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       const out = await execute(ex, a, { g, symbol, native, botId: bot.id, fl }); changed = true;
       await log("info", typeof out === "string" ? out : out.msg);
       if (a.kind === "mclose") man = { a, px: out.px > 0 ? out.px : a.price };
+      if (a.kind === "madd" && out.qty > 0 && out.px > 0) adds.push({ a, px: out.px, q: out.qty });
       // прослизання входу: ціна моделі (закриття свічки) проти фактичної середньої ціни на біржі
       if (a.kind === "open" && st.xr && a.price > 0 && fl.ex > 0) st.xr.en = [...st.xr.en, { t: a.t, m: a.price, x: fl.ex }].slice(-XR_KEEP);
     }
@@ -477,6 +493,8 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       else { await log("error", `Біржа: ${e.message} (спроба ${b.tries} з ${MAX_TRIES}, повторю)`); left.push(b); stop = true; }
     }
   }
+  // «Докупити зараз»: модель докуповує за фактичною ціною й кількістю на біржі
+  for (const x of adds) if (st.b && st.b.pos && tidOf(st.b.pos) === x.a.tid) { st.b = addModel(st.b, g, { px: x.px, q: x.q, t: now }); }
   // ручне закриття (кнопка «Закрити за ринком»): модель закривається за ціною закриття на біржі
   if (fl.mc && !left.some((a) => a.kind === "mclose")) delete fl.mc; // дію виконано або знято після MAX_TRIES
   if (man && st.b && st.b.pos && tidOf(st.b.pos) === man.a.tid) {

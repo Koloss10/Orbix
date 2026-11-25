@@ -22,6 +22,13 @@ const e=await SB.from('bot_events').select('id,bot_id,level,message,created_at')
 if(!e.error){let add=0;for(const r of (e.data||[]).slice().reverse()){if(SRV.seen.has(r.id))continue;SRV.seen.add(r.id);FEED.unshift({t:new Date(r.created_at).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),m:'☁ '+r.message});add++}
 if(add){FEED=FEED.slice(0,60);sv('zfeed',FEED);feedR()}}
 lst();upd();if(CUR==='mon')monR()}catch(er){}finally{SRV.busy=0}}
+/* статус «Помилка» (як у Veles): свіжа помилка біржі (state.xe, до години) або тривожна розбіжність з біржею (fl.mis.on);
+   кнопка «Перезапустити угоду» — команда resync (runner/commands.js) */
+const ERR_TTL=36e5;
+const srvErr=x=>{if(!x.srv||!x.on||!x.srvSt)return null;const e=x.srvXe;if(e&&e.m&&Date.now()-e.at<ERR_TTL)return{t:'Помилка біржі: '+e.m,at:e.at,xe:1};
+const m=x.srvMis;return m&&m.on&&m.t?{t:'Розбіжність з біржею: '+m.t}:null};
+const errLine=x=>{const e=srvErr(x);if(!e)return'';
+return`${e.xe?`<p class="dn" style="margin:0">⚠ ${esc(e.t)} · ${ago(e.at)}</p>`:''}<div class="ac"><button class="b sm p" data-a="cmd" data-k="resync" data-id="${x.id}">${x.b.pos?'Перезапустити угоду':'Скинути помилку'}</button><button class="b sm" data-a="mon" data-id="${x.id}">Деталі</button></div>`};
 const srvMisL=x=>{const m=x.srvMis;if(!x.tn||!m||!m.t||(m.k!=='xc'&&!m.on))return'';return`<p class="${m.k==='xc'?'mu':'dn'}" style="margin:0">${m.k==='xc'?'ℹ':'⚠'} Звірка з біржею: ${esc(m.t)}${m.k==='orphan'?' — перевірте позицію в Bybit Demo':''}</p>`};
 const srvRlL=x=>x.srv&&x.tn&&x.srvRl&&x.srvRl.t?`<p class="dn" style="margin:0">⏸ Нові угоди призупинено лімітом ризику: ${esc(x.srvRl.t)}</p>`:'';
 const srvSaL=x=>x.srv&&x.srvSa?`<p class="dn" style="margin:0">⏸ Пауза до кінця угоди: нових угод бот не відкриватиме${x.b.pos?', поточну доведе до кінця':''}. Відновити — «⋯» → «Відновити нові угоди».</p>`:'';
@@ -78,12 +85,18 @@ const CMDQ={
   close:p=>`Закрити угоду ${p} за ринком зараз?\n\nСервер зніме лімітні докупівлі бота й закриє позицію ринковим ордером. Після цього бот, як завжди, шукатиме новий вхід.`,
   cancel:p=>`Скасувати угоду ${p}?\n\nБот перестане її вести: зніме свої лімітні докупівлі, а позиція ЛИШИТЬСЯ на біржі — закрийте її вручну на біржі. Нова угода бота на цій парі додалася б до неї, тож краще закрити позицію до наступного входу.`,
   stop_after:p=>`Пауза до кінця угоди ${p}?\n\nПоточну угоду бот доведе до кінця (TP, SL, докупівлі), а нових не відкриватиме, доки ви не натиснете «Відновити нові угоди».`,
-  resume:null};
-const CMDN={close:'Закрити за ринком',cancel:'Скасувати угоду',stop_after:'Пауза до кінця угоди',resume:'Відновити нові угоди'};
+  resume:null,
+  resync:p=>`Перезапустити угоду ${p}?\n\nСервер перевірить біржу, поставить відсутні лімітні ордери бота, оновить TP/SL і скине помилку. Позиція й угода лишаються як є.`,
+  add:null};
+const CMDN={close:'Закрити за ринком',cancel:'Скасувати угоду',stop_after:'Пауза до кінця угоди',resume:'Відновити нові угоди',add:'Докупити зараз',resync:'Перезапустити угоду'};
 function srvCmdBtns(x){if(!x.srv||!x.rid||!x.on||!x.srvSt||!CLOUD.u)return'';const p=x.b&&x.b.pos,B=(k,c='')=>`<button class="b sm ${c}" data-a="cmd" data-k="${k}" data-id="${x.id}">${CMDN[k]}</button>`;
-return(p?B('close','d')+B('cancel'):'')+(x.srvSa?B('resume','p'):B('stop_after'))}
-async function srvCmd(x,k){if(!CMDN[k]||!SB||!CLOUD.u||!x.rid)return;if(CMDQ[k]&&!confirm(CMDQ[k](x.g.pair)))return;
-try{const r=await SB.from('bot_commands').insert({bot_id:x.rid,kind:k}).select('id').single();
+return(p&&!p.t1?B('add'):'')+(p?B('close','d')+B('cancel'):'')+(x.srvSa?B('resume','p'):B('stop_after'))}
+/* «Докупити зараз»: сума маржі (USDT); з плечем позиція зросте на суму × плече */
+function addAsk(x){const L=x.g.lev||1,v=prompt(`Докупити ${x.g.pair} зараз за ринком.\n\nСума маржі, USDT${L>1?` (з плечем ${L}× позиція зросте на суму × ${L})`:''}:`,String(x.g.base||10));if(v==null)return null;
+const n=+String(v).replace(',','.').trim();if(!(n>0&&n<=1e6)){toast('Сума має бути числом від 0 до 1 000 000 USDT.');return null}
+return confirm(`Докупити ${x.g.pair} на ${n} USDT маржі${L>1?` (${+(n*L).toFixed(2)} USDT з плечем)`:''} ринковим ордером?\n\nЛімітні докупівлі бота лишаються на своїх місцях, TP і SL перерахуються від нової середньої ціни.`)?n:null}
+async function srvCmd(x,k){if(!CMDN[k]||!SB||!CLOUD.u||!x.rid)return;if(CMDQ[k]&&!confirm(CMDQ[k](x.g.pair)))return;const n=k==='add'?addAsk(x):null;if(k==='add'&&n==null)return;
+try{const r=await SB.from('bot_commands').insert(k==='add'?{bot_id:x.rid,kind:k,amount:n}:{bot_id:x.rid,kind:k}).select('id').single();
 if(r.error){if(r.error.code==='23505')return toast('Попередня команда для '+x.g.pair+' ще виконується — зачекайте кілька секунд.');throw new Error(r.error.message)}
 toast(CMDN[k]+': команду надіслано на сервер ('+x.g.pair+'). Виконання — за кілька секунд.');srvCmdWait(x,r.data.id,0)}
 catch(e){toast('Не вдалося надіслати команду: '+e.message)}}

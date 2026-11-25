@@ -14,10 +14,18 @@
 //                на Bybit знімаються лише лімітні ордери бота (дія mcancel), позиція лишається на біржі.
 //   stop_after — нові угоди не відкриваються (fl.sa), поточна доводиться до кінця.
 //   resume     — знову дозволити нові угоди.
+//   resync     — «Перезапустити угоду» після помилки (як у Veles): скинути помилку біржі й розбіжність; на Bybit з
+//                відкритою угодою — fl.rs: сервер поверне відсутні лімітні ордери бота (restore) і оновить захист.
+//   add        — «Докупити зараз» на amount USDT маржі: модель без біржі докуповує одразу за поточною ціною;
+//                з біржею: у чергу йде ринкова дія madd, модель докуповує після виконання — за фактичною ціною й
+//                кількістю на біржі (handleBot). Драбина лімітних докупівель не зсувається (рівні — від ціни входу),
+//                тож переставляти її не треба; захист (TP/SL) біржі оновлює звірка від нової середньої.
 import { tfMs } from "./engine.js";
-import { linkId } from "./mirror.js";
+import { addModel, linkId } from "./mirror.js";
 
-export const CMD_KINDS = ["close", "cancel", "stop_after", "resume"];
+export const CMD_KINDS = ["close", "cancel", "stop_after", "resume", "resync", "add"];
+/* найбільша сума однієї ручної докупівлі (маржа, USDT) — як обмеження в базі */
+export const ADD_MAX = 1e6;
 /* команда, що чекає довше, вже неактуальна (бот вимкнули, сервер не працював тощо) */
 export const CMD_TTL = 30 * 60e3;
 
@@ -41,9 +49,10 @@ export const clearDeal = (fl) => { for (const k of DEAL_FL) delete fl[k]; };
  * @param state   збережений стан бота (bot_state.state) або null
  * @param price   поточна ціна (остання свічка, зокрема незакрита)
  * @param mirror  чи торгує бот на демо-біржі; native — Bybit (лімітні ордери стоять на біржі)
+ * @param addCap  стеля вартості позиції для «Докупити зараз» (USDT, з плечем; risk.js addCap); 0 — без обмеження
  * @returns { state, results: [{ id, kind, status: "done"|"skipped", text }], notes: [{ kind, text }] — для журналу й Telegram }
  */
-export function applyCommands({ cmds, state, g, botId, mirror, native, price, now }) {
+export function applyCommands({ cmds, state, g, botId, mirror, native, price, now, addCap = 0 }) {
   const st = state ? JSON.parse(JSON.stringify(state)) : null;
   const results = [], notes = [];
   if (!Array.isArray(cmds) || !cmds.length) return { state: st, results, notes };
@@ -54,13 +63,36 @@ export function applyCommands({ cmds, state, g, botId, mirror, native, price, no
     if (!CMD_KINDS.includes(c.kind)) { res(c, "skipped", "невідома команда"); continue; }
     if (now - Date.parse(c.created_at) > CMD_TTL) { res(c, "skipped", "команда застаріла (понад 30 хв) — натисніть ще раз"); continue; }
     if (!st) { res(c, "skipped", "сервер ще не обробляв цього бота — спробуйте за кілька хвилин"); continue; }
-    if ((c.kind === "close" || c.kind === "cancel") && st.b && st.b.pos && !(price > 0)) break; // немає ціни — ця й наступні команди чекають наступного запуску (порядок зберігається)
+    if ((c.kind === "close" || c.kind === "cancel" || c.kind === "add") && st.b && st.b.pos && !(price > 0)) break; // немає ціни — ця й наступні команди чекають наступного запуску (порядок зберігається)
     fl.cmd = c.id;
     if (c.kind === "stop_after") { fl.sa = 1; res(c, "done", "Пауза до кінця угоди: нових угод бот не відкриватиме, поточну доведе до кінця"); continue; }
     if (c.kind === "resume") { const was = !!fl.sa; delete fl.sa; res(c, "done", was ? "Нові угоди знову дозволено" : "Нові угоди вже дозволено"); continue; }
+    if (c.kind === "resync") {
+      const p0 = st.b && st.b.pos, had = !!(st.xe || (fl.mis && fl.mis.on));
+      delete st.xe; delete fl.mis;
+      if (p0 && mirror && native) fl.rs = 1;
+      res(c, "done", p0 && mirror && native ? "Перезапуск угоди: сервер перевірить біржу, поставить відсутні ордери бота й оновить захист"
+        : had ? "Помилку скинуто" + (p0 ? ", угоду веде сервер" : "") : "Помилок не було — нічого скидати");
+      continue;
+    }
     const b = st.b || {}, p = b.pos;
     if (!p) { res(c, "skipped", "відкритої угоди немає"); continue; }
     const pend = Array.isArray(st.pend) ? st.pend : [], tid = dealId(p);
+    if (c.kind === "add") {
+      const L = g.lev || 1, n = +c.amount, N = n * L;
+      if (!(n > 0 && n <= ADD_MAX)) { res(c, "skipped", "сума докупівлі некоректна"); continue; }
+      if (p.t1) { res(c, "skipped", "після першої фіксації TP бот не докуповує"); continue; }
+      if (pend.some((a) => (a.kind === "mclose" || a.kind === "mcancel") && a.tid === tid)) { res(c, "skipped", "ця угода вже закривається"); continue; }
+      if (addCap > 0 && p.cost + N > addCap + 1e-9) { res(c, "skipped", `перевищить ліміт ризику: позиція не може бути більшою за ${Math.round(addCap)} USDT`); continue; }
+      if (mirror) {
+        st.pend = [...pend, { id: linkId(botId, now, "u"), kind: "madd", t: now, tid, notional: N, price, tries: 0 }];
+        res(c, "done", `Докупівлю на ${n} USDT${L > 1 ? ` (з плечем ${N} USDT)` : ""} надіслано на ${native ? "Bybit Demo" : "Binance Testnet"} — ринковий ордер`);
+        continue;
+      }
+      st.b = addModel(b, g, { px: price, q: N / price, t: now });
+      res(c, "done", `Докуплено вручну на ${n} USDT за ${price}`);
+      continue;
+    }
     if (pend.some((a) => (a.kind === "mclose" || a.kind === "mcancel") && a.tid === tid)) { res(c, "skipped", "ця угода вже закривається"); continue; }
     // докупівлі й часткові фіксації цієї угоди, що чекали в черзі, більше не потрібні
     const keep = pend.filter((a) => a.kind !== "dca" && a.kind !== "part");

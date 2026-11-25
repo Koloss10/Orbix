@@ -45,6 +45,15 @@ export function nextLadder(g, state) {
   return ladderNotional(g) * reinvestFactor(g, state && state.b ? +state.b.cum || 0 : 0);
 }
 
+/* найбільша вартість позиції бота (USDT, з плечем), до якої можна докупити вручну, не порушивши лімітів; 0 — обмежень немає */
+export function addCap(limits, peers = []) {
+  const lim = limits || {}, busy = peers.reduce((a, b) => a + (b.state && b.state.b && b.state.b.pos ? exposure(b.g, b.state) : 0), 0);
+  const caps = [];
+  if (lim.maxPos) caps.push(lim.maxPos);
+  if (lim.maxTotal) caps.push(Math.max(0, lim.maxTotal - busy));
+  return caps.length ? Math.min(...caps) : 0;
+}
+
 /* початок поточної доби UTC */
 export const dayStart = (now) => Math.floor(now / DAY) * DAY;
 
