@@ -2,7 +2,7 @@
    dealPlan — чистий розрахунок за тими самими правилами, що й рушій (Bot.step): наступні докупівлі від ціни останнього
    виконання, кроки step·smul^k і суми base·lev·bf·mult^k; докупівля досяжна, лише поки лежить до SL і ліквідації від
    поточної середньої; SL на картці — кінцевий, після останньої досяжної докупівлі (як стоп на біржі, mirror.js slStop). */
-const VWS=[['ladder','Драбина'],['board','Табло'],['chart','Графік']];
+const VWS=[['ladder','Драбина'],['board','Табло'],['chart','Графік-фон']];
 const vwOk=v=>VWS.some(([k])=>k===v)?v:'ladder';
 function dealPlan(g,p,px){const d=g.d<0?-1:1,L=g.lev||1,ft=g.ftk!=null?g.ftk:g.fee||0,bf=p.bf||1,avg=p.cost/p.q;
 const pnl0=p.real+d*(p.q*px-p.cost)-ft*p.q*px,pnl=Math.abs(pnl0)<.005?0:pnl0,margin=p.cost/L;
@@ -30,10 +30,12 @@ const dLeft=P=>P.next?{t:'Ордер '+P.next.k,to:'ордера '+P.next.k,p:P.
 function dvLadder(x,P){const C=2*Math.PI*42,lt=dLeft(P),pr=P.pnl>=0?Math.min(1,Math.abs(P.px-P.avg)/Math.max(1e-12,Math.abs(P.tp-P.avg))):lt?Math.min(1,Math.abs(P.px-P.avg)/Math.max(1e-12,Math.abs(lt.p-P.avg))):0;
 const vs=[P.px,P.tp,P.avg,...P.done.map(o=>o.p),...P.rest.filter(o=>o.ok).map(o=>o.p),...(P.sl?[P.sl]:[])].map(v=>P.d*v),lo=Math.min(...vs),hi=Math.max(...vs),X=v=>14+(P.d*v-lo)/Math.max(1e-12,hi-lo)*292;
 let s=`<line x1="14" x2="306" y1="26" y2="26" stroke-width="2" style="stroke:var(--ln)"/><rect y="22" height="8" rx="4" x="${Math.min(X(P.px),X(P.avg))}" width="${Math.abs(X(P.px)-X(P.avg))}" style="fill:${dcol(P.pnl)}"/>`;
-const dot=(v,t,fill,st)=>`<circle cx="${X(v)}" cy="26" r="5.5" style="fill:${fill};stroke:${st};stroke-width:1.6"/>${t?`<text x="${X(v)}" y="50" text-anchor="middle" class="dvt">${t}</text>`:''}`;
-if(P.sl)s+=dot(P.sl,'SL','var(--pan2)','var(--dn)');
+const lab=[],free=(x,w)=>!lab.some(([a,b])=>Math.abs(a-x)<(b+w)/2+3);/* підпис не налазить на сусідній: SL і TP — першими */
+const dot=(v,t,fill,st,force)=>{const x=X(v),w=String(t).length*6.5+2,ok=t!==''&&(force||free(x,w));if(ok)lab.push([x,w]);return`<circle cx="${x}" cy="26" r="5.5" style="fill:${fill};stroke:${st};stroke-width:1.6"/>${ok?`<text x="${x}" y="50" text-anchor="middle" class="dvt">${t}</text>`:''}`};
+if(P.sl)lab.push([X(P.sl),15]);lab.push([X(P.tp),dTgt(P).length*6.5+2]);
+if(P.sl)s+=dot(P.sl,'SL','var(--pan2)','var(--dn)',1);
 P.done.forEach(o=>s+=dot(o.p,o.k,'var(--mu)','var(--mu)'));P.rest.filter(o=>o.ok).forEach(o=>s+=dot(o.p,o.k,'var(--pan2)',o===P.next?'var(--warn)':'var(--mu)'));
-s+=`<line x1="${X(P.avg)}" x2="${X(P.avg)}" y1="16" y2="36" stroke-dasharray="2 2" style="stroke:var(--tx)"/>`+dot(P.tp,dTgt(P),'var(--pan2)','var(--up)');
+s+=`<line x1="${X(P.avg)}" x2="${X(P.avg)}" y1="16" y2="36" stroke-dasharray="2 2" style="stroke:var(--tx)"/>`+dot(P.tp,dTgt(P),'var(--pan2)','var(--up)',1);
 s+=`<polygon points="${X(P.px)-6},6 ${X(P.px)+6},6 ${X(P.px)},15" style="fill:var(--tx)"/>`;
 return`<div class="dvr"><svg viewBox="0 0 100 100" width="86" height="86" role="img" aria-label="PnL позиції"><circle cx="50" cy="50" r="42" fill="none" stroke-width="8" style="stroke:var(--ln)"/><circle cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="${C*Math.max(.02,pr)} ${C}" style="stroke:${dcol(P.pnl)}"/><text x="50" y="50" text-anchor="middle" class="dvv" style="fill:${dcol(P.pnl)}">${f(P.pnl)}</text><text x="50" y="66" text-anchor="middle" class="dvt">${f(P.roe*100,1)} %</text></svg>
 <div class="dvs"><div>Ціна <b class="mono">${dpx(P.px)}</b></div><div>Вхід <b class="mono">${dpx(P.avg)}</b></div><div>До ${dTgt(P)} <b class="mono" style="color:var(--up)">${dpc(P.tp,P.px)}</b></div>${lt?`<div>До ${lt.to} <b class="mono" style="color:${lt.c}">${dpc(lt.p,P.px)}</b></div>`:''}</div></div>

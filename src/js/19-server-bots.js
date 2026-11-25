@@ -32,7 +32,9 @@ return`${e.xe?`<p class="dn" style="margin:0">⚠ ${esc(e.t)} · ${ago(e.at)}</p
 const srvMisL=x=>{const m=x.srvMis;if(!x.tn||!m||!m.t||(m.k!=='xc'&&!m.on))return'';return`<p class="${m.k==='xc'?'mu':'dn'}" style="margin:0">${m.k==='xc'?'ℹ':'⚠'} Звірка з біржею: ${esc(m.t)}${m.k==='orphan'?' — перевірте позицію в Bybit Demo':''}</p>`};
 const srvRlL=x=>x.srv&&x.tn&&x.srvRl&&x.srvRl.t?`<p class="dn" style="margin:0">⏸ Нові угоди призупинено лімітом ризику: ${esc(x.srvRl.t)}</p>`:'';
 const srvSaL=x=>x.srv&&x.srvSa?`<p class="dn" style="margin:0">⏸ Пауза до кінця угоди: нових угод бот не відкриватиме${x.b.pos?', поточну доведе до кінця':''}. Відновити — «⋯» → «Відновити нові угоди».</p>`:'';
-const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+srvSaL(x)+(x.srvMc?`<p class="mu" style="margin:0">⏳ Угода закривається за ринком…</p>`:'')+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
+const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+srvSaL(x)+(x.srvMc?`<p class="mu" style="margin:0">⏳ Угода закривається за ринком…</p>`:'')+(x.srvSt&&x.srvAt?'':`<p class="mu" style="margin:0">☁ Сервер підхопить бота протягом 5 хвилин</p>`):'';
+/* коротка позначка в шапці картки; повний опис — у підказці */
+const srvTag=x=>x.srv?` · <span title="${esc('Працює на сервері 24/7'+(x.srvAt?', оновлено '+tm(x.srvAt):'')+(x.tn?((x.srvEx||'bybit')==='bybit'?'. Угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':'. Угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''))}">☁ 24/7</span>`:'';
 
 /* ---------- Моніторинг серверних ботів ----------
    Для кожного бота «Сервер 24/7»: коли сервер востаннє його обробляв, позиція моделі, стан на демо-біржі
