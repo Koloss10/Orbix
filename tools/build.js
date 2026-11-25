@@ -29,7 +29,7 @@ function build() {
 
 // Серверні копії: торговий рушій (модулі 01–06) для Edge Function `runner` і спільні файли бірж.
 // Рушій на сервері — той самий код, що й у браузері, тож результати ботів збігаються.
-const ENGINE_EXPORTS = ['Bot', 'entry', 'aggT', 'aggC', 'normG', 'tfMs', 'tfOff', 'DEF', 'rnd', 'lbT', 'lv', 'htfNeed',
+const ENGINE_EXPORTS = ['Bot', 'entry', 'aggT', 'aggC', 'normG', 'tfMs', 'tfOff', 'DEF', 'rnd', 'lbT', 'lv', 'htfNeed', 'reinvestFactor',
   // картки сигналів (runner/signal.js): ті самі індикатори й фільтри, що й у входах рушія
   'SIG', 'SGN', 'ema', 'rsi', 'bbands', 'cci', 'stoch', 'macdH', 'whale', 'liq', 'act', 'casc', 'htf', 'WHL'];
 function generated() {

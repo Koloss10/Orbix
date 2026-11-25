@@ -934,3 +934,31 @@ test('closeModel: PnL як у виходу рушія (Short), вхідний с
   assert.ok(Math.abs(o.tr[0].pnl - (p.real - (p.q * 2.4 - p.cost) - gs.ftk * p.q * 2.4)) < 1e-12); assert.ok(o.tr[0].pnl > 0);
   assert.equal(JSON.stringify(s), snap);
 });
+
+test('Реінвест: драбина докупівель на біржі у масштабі угоди моделі (bf), і після паузи теж', async () => {
+  const a0 = actionsFor([{ kind: 'open', notional: 60, price: 2.5, t: T }], BOT, true)[0];
+  const a1 = actionsFor([{ kind: 'open', notional: 90, price: 2.5, t: T, bf: 1.5 }], BOT, true)[0];
+  assert.equal(a0.bf, undefined); assert.equal(a1.bf, 1.5);
+  const qOf = async (a) => { const ex = fakeEx(), fl = {}; await execute(ex, a, { ...ctx, fl }); return { ex, fl, q: ex.S.orders.filter((o) => o.status === 'New').map((o) => o.qty) }; };
+  const r0 = await qOf(a0), r1 = await qOf(a1);
+  assert.equal(r0.q.length, r1.q.length); assert.ok(r0.q.length > 0);
+  // кількість кожної сходинки — у 1,5 раза більша (з точністю до кроку кількості 0,1)
+  r0.q.forEach((q, i) => assert.ok(Math.abs(r1.q[i] - q * 1.5) <= 0.1 + 1e-9, `сходинка ${i + 1}: ${r1.q[i]} vs ${q * 1.5}`));
+  // пауза й відновлення: модель пам'ятає bf у позиції — нова драбина того ж масштабу
+  await park(r1.ex, { symbol: 'TONUSDT', botId: BOT });
+  await restore(r1.ex, { g, symbol: 'TONUSDT', fl: r1.fl, mp: { q: 1, n: 1, t1: 0, bf: 1.5 } });
+  const again = r1.ex.S.orders.filter((o) => o.status === 'New').map((o) => o.qty);
+  assert.deepEqual(again, r1.q);
+});
+
+test('Реінвест і часткове виставлення: докладена сходинка — у масштабі угоди моделі (bf)', async () => {
+  const ex = fakeEx(), fl = {}, bf = 1.5, gb = { ...gl, base: gl.base * bf };
+  const a = actionsFor([{ kind: 'open', notional: 90, price: 2.5, t: T, bf }], BOT, true)[0];
+  await execute(ex, a, { ...ctxL, fl });
+  const L = ladder(gb, 2.5, F), L0 = ladder(gl, 2.5, F);
+  assert.equal(ex.S.orders.find((o) => o.link === fl.lb + 'd1').qty, L[0].qty);
+  ex.hit(L[0].price);
+  await topUp(ex, { ...ctxL, fl, mp: { n: 2, bf } });
+  const d2 = ex.S.orders.find((o) => o.link === fl.lb + 'd2');
+  assert.equal(d2.qty, L[1].qty); assert.ok(d2.qty > L0[1].qty, 'не в базовому масштабі');
+});
