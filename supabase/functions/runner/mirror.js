@@ -176,6 +176,20 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
     const o = await once(ex, symbol, a.id, () => ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", q, true, a.id));
     return `${name}: частково зафіксовано ${o.qty} за ${pxOf(o, p)}${native ? " · лімітні докупівлі знято" : ""}`;
   }
+  // ручні дії з кнопок картки (runner/commands.js): повертають { msg, px }
+  if (a.kind === "mcancel") {
+    const n = native ? await cancelMine(ex, symbol, botId) : 0;
+    return { msg: `${name}: угоду скасовано вручну — знято ${n} лімітн. ордер(ів) бота, позиція лишилась на біржі`, px: null };
+  }
+  if (a.kind === "mclose") {
+    if (native) await cancelMine(ex, symbol, botId);
+    const had = await ex.byLink(symbol, a.id);
+    if (had) return { msg: `${name}: угоду закрито вручну за ринком за ${had.price}`, px: had.price > 0 ? had.price : null };
+    const p = (await ex.positions(symbol))[0];
+    if (!p || Math.sign(p.amt) !== Math.sign(g.d)) return { msg: `${name}: позиції бота на біржі вже немає — угоду моделі закрито за поточною ціною`, px: null };
+    const o = await once(ex, symbol, a.id, () => ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", Math.abs(p.amt), true, a.id));
+    return { msg: `${name}: угоду закрито вручну за ринком за ${pxOf(o, p)}`, px: o.price > 0 ? o.price : p.mark > 0 ? p.mark : null };
+  }
   // close
   if (native) await cancelMine(ex, symbol, botId);
   const done = await ex.byLink(symbol, a.id);
@@ -247,10 +261,10 @@ export function exchangeExit(xr, mp, g) {
   return L.length ? L[L.length - 1] : null;
 }
 /* закрити позицію моделі за ціною px у момент t: той самий розрахунок, що й вихід рушія (v. Bot.step), зі збереженням угоди в b.tr */
-export function closeByExchange(b, g, { px, t }) {
+export function closeByExchange(b, g, { px, t, tag = "xc" }) {
   const p = b.pos, d = g.d, ft = g.ftk != null ? g.ftk : g.fee, v = p.q * px;
   const pnl = p.real + d * (v - p.cost) - ft * v, W = tfMs(g.tf || 1), i = Math.floor(t / W);
-  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, xc: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
+  const tr = [...b.tr, { i, ts: t, pnl, n: p.n, liq: false, sl: false, [tag]: 1, fd: p.fd, f: p.f.concat({ t, p: px, k: "x" }) }];
   return { ...b, pos: null, tr, cum: b.cum + pnl, cd: i + g.cd + 1 };
 }
 /* угода моделі, до якої належать прапорці звірки */
@@ -415,12 +429,14 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
     return { saved: true };
   }
   const left = [];
-  let stop = false, changed = false;
+  let stop = false, changed = false, man = null;
   for (const a of pend) {
     if (stop) { left.push(a); continue; }
-    if (a.kind !== "close" && a.kind !== "part" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
+    if (a.kind !== "close" && a.kind !== "part" && a.kind !== "mclose" && a.kind !== "mcancel" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
     try {
-      await log("info", await execute(ex, a, { g, symbol, native, botId: bot.id, fl })); changed = true;
+      const out = await execute(ex, a, { g, symbol, native, botId: bot.id, fl }); changed = true;
+      await log("info", typeof out === "string" ? out : out.msg);
+      if (a.kind === "mclose") man = { a, px: out.px > 0 ? out.px : a.price };
       // прослизання входу: ціна моделі (закриття свічки) проти фактичної середньої ціни на біржі
       if (a.kind === "open" && st.xr && a.price > 0 && fl.ex > 0) st.xr.en = [...st.xr.en, { t: a.t, m: a.price, x: fl.ex }].slice(-XR_KEEP);
     }
@@ -432,7 +448,19 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
       else { await log("error", `Біржа: ${e.message} (спроба ${b.tries} з ${MAX_TRIES}, повторю)`); left.push(b); stop = true; }
     }
   }
-  const mp = r.state?.b?.pos || null;
+  // ручне закриття (кнопка «Закрити за ринком»): модель закривається за ціною закриття на біржі
+  if (fl.mc && !left.some((a) => a.kind === "mclose")) delete fl.mc; // дію виконано або знято після MAX_TRIES
+  if (man && st.b && st.b.pos && tidOf(st.b.pos) === man.a.tid) {
+    st.b = closeByExchange(st.b, g, { px: man.px, t: now, tag: "man" });
+    st.equity = st.b.cum;
+    clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; delete fl.mc;
+    left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+    const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+    const m = `Угоду закрито вручну за ринком за ${man.px}, PnL моделі ${f2(l.pnl)} USDT`;
+    await log("info", m, { kind: "manual_close", price: man.px, pnl: l.pnl, t: now });
+    await notify(`Orbix (сервер): ${g.pair} — ${m}`, "close");
+  }
+  const mp = st.b?.pos || null;
   if (!mp) { delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; } // угоди немає — дані драбини не потрібні
   if (native && !left.length) {
     const out = {};

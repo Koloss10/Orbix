@@ -25,7 +25,7 @@ npm run verify   # check + test
 - `supabase/functions/{exchange,runner}/{exchanges.ts,sign.js}` ← `supabase/functions/_shared/`
 - `supabase/functions/ai-assistant/{engine.js,risk.js}` ← `runner/engine.js`, `runner/risk.js` (Orbix AI рахує ризик тією самою логікою)
 
-Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `runner/signal.js`, `tg-card/*`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`, `ai-assistant/{index.ts,agent.js,provider.js,tools.js,docs.js}`.
+Вручну пишуться: `runner/index.ts`, `runner/core.js`, `runner/mirror.js`, `runner/risk.js`, `runner/signal.js`, `runner/commands.js`, `tg-card/*`, `exchange/index.ts`, `tg-notify/*`, `_shared/*`, `ai-assistant/{index.ts,agent.js,provider.js,tools.js,docs.js}`.
 
 ## Процес
 - Робота в гілці, злиття в `main` лише через PR після зеленого CI «Validate Orbix» (`.github/workflows/validate.yml`), злиття з `expectedHeadSha`, потім fast-forward робочої гілки до `main`.
@@ -48,6 +48,7 @@ npm run verify   # check + test
 - Стан бота зберігається з перевіркою версії (CAS) **до** будь-яких дій на біржі.
 - Ліміти ризику (`profiles.risk_*`, `runner/risk.js`) пригнічують вхід у самій моделі (`processBot`, `entryOk`), а не лише на біржі: так модель і біржа не розходяться. Без профілю діють ліміти за замовчуванням (`DEF_LIMITS`).
 - Картки сигналів у Telegram (v18): `runner` будує опис картки (`signal.js`: причини входу з тих самих індикаторів рушія, рівні, налаштування `public.tg_card_prefs`) і передає його `tg-card` із секретом розкладу; `tg-card` малює PNG (`card.js` → resvg) і надсилає. Не вийшло — `runner` надсилає текст. Сповіщення мають категорії (`notify(text, cat)` у `mirror.js`) для фільтра подій.
+- Ручні команди (v19): кнопки «⋯» на картці серверного бота пишуть у `public.bot_commands` (лише власник, 2FA, одна команда, що чекає, на бота); тригер одразу будить `runner` тілом `{ bot }` (pg_net, секрет розкладу). `runner/commands.js` застосовує команду до збереженого стану ДО рушія, дії для біржі (`mclose`, `mcancel`) — через чергу `pend`, як сигнали; `fl.cmd` — захист від повтору, `fl.sa` — «пауза до кінця угоди». Модель після ручного закриття — за ціною закриття на біржі (угода з позначкою `man`, скасована — `cx`).
 - Адмін-статистика: `public.admin_stats()` (лише для `private.admins`, з 2FA-сесією) віддає кількості, налаштування ботів і результати у %, **без пошти, ключів і сум** — так і лишати. ID акаунта — `profiles.public_no` (не змінюється, тригер `profiles_keep_public_no`).
 - Листи Auth (реєстрація, коди): вбудована пошта Supabase шле лише членам команди проєкту; для інших людей потрібен власний SMTP (Supabase → Authentication → Emails → SMTP).
 - `auth`: адреса повернення = `location.origin + location.pathname`. Після зміни адреси сайту (наприклад, перейменування репозиторію) її треба додати в Supabase → Authentication → URL Configuration.

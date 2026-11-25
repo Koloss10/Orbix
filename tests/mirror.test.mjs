@@ -805,3 +805,132 @@ test('Біржа головна: без позиції біржі вручну (
   const b = { pos, tr: [], cd: 0, cum: 0 }, snap = JSON.stringify(b);
   closeByExchange(b, g, { px: 2.6, t: E0 + 1 }); assert.equal(JSON.stringify(b), snap);
 });
+
+/* ---------- Ручні команди з кнопок картки (runner/commands.js) ---------- */
+import { applyCommands, closeModel, CMD_TTL } from '../supabase/functions/runner/commands.js';
+import { processBot } from '../supabase/functions/runner/core.js';
+
+const cmd = (id, kind, t) => ({ id, kind, created_at: new Date(t).toISOString() });
+/* стан бота з відкритою угодою моделі та (за потреби) позицією на фейковій біржі */
+async function withDeal(gg = g) {
+  const h = xcHarness(gg), pos = h.open();
+  await h.go(null, pos, [{ kind: 'open', notional: 60, price: 2.5, t: E0 }], E0);
+  return { ...h, pos, st: h.saved.at(-1) };
+}
+/* запуск як у runner/index.ts: команди → стан → handleBot з моделлю зі стану */
+async function runCmd(h, st, cmds, t, { mirror = true, price = h.ex.S.px } = {}) {
+  const a = applyCommands({ cmds, state: st, g: h.g || g, botId: BOT, mirror, native: true, price, now: t });
+  const { pend, fl, xs, xe, xr, ...rs } = a.state; // як processBot: модель (b) — зі стану після команд
+  await h.go(a.state, a.state.b.pos, [], t, { r: { state: { ...rs, lt: t }, events: [] }, ...(mirror ? {} : { mirror: false, ex: null }) });
+  return { a, st: h.saved.at(-1) };
+}
+
+test('Ручне закриття (біржа): спершу дія в черзі й збереження, потім reduceOnly-закриття; модель закрита за ціною біржі', async () => {
+  const h = await withDeal(); h.g = g;
+  const ordersBefore = h.ex.S.orders.filter((o) => o.status === 'New').length;
+  assert.ok(ordersBefore > 0, 'лімітні докупівлі бота стоять на біржі');
+  h.ex.S.px = 2.55;
+  const { a, st } = await runCmd(h, h.st, [cmd(7, 'close', E0 + 60e3)], E0 + 60e3);
+  assert.equal(a.results[0].status, 'done');
+  assert.ok(h.saved.length >= 2 && h.saved.at(-2).pend.some((x) => x.kind === 'mclose'), 'дію збережено до біржі (CAS)');
+  assert.equal(h.ex.S.pos, null, 'позицію на біржі закрито');
+  assert.equal(h.ex.S.orders.filter((o) => o.status === 'New').length, 0, 'лімітні ордери бота знято');
+  const cl = h.ex.S.calls.lastIndexOf('market:SELL'), c1 = h.ex.S.calls.indexOf('cancel');
+  assert.ok(c1 >= 0 && c1 < cl, 'ордери бота знято ДО закриття (інакше докупівля може знову відкрити позицію)');
+  assert.equal(st.b.pos, null); assert.equal(st.b.tr.at(-1).man, 1); assert.equal(st.b.tr.at(-1).f.at(-1).p, 2.55);
+  const p = h.pos, want = p.real + (24 * 2.55 - p.cost) - (g.ftk != null ? g.ftk : g.fee) * p.q * 2.55;
+  assert.ok(Math.abs(st.b.tr.at(-1).pnl - (p.real + (p.q * 2.55 - p.cost) - (g.ftk != null ? g.ftk : g.fee) * p.q * 2.55)) < 1e-9, String(want));
+  assert.equal(st.fl.mc, undefined); assert.equal(st.fl.cmd, 7);
+  assert.equal(st.pend.length, 0);
+  assert.ok(h.notes.some((n) => /закрито вручну/.test(n)));
+  // повтор тієї самої команди (позначку ще не поставлено) — без другого ордера
+  const n = h.ex.S.calls.filter((c) => c.startsWith('market')).length;
+  const again = applyCommands({ cmds: [cmd(7, 'close', E0 + 60e3)], state: st, g, botId: BOT, mirror: true, native: true, price: 2.55, now: E0 + 120e3 });
+  assert.equal(again.results[0].text, 'виконано'); assert.deepEqual(again.state.pend, []);
+  assert.equal(h.ex.S.calls.filter((c) => c.startsWith('market')).length, n);
+});
+
+test('Ручне закриття: збій біржі — дія лишається в черзі, модель тримає угоду; повтор закриває один раз', async () => {
+  const h = await withDeal(); h.g = g;
+  const real = h.ex.market; let fail = 1;
+  h.ex.market = async (...x) => { if (fail-- > 0) throw new Error('network'); return real(...x); };
+  h.ex.S.px = 2.45;
+  const { st } = await runCmd(h, h.st, [cmd(8, 'close', E0 + 60e3)], E0 + 60e3);
+  assert.ok(st.b.pos, 'модель не закрита, поки біржа не закрила'); assert.equal(st.fl.mc, (st.b.pos.f[0].t));
+  assert.equal(st.pend.filter((x) => x.kind === 'mclose').length, 1); assert.ok(h.ex.S.pos, 'позиція ще на біржі');
+  await h.go(st, st.b.pos, [], E0 + 5 * 60e3); const s2 = h.saved.at(-1);
+  assert.equal(h.ex.S.pos, null); assert.equal(s2.b.pos, null); assert.equal(s2.b.tr.at(-1).f.at(-1).p, 2.45);
+  assert.equal(h.ex.S.orders.filter((o) => o.link && o.link.endsWith('-m')).length, 1, 'одне закриття');
+});
+
+test('Ручне закриття: другий натиск на ту саму угоду не дублює дію', () => {
+  const b = new Bot(g, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  const st = { b: { pos: b.pos, tr: [], cd: 0, cum: 0 }, pend: [], fl: {} };
+  const a = applyCommands({ cmds: [cmd(1, 'close', E0), cmd(2, 'close', E0)], state: st, g, botId: BOT, mirror: true, native: true, price: 2.5, now: E0 });
+  assert.deepEqual(a.results.map((x) => x.status), ['done', 'skipped']);
+  assert.equal(a.state.pend.filter((x) => x.kind === 'mclose').length, 1);
+  assert.equal(JSON.stringify(st.pend), '[]', 'вхідний стан не змінено');
+});
+
+test('Ручне закриття без біржі: модель закривається одразу за поточною ціною', () => {
+  const b = new Bot(g, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  const st = { b: { pos: b.pos, tr: [], cd: 0, cum: 1 }, pend: [{ kind: 'dca', t: E0 }], fl: { lb: 'x' } };
+  const a = applyCommands({ cmds: [cmd(3, 'close', E0)], state: st, g, botId: BOT, mirror: false, native: false, price: 2.6, now: E0 });
+  const l = a.state.b.tr.at(-1);
+  assert.equal(a.state.b.pos, null); assert.equal(l.man, 1); assert.equal(l.f.at(-1).p, 2.6);
+  assert.ok(Math.abs(a.state.b.cum - (1 + l.pnl)) < 1e-12); assert.equal(a.state.equity, a.state.b.cum);
+  assert.deepEqual(a.state.pend, [], 'докупівлю закритої угоди знято'); assert.equal(a.state.fl.lb, undefined);
+  assert.equal(a.state.b.cd, Math.floor(E0 / 864e5) + g.cd + 1, 'новий вхід — не раніше наступної свічки');
+});
+
+test('Скасування угоди (Bybit): модель забуває угоду, знімаються лише ордери бота, позиція й ручні ордери лишаються', async () => {
+  const h = await withDeal(); h.g = g;
+  h.ex.S.orders.push({ link: 'my-manual-1', side: 'BUY', qty: 1, price: 2.0, status: 'New' });
+  const posBefore = { ...h.ex.S.pos };
+  const { a, st } = await runCmd(h, h.st, [cmd(9, 'cancel', E0 + 60e3)], E0 + 60e3);
+  assert.equal(a.results[0].status, 'done'); assert.match(a.results[0].text, /Позиція лишилась на біржі/);
+  assert.equal(st.b.pos, null); assert.equal(st.b.tr.at(-1).cx, 1);
+  assert.equal(h.ex.S.pos.amt, posBefore.amt, 'позицію не закрито');
+  assert.ok(h.ex.S.orders.find((o) => o.link === 'my-manual-1').status === 'New', 'ручний ордер не чіпали');
+  assert.equal(h.ex.S.orders.filter((o) => o.status === 'New' && o.link.startsWith('ox')).length, 0, 'ордери бота знято');
+  assert.equal(count(h.ex, 'cancelAll'), 0);
+  assert.equal(h.ex.S.calls.filter((c) => c.startsWith('market')).length, 1, 'жодного ринкового ордера, крім входу');
+});
+
+test('Пауза до кінця угоди: нових угод модель не відкриває; «Відновити» знову дозволяє', () => {
+  const st0 = { b: { pos: null, tr: [], cd: 0, cum: 0 }, pend: [], fl: {} };
+  const a = applyCommands({ cmds: [cmd(1, 'stop_after', E0)], state: st0, g, botId: BOT, mirror: false, price: 2.5, now: E0 });
+  assert.equal(a.state.fl.sa, 1);
+  const W = 864e5, cs = Array.from({ length: 80 }, (_, i) => ({ t: E0 - (80 - i) * W, o: 3 - i * 0.01, h: 3 - i * 0.01, l: 2.9 - i * 0.01, c: 2.95 - i * 0.012, v: 1 }));
+  const gg = botConfig({ ...g, sg: ['rsi'], k: 1, rm: 99 });
+  const st = { ...a.state, lt: cs[30].t };
+  const blocked = processBot({ g: gg, state: st, candles: cs, now: E0, entryOk: !st.fl.sa });
+  const free = processBot({ g: gg, state: st, candles: cs, now: E0, entryOk: true });
+  assert.ok(free.events.some((e) => e.kind === 'open'), 'без паузи вхід був би'); assert.ok(!blocked.events.some((e) => e.kind === 'open'));
+  const r = applyCommands({ cmds: [cmd(2, 'resume', E0)], state: a.state, g, botId: BOT, mirror: false, price: 2.5, now: E0 });
+  assert.equal(r.state.fl.sa, undefined);
+});
+
+test('Команди: застаріла, без угоди, невідома, без стану — пропускаються з поясненням', () => {
+  const st = { b: { pos: null, tr: [] }, pend: [], fl: {} };
+  const a = applyCommands({ cmds: [cmd(1, 'close', E0 - CMD_TTL - 1), cmd(2, 'cancel', E0), cmd(3, 'rm -rf', E0)], state: st, g, botId: BOT, mirror: true, native: true, price: 2.5, now: E0 });
+  assert.deepEqual(a.results.map((x) => x.status), ['skipped', 'skipped', 'skipped']);
+  assert.match(a.results[0].text, /застаріла/); assert.match(a.results[1].text, /немає/);
+  assert.equal(applyCommands({ cmds: [cmd(4, 'close', E0)], state: null, g, botId: BOT, mirror: true, native: true, price: 2.5, now: E0 }).results[0].status, 'skipped');
+});
+
+test('Команди: без поточної ціни закриття чекає наступного запуску, порядок команд зберігається', () => {
+  const b = new Bot(g, null, null); b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  const st = { b: { pos: b.pos, tr: [] }, pend: [], fl: {} };
+  const a = applyCommands({ cmds: [cmd(5, 'cancel', E0), cmd(6, 'stop_after', E0)], state: st, g, botId: BOT, mirror: false, price: 0, now: E0 });
+  assert.equal(a.results.length, 0); assert.ok(a.state.b.pos); assert.equal(a.state.fl.sa, undefined); assert.equal(a.state.fl.cmd, undefined);
+});
+
+test('closeModel: PnL як у виходу рушія (Short), вхідний стан не змінюється', () => {
+  const gs = botConfig({ ...g, d: -1 }), b = new Bot(gs, null, null);
+  b.step(Math.floor(T / 864e5), { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  const s = { pos: b.pos, tr: [], cd: 0, cum: 0 }, snap = JSON.stringify(s);
+  const o = closeModel(s, gs, { px: 2.4, t: E0, tag: 'man' }), p = b.pos;
+  assert.ok(Math.abs(o.tr[0].pnl - (p.real - (p.q * 2.4 - p.cost) - gs.ftk * p.q * 2.4)) < 1e-12); assert.ok(o.tr[0].pnl > 0);
+  assert.equal(JSON.stringify(s), snap);
+});

@@ -10,6 +10,7 @@ import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
 import { limitsOf, riskBlock } from "./risk.js";
 import { htfNeed, tfMs } from "./engine.js";
+import { applyCommands, CMD_TTL } from "./commands.js";
 import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
@@ -53,6 +54,9 @@ Deno.serve(async (req) => {
   const { data: ok } = await admin.rpc("runner_check", { p_token: req.headers.get("x-runner-secret") ?? "" });
   if (ok !== true) return json({ error: "forbidden" }, 403);
   const started = Date.now();
+  // адресний запуск одного бота (тригер таблиці bot_commands: кнопка на картці) — { bot: uuid }; розклад шле {}
+  const body = await req.json().catch(() => ({}));
+  const only = typeof body?.bot === "string" && /^[0-9a-f-]{36}$/i.test(body.bot) ? body.bot : null;
   // серверні боти: ті, що працюють (обробляються рушієм), і ті, що на паузі (знімаються їхні ордери на біржі)
   const { data: all, error } = await admin.from("bots").select("id,user_id,config,status").in("status", ["running", "paused"]).eq("config->>_srv", "true");
   if (error) return json({ error: error.message }, 500);
@@ -65,6 +69,18 @@ Deno.serve(async (req) => {
     for (const v of vs ?? []) { ver.set(v.bot_id, v.updated_at); stOf.set(v.bot_id, v.state); }
   }
   for (const b of all ?? []) (b as any).state = stOf.get(b.id) ?? null;
+  // ручні команди з кнопок картки (runner/commands.js); застарілі — позначаються пропущеними
+  const cmdsOf = new Map<string, any[]>();
+  await admin.from("bot_commands").update({ status: "skipped", result: "команда застаріла: сервер не обробив її за 30 хв", done_at: new Date().toISOString() })
+    .eq("status", "new").lt("created_at", new Date(started - CMD_TTL).toISOString());
+  if (ids.length) {
+    const { data: cs, error: ce } = await admin.from("bot_commands").select("id,bot_id,kind,created_at").eq("status", "new").in("bot_id", ids).order("id");
+    if (ce) console.warn("runner: bot_commands", ce.message);
+    for (const c of cs ?? []) { if (!cmdsOf.has(c.bot_id)) cmdsOf.set(c.bot_id, []); cmdsOf.get(c.bot_id)!.push(c); }
+  }
+  const markCmds = async (results: any[]) => {
+    for (const x of results) await admin.from("bot_commands").update({ status: x.status, result: String(x.text).slice(0, 300), done_at: new Date().toISOString() }).eq("id", x.id).eq("status", "new");
+  };
   const rows = (all ?? []).filter((b: any) => b.status === "running"), paused = (all ?? []).filter((b: any) => b.status === "paused");
 
   const mcache = new Map<string, Promise<any>>(), keys = new Map<string, Promise<any>>(), tgs = new Map<string, Promise<any>>();
@@ -91,6 +107,13 @@ Deno.serve(async (req) => {
   const tgFor = (uid: string) => {
     if (!tgs.has(uid)) tgs.set(uid, admin.rpc("tg_secret_for", { p_uid: uid }).then(({ data }) => (Array.isArray(data) ? data[0] : data) ?? null));
     return tgs.get(uid)!;
+  };
+
+  const tgSend = async (uid: string, text: string) => {
+    try {
+      const t = await tgFor(uid);
+      if (t?.token && t?.chat_id) await fetch(`https://api.telegram.org/bot${t.token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: t.chat_id, text, disable_web_page_preview: true }) });
+    } catch (_e) { /* сповіщення не критичні */ }
   };
 
   let done = 0, evCount = 0;
@@ -124,6 +147,7 @@ Deno.serve(async (req) => {
   };
 
   for (const bot of rows ?? []) {
+    if (only && bot.id !== only) continue;
     if (Date.now() - started > 100e3) break; // запас до ліміту часу функції
     try {
       const g: any = botConfig(bot.config), cfg = bot.config || {};
@@ -138,17 +162,36 @@ Deno.serve(async (req) => {
       const exName = cfg._ex === "binance" ? "binance" : "bybit";
       const want = !!(cfg._tn && g.fut);
       const mirror = want && owner.get(`${bot.user_id}|${exName}|${g.pair}`) === bot.id;
+      const ex = mirror ? await exFor(bot.user_id, exName) : null;
+      // ручні команди: застосовуються до збереженого стану до прогону рушія; позначка «виконано» — після першого збереження
+      let cmdRes: any[] = [], cmdNotes: any[] = [];
+      const cmds = cmdsOf.get(bot.id) ?? [];
+      if (cmds.length) {
+        const live = m.candles[m.candles.length - 1];
+        const a = applyCommands({ cmds, state: bot.state, g, botId: bot.id, mirror: mirror && !!ex, native: !!ex?.native, price: live ? live.c : 0, now: Date.now() });
+        bot.state = a.state; cmdRes = a.results; cmdNotes = a.notes;
+      }
       // ліміт ризику: перевищено — нових угод не відкривати (позиції, що вже є, бот веде далі)
       const peers = mirror ? [...tnBots.entries()].filter(([id, x]) => id !== bot.id && x.uid === bot.user_id).map(([, x]) => x) : [];
       const blk = mirror ? riskBlock({ limits: limitsOf(lims.get(bot.user_id)), self: { g, state: bot.state }, peers, now: Date.now() }) : null;
-      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk });
+      const r = processBot({ g, state: bot.state, candles: m.candles, funding: m.funding, now: Date.now(), spans: cfg._sp, entryOk: !blk && !bot.state?.fl?.sa }); // fl.sa — «Пауза до кінця угоди»
       evCount += r.events.length;
       if (tnBots.has(bot.id)) tnBots.get(bot.id)!.state = { ...(bot.state || {}), ...r.state }; // нова угода цього запуску займає ліміт для наступних ботів
       if (want && !mirror && r.events.length) await log(bot, "warn", `На демо-рахунку вже торгує інший бот ${g.pair} — угоду не продубльовано (позиції злилися б в одну)`);
-      const ex = mirror ? await exFor(bot.user_id, exName) : null;
       await handleBot({
         bot, g, r, symbol, mirror, native: !!ex?.native, ex, risk: mirror ? { blk } : null,
-        save: saver(bot),
+        save: async (state: unknown) => {
+          const ok = await saver(bot)(state);
+          if (ok && cmdRes.length) { // стан із командами збережено — позначити їх і повідомити
+            const res = cmdRes, notes = cmdNotes; cmdRes = []; cmdNotes = [];
+            await markCmds(res);
+            for (const n of notes) {
+              await log(bot, "info", `Ручна команда: ${n.text}`);
+              if (wantMsg(prefsOf(bot.user_id), n.kind === "close" || n.kind === "cancel" ? "close" : "other")) await tgSend(bot.user_id, `Orbix (сервер): ${g.pair} — ${n.text}`);
+            }
+          }
+          return ok;
+        },
         log: (level: string, text: string, data: unknown = null) => log(bot, level, text, data && typeof data === "object" ? { ...(data as object), src: m.src } : data),
         card: async (ev: any, text: string) => {
           const pf = prefsOf(bot.user_id);
@@ -188,6 +231,9 @@ Deno.serve(async (req) => {
   // боти на паузі, яких сервер уже вів із «Тестнет»: один раз зняти їхні лімітні докупівлі на біржі
   let parked = 0;
   for (const bot of paused) {
+    const pc = cmdsOf.get(bot.id);
+    if (pc?.length) await markCmds(pc.map((c: any) => ({ id: c.id, status: "skipped", text: "бот на паузі — увімкніть бота, щоб виконати команду" })));
+    if (only) continue;
     if (Date.now() - started > 110e3) break;
     try {
       const cfg = bot.config || {}, st = bot.state;

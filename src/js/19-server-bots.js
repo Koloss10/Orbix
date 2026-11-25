@@ -17,14 +17,15 @@ toast(x.srv?'Бот '+x.g.pair+' переходить на сервер (до 5 
 async function srvLoad(){if(!SB||!CLOUD.u||SRV.busy)return;const L=bots.filter(x=>x.srv&&x.rid);if(!L.length)return;SRV.busy=1;try{
 const ids=L.map(x=>x.rid),s=await SB.from('bot_state').select('bot_id,state,updated_at').in('bot_id',ids);
 if(!s.error)for(const r of s.data||[]){const x=L.find(y=>y.rid===r.bot_id),st=r.state||{};if(!x||!st.b)continue;
-const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0}
+const b=new Bot(x.g);b.pos=st.b.pos||null;b.tr=Array.isArray(st.b.tr)?st.b.tr:[];b.cd=st.b.cd||0;b.cum=st.b.cum||0;x.b=b;x.pk=st.pk||0;x.dd=st.dd||0;x.lt=st.lt||x.lt;x.srvSt=1;x.srvAt=Date.parse(r.updated_at);x.srvMis=st.fl&&st.fl.mis||null;x.srvRl=st.fl&&st.fl.rl||null;x.srvXs=st.xs;x.srvXe=st.xe||null;x.srvXr=st.xr||null;x.srvPend=Array.isArray(st.pend)?st.pend.length:0;x.srvSa=!!(st.fl&&st.fl.sa);x.srvMc=!!(st.fl&&st.fl.mc)}
 const e=await SB.from('bot_events').select('id,bot_id,level,message,created_at').in('bot_id',ids).order('created_at',{ascending:false}).limit(30);
 if(!e.error){let add=0;for(const r of (e.data||[]).slice().reverse()){if(SRV.seen.has(r.id))continue;SRV.seen.add(r.id);FEED.unshift({t:new Date(r.created_at).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),m:'☁ '+r.message});add++}
 if(add){FEED=FEED.slice(0,60);sv('zfeed',FEED);feedR()}}
 lst();upd();if(CUR==='mon')monR()}catch(er){}finally{SRV.busy=0}}
 const srvMisL=x=>{const m=x.srvMis;if(!x.tn||!m||!m.t||(m.k!=='xc'&&!m.on))return'';return`<p class="${m.k==='xc'?'mu':'dn'}" style="margin:0">${m.k==='xc'?'ℹ':'⚠'} Звірка з біржею: ${esc(m.t)}${m.k==='orphan'?' — перевірте позицію в Bybit Demo':''}</p>`};
 const srvRlL=x=>x.srv&&x.tn&&x.srvRl&&x.srvRl.t?`<p class="dn" style="margin:0">⏸ Нові угоди призупинено лімітом ризику: ${esc(x.srvRl.t)}</p>`:'';
-const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
+const srvSaL=x=>x.srv&&x.srvSa?`<p class="dn" style="margin:0">⏸ Пауза до кінця угоди: нових угод бот не відкриватиме${x.b.pos?', поточну доведе до кінця':''}. Відновити — «⋯» → «Відновити нові угоди».</p>`:'';
+const srvLine=x=>x.srv?srvMisL(x)+srvRlL(x)+srvSaL(x)+(x.srvMc?`<p class="mu" style="margin:0">⏳ Угода закривається за ринком…</p>`:'')+`<p class="mu" style="margin:0">☁ Працює на сервері 24/7${x.srvSt&&x.srvAt?' · оновлено '+tm(x.srvAt):' · сервер підхопить бота протягом 5 хвилин'}${x.tn?((x.srvEx||'bybit')==='bybit'?' · угоди на Bybit Demo: докупівлі, TP і SL стоять на самій біржі':' · угоди дублюються на Binance Testnet (TP/SL — з сервера після закриття свічки)'):''}</p>`:'';
 
 /* ---------- Моніторинг серверних ботів ----------
    Для кожного бота «Сервер 24/7»: коли сервер востаннє його обробляв, позиція моделі, стан на демо-біржі
@@ -69,3 +70,24 @@ el.innerHTML=`<div class="k">${K('Ботів на сервері',`${run.length}
 ${[...L].sort((a,b)=>(b.on-a.on)||a.g.pair.localeCompare(b.g.pair)).map(monBot).join('')}</div>`;
 $('#monr').onclick=()=>{MON.at=0;monR(1)}}
 setInterval(()=>{if(document.hidden)return;srvLoad();if(CUR==='mon'&&Date.now()-MON.at>60e3)monEv().then(()=>monR())},60000);
+
+/* ---------- Ручні команди серверного бота (меню «⋯» на картці) ----------
+   Браузер лише записує команду в public.bot_commands; сервер (runner) виконує її за кілька секунд
+   у тому ж порядку, що й сигнали: спершу стан, потім біржа. Знімаються лише ордери цього бота. */
+const CMDQ={
+  close:p=>`Закрити угоду ${p} за ринком зараз?\n\nСервер зніме лімітні докупівлі бота й закриє позицію ринковим ордером. Після цього бот, як завжди, шукатиме новий вхід.`,
+  cancel:p=>`Скасувати угоду ${p}?\n\nБот перестане її вести: зніме свої лімітні докупівлі, а позиція ЛИШИТЬСЯ на біржі — закрийте її вручну на біржі. Нова угода бота на цій парі додалася б до неї, тож краще закрити позицію до наступного входу.`,
+  stop_after:p=>`Пауза до кінця угоди ${p}?\n\nПоточну угоду бот доведе до кінця (TP, SL, докупівлі), а нових не відкриватиме, доки ви не натиснете «Відновити нові угоди».`,
+  resume:null};
+const CMDN={close:'Закрити за ринком',cancel:'Скасувати угоду',stop_after:'Пауза до кінця угоди',resume:'Відновити нові угоди'};
+function srvCmdBtns(x){if(!x.srv||!x.rid||!x.on||!x.srvSt||!CLOUD.u)return'';const p=x.b&&x.b.pos,B=(k,c='')=>`<button class="b sm ${c}" data-a="cmd" data-k="${k}" data-id="${x.id}">${CMDN[k]}</button>`;
+return(p?B('close','d')+B('cancel'):'')+(x.srvSa?B('resume','p'):B('stop_after'))}
+async function srvCmd(x,k){if(!CMDN[k]||!SB||!CLOUD.u||!x.rid)return;if(CMDQ[k]&&!confirm(CMDQ[k](x.g.pair)))return;
+try{const r=await SB.from('bot_commands').insert({bot_id:x.rid,kind:k}).select('id').single();
+if(r.error){if(r.error.code==='23505')return toast('Попередня команда для '+x.g.pair+' ще виконується — зачекайте кілька секунд.');throw new Error(r.error.message)}
+toast(CMDN[k]+': команду надіслано на сервер ('+x.g.pair+'). Виконання — за кілька секунд.');srvCmdWait(x,r.data.id,0)}
+catch(e){toast('Не вдалося надіслати команду: '+e.message)}}
+/* дочекатися результату команди (до ~2 хв) і показати його */
+async function srvCmdWait(x,id,n){await new Promise(r=>setTimeout(r,n?10000:6000));try{const r=await SB.from('bot_commands').select('status,result').eq('id',id).single();
+if(!r.error&&r.data&&r.data.status!=='new'){toast(x.g.pair+': '+(r.data.status==='done'?'✓ ':'Не виконано: ')+(r.data.result||'готово'));srvLoad();return}}catch(e){}
+if(n<12)srvCmdWait(x,id,n+1);else toast(x.g.pair+': сервер ще не виконав команду — він підхопить її під час найближчого запуску (до 5 хв).')}
