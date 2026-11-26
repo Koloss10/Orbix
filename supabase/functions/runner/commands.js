@@ -95,7 +95,7 @@ export function applyCommands({ cmds, state, g, botId, mirror, native, price, no
     }
     if (pend.some((a) => (a.kind === "mclose" || a.kind === "mcancel") && a.tid === tid)) { res(c, "skipped", "ця угода вже закривається"); continue; }
     // докупівлі й часткові фіксації цієї угоди, що чекали в черзі, більше не потрібні
-    const keep = pend.filter((a) => a.kind !== "dca" && a.kind !== "part");
+    const keep = pend.filter((a) => a.kind !== "dca" && a.kind !== "part" && a.kind !== "bz");
     if (c.kind === "close" && mirror) {
       st.pend = [...keep, { id: linkId(botId, now, "m"), kind: "mclose", t: now, tid, price, tries: 0 }];
       fl.mc = tid;

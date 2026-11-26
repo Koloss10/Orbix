@@ -93,7 +93,7 @@ export function cardPrefs(row) {
     bots_off: Array.isArray(r.bots_off) ? r.bots_off.map(String) : [] };
 }
 /** категорія повідомлення для фільтра подій: вид події рушія або категорія з mirror.js */
-export const catOf = (kind) => (["open", "dca"].includes(kind) ? kind : ["close", "sl", "liq", "part", "xclose"].includes(kind) ? "close" : ["risk", "error"].includes(kind) ? kind : "other");
+export const catOf = (kind) => (["open", "dca"].includes(kind) ? kind : ["close", "sl", "liq", "part", "bz", "xclose"].includes(kind) ? "close" : ["risk", "error"].includes(kind) ? kind : "other");
 /** чи надсилати повідомлення цієї категорії взагалі */
 export const wantMsg = (p, kind) => p.events[catOf(kind)] !== false;
 /** чи надсилати картинкою (інакше — текстом): картки вимкнено, бот у винятках або подія без графіка */

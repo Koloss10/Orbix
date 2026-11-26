@@ -40,6 +40,7 @@ export function actionsFor(events, botId, native) {
   for (const ev of events) {
     if (ev.kind === "open") out.push({ id: linkId(botId, ev.t, "o"), kind: "open", t: ev.t, notional: ev.notional, price: ev.price, ...(ev.bf > 1 ? { bf: ev.bf } : {}), tries: 0 });
     else if (ev.kind === "dca") { if (!native) out.push({ id: linkId(botId, ev.t, "a" + ev.n), kind: "dca", t: ev.t, notional: ev.notional, tries: 0 }); }
+    else if (ev.kind === "bz") out.push({ id: linkId(botId, ev.t, "z"), kind: "bz", t: ev.t, share: ev.share, tries: 0 });
     else if (ev.kind === "part") out.push({ id: linkId(botId, ev.t, "p"), kind: "part", t: ev.t, share: ev.share, tries: 0 });
     else out.push({ id: linkId(botId, ev.t, "c"), kind: "close", t: ev.t, tries: 0 });
   }
@@ -190,6 +191,19 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
   if (a.kind === "dca") {
     const o = await once(ex, symbol, a.id, () => marketNotional(ex, symbol, side, a.notional, a.id));
     return `${name}: докупівля ${o.qty} за ${o.approx ? "≈" : ""}${o.price}`;
+  }
+  if (a.kind === "bz") {
+    // закриття в беззбиток: модель закрила останні ордери — закрити ту саму частку на біржі (reduceOnly); на Bybit закриті рівні
+    // виставляються знову (restore): виконані ордери попередніх циклів (покоління < fl.zg) більше не блокують рівень
+    const had = await ex.byLink(symbol, a.id);
+    if (had) return `${name}: закрито в беззбиток ${had.qty} за ${had.price}`;
+    const p = (await ex.positions(symbol))[0];
+    if (!p) return `${name}: позиції вже немає — закриття в беззбиток пропущено`;
+    const F = await ex.filt(symbol), q = floorStep(Math.abs(p.amt) * a.share, F && F.step);
+    if (!(q > 0) || (F && q < F.minQty)) return `${name}: частка ${Math.round(a.share * 100)} % замала для біржі — закриття в беззбиток пропущено`;
+    const o = await once(ex, symbol, a.id, () => ex.market(symbol, p.amt > 0 ? "SELL" : "BUY", q, true, a.id));
+    if (native) { fl.zg = (fl.rg || 0) + 1; fl.rs = 1; }
+    return `${name}: закрито в беззбиток ${o.qty} за ${pxOf(o, p)}${native ? " · закриті рівні докупівель буде виставлено знову" : ""}`;
   }
   if (a.kind === "part") {
     // часткова фіксація TP: модель закрила частку позиції — закрити ту саму частку на біржі (reduceOnly)
@@ -353,7 +367,8 @@ export async function restore(ex, { g, symbol, fl, mp }) {
     if (r.k > top) break;
     // перевірка не вдалася — відновлення переривається (fl.rs лишається, повтор наступного запуску): інакше нове покоління продублювало б сходинку
     const prev = await Promise.all(was(r.k).map((id) => ex.byLink(symbol, id)));
-    if (prev.some((o) => o && /^(New|PartiallyFilled|Filled|Untriggered)$/.test(o.status))) continue; // ще стоїть або вже виконаний
+    // ще стоїть або вже виконаний; виконаний до закриття в беззбиток (покоління < fl.zg; 0 — початкова драбина) рівень не блокує
+    if (prev.some((o, j) => o && (/^(New|PartiallyFilled|Untriggered)$/.test(o.status) || (o.status === "Filled" && j >= (fl.zg || 0))))) continue;
     const id = fl.lb + "e" + gen + "x" + r.k;
     try { await once(ex, symbol, id, () => ex.limit(symbol, side, r.qty, r.price, id)); n++; }
     catch (e) { miss.push(`${r.k}: ${e.message}`); if (!firstMiss) firstMiss = r.k; }
@@ -478,7 +493,7 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   const adds = [];
   for (const a of pend) {
     if (stop) { left.push(a); continue; }
-    if (a.kind !== "close" && a.kind !== "part" && a.kind !== "mclose" && a.kind !== "mcancel" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
+    if (a.kind !== "close" && a.kind !== "part" && a.kind !== "bz" && a.kind !== "mclose" && a.kind !== "mcancel" && now - a.t > STALE_MS) { changed = true; await log("warn", `Біржа: сигнал застарів (${Math.round((now - a.t) / 60e3)} хв) — ${a.kind === "open" ? "вхід" : "докупівлю"} не надіслано`); continue; }
     try {
       const out = await execute(ex, a, { g, symbol, native, botId: bot.id, fl }); changed = true;
       await log("info", typeof out === "string" ? out : out.msg);
@@ -502,15 +517,15 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
   if (man && st.b && st.b.pos && tidOf(st.b.pos) === man.a.tid) {
     st.b = closeByExchange(st.b, g, { px: man.px, t: now, tag: "man" });
     st.equity = st.b.cum;
-    clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; delete fl.mc;
-    left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+    clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.zg; delete fl.rs; delete fl.lt; delete fl.mc;
+    left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part" && a.kind !== "bz"));
     const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
     const m = `Угоду закрито вручну за ринком за ${man.px}, PnL моделі ${f2(l.pnl)} USDT`;
     await log("info", m, { kind: "manual_close", price: man.px, pnl: l.pnl, t: now });
     await notify(`Orbix (сервер): ${g.pair} — ${m}`, "close");
   }
   const mp = st.b?.pos || null;
-  if (!mp) { delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt; } // угоди немає — дані драбини не потрібні
+  if (!mp) { delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.zg; delete fl.rs; delete fl.lt; } // угоди немає — дані драбини не потрібні
   if (native && !left.length) {
     const out = {};
     try {
@@ -546,9 +561,9 @@ export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, l
     if (rec) {
       st.b = closeByExchange(st.b, g, { px: rec.px, t: rec.t });
       st.equity = st.b.cum;
-      clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.rs; delete fl.lt;
-      const gone = left.filter((a) => a.kind === "dca" || a.kind === "part").length;
-      if (gone) left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part"));
+      clearMis(fl); delete fl.lb; delete fl.e0; delete fl.ex; delete fl.rg; delete fl.zg; delete fl.rs; delete fl.lt;
+      const gone = left.filter((a) => a.kind === "dca" || a.kind === "part" || a.kind === "bz").length;
+      if (gone) left.splice(0, left.length, ...left.filter((a) => a.kind !== "dca" && a.kind !== "part" && a.kind !== "bz"));
       const l = st.b.tr[st.b.tr.length - 1], f2 = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
       const m = `Біржа закрила позицію (TP/SL/трейлінг) — угоду моделі закрито за ціною біржі ${rec.px}, PnL моделі ${f2(l.pnl)} USDT${gone ? "; незавершені докупівлі скасовано" : ""}`;
       await log("info", m, { kind: "xclose", price: rec.px, pnl: l.pnl, t: rec.t });

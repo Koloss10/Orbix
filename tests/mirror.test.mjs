@@ -1051,3 +1051,28 @@ test('Нейтральний бот: ручне закриття Short без б
   const a = applyCommands({ cmds: [cmd(1, 'close', E0)], state: { b: { pos: b.pos, tr: [], cd: 0, cum: 0 }, pend: [], fl: {} }, g: g0, botId: BOT, mirror: false, native: false, price: 2.4, now: E0 });
   assert.ok(a.state.b.tr[0].pnl > 0, 'ціна впала — Short у плюсі');
 });
+
+/* ---------- Закриття в беззбиток (g.bz) на біржі ---------- */
+test('Беззбиток на біржі: закривається та сама частка позиції, закриті рівні виставляються знову (нові id), живі не дублюються', async () => {
+  const gz = { ...g, orders: 4, bz: 2, sl: 0.3 }, h = xcHarness(gz), L = ladder(gz, 2.5, F);
+  const b = new Bot(gz, null, null), day = Math.floor(T / 864e5);
+  b.step(day, { t: T, o: 2.5, h: 2.5, l: 2.5, c: 2.5 }, true);
+  await h.go(null, b.pos, [{ kind: 'open', notional: b.pos.cost, price: 2.5, t: E0 }], E0);
+  let st = h.saved.at(-1);
+  // ціна проходить рівні 1–3 (ордери 2–4) — на біржі й у моделі
+  for (const r of L) { h.ex.hit(r.price); b.step(day, { t: T + 1, o: r.price, h: r.price, l: r.price * 0.999, c: r.price }, false); }
+  assert.equal(b.pos.n, 4); const q4 = Math.abs(h.ex.S.pos.amt);
+  await h.go(st, b.pos, [], E0 + 60e3); st = h.saved.at(-1);
+  // відскок до беззбитку: модель закриває 2 останні ордери
+  const z0 = b.pos.q, av = b.pos.cost / b.pos.q; b.step(day, { t: T + 2, o: L.at(-1).price, h: av * 1.003, l: L.at(-1).price, c: av * 1.002 }, false); // нижче TP
+  assert.equal(b.pos.n, 2); const share = 1 - b.pos.q / z0;
+  h.ex.S.px = av * 1.002;
+  await h.go(st, b.pos, [{ kind: 'bz', share, price: 2.45, n: 2, t: E0 + 120e3 }], E0 + 120e3); st = h.saved.at(-1);
+  const left = Math.abs(h.ex.S.pos.amt);
+  assert.ok(Math.abs(left - q4 * (1 - share)) <= 0.1 + 1e-9, `на біржі лишилось ${left} з ${q4}, частка ${share}`);
+  assert.ok(st.fl.rs || st.fl.zg, 'позначено новий цикл сітки');
+  for (let i = 0; i < 3 && st.fl.rs; i++) { await h.go(st, b.pos, [], E0 + (180 + i * 60) * 1e3); st = h.saved.at(-1); }
+  const live = h.ex.S.orders.filter((o) => o.status === 'New' && !o.reduceOnly);
+  assert.deepEqual(live.map((o) => +o.price.toFixed(4)).sort(), L.slice(1).map((r) => +r.price.toFixed(4)).sort(), 'ордери 3 і 4 знову на своїх рівнях');
+  assert.ok(live.every((o) => /e\d+x\d+$/.test(o.link)), 'нові ідентифікатори (Bybit не приймає повтор)');
+});
