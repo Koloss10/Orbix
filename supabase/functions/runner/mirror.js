@@ -12,7 +12,7 @@
 // Захист від повторних ордерів: кожен ордер має незмінний ідентифікатор (orderLinkId / newClientOrderId),
 // перед відправкою перевіряється, чи такий ордер уже є; дії спершу зберігаються в стані бота
 // (з перевіркою, що інший запуск не змінив його), і лише потім ідуть на біржу.
-import { lv, rnd } from "./engine.js";
+import { lv, ocOn, rnd } from "./engine.js";
 import { eventText } from "./core.js";
 import { tfMs } from "./engine.js";
 import { floorStep } from "./sign.js";
@@ -35,11 +35,11 @@ export const linkBase = (botId, t) => `ox${hex(botId)}-${Math.floor(t / 1000).to
 export const linkId = (botId, t, kind) => linkBase(botId, t) + kind;
 
 /* події рушія → дії на біржі */
-export function actionsFor(events, botId, native) {
-  const out = [];
+export function actionsFor(events, botId, native, g = null) {
+  const out = [], mk = !!(g && ocOn(g)); // бот з умовами докупівлі: докупівлі на біржі — ринковими ордерами й у рідному режимі
   for (const ev of events) {
     if (ev.kind === "open") out.push({ id: linkId(botId, ev.t, "o"), kind: "open", t: ev.t, notional: ev.notional, price: ev.price, ...(ev.bf > 1 ? { bf: ev.bf } : {}), tries: 0 });
-    else if (ev.kind === "dca") { if (!native) out.push({ id: linkId(botId, ev.t, "a" + ev.n), kind: "dca", t: ev.t, notional: ev.notional, tries: 0 }); }
+    else if (ev.kind === "dca") { if (!native || mk) out.push({ id: linkId(botId, ev.t, "a" + ev.n), kind: "dca", t: ev.t, notional: ev.notional, tries: 0 }); }
     else if (ev.kind === "bz") out.push({ id: linkId(botId, ev.t, "z"), kind: "bz", t: ev.t, share: ev.share, tries: 0 });
     else if (ev.kind === "part") out.push({ id: linkId(botId, ev.t, "p"), kind: "part", t: ev.t, share: ev.share, tries: 0 });
     else out.push({ id: linkId(botId, ev.t, "c"), kind: "close", t: ev.t, tries: 0 });
@@ -51,6 +51,9 @@ export function actionsFor(events, botId, native) {
    без правил біржі, тож рівні не округлені). Ціна лімітного ордера округлюється до кроку ціни в бік виконання
    (Long — вгору, Short — вниз): ордер виконується щоразу, коли модель зараховує докупівлю. */
 export function ladder(g, px, F) {
+  // бот з умовами докупівлі: лімітних ордерів на біржі немає — докупівлі ринковими, коли модель їх зарахує (рівні наступних
+  // ордерів залежать від фактичної ціни ордера з умовами, тож заздалегідь їх не виставити)
+  if (ocOn(g)) return [];
   const R = lv(g, px, F ? { step: F.step, minQty: F.minQty, minN: F.minN } : null);
   return R.L.slice(1).map((x, i) => ({ k: i + 1, price: F && F.tick ? rnd(x.p, F.tick, g.d > 0 ? "ceil" : "floor") : x.p, qty: F && F.step ? floorStep(x.s / x.p, F.step) : x.s / x.p })).filter((x) => x.qty > 0);
 }
@@ -186,7 +189,7 @@ export async function execute(ex, a, { g, symbol, native, botId, fl = {} }) {
     if (liveN(g) < Infinity) fl.lt = lt; // наступні рівні докладе topUp, щойно модель зарахує докупівлю
     fl.lb = base; fl.e0 = e0; fl.ex = p.entry; // e0 — база драбини (для відновлення після паузи), ex — ціна входу на біржі
     const gd = await guard(ex, { g, symbol, botId, fl }, p, F);
-    return msg + ` · на біржі: ${n} лімітн. докупівель${liveN(g) < Infinity && top < (g.orders || 1) - 1 ? ` (з ${(g.orders || 1) - 1}; решта — по одній після виконання)` : ""}${gd ? " · " + gd.msg.replace("Bybit Demo: ", "") : ""}`;
+    return msg + (ocOn(g) ? " · докупівлі — ринковими ордерами, коли виконаються умови" : ` · на біржі: ${n} лімітн. докупівель${liveN(g) < Infinity && top < (g.orders || 1) - 1 ? ` (з ${(g.orders || 1) - 1}; решта — по одній після виконання)` : ""}`) + `${gd ? " · " + gd.msg.replace("Bybit Demo: ", "") : ""}`;
   }
   if (a.kind === "dca") {
     const o = await once(ex, symbol, a.id, () => marketNotional(ex, symbol, side, a.notional, a.id));
@@ -452,7 +455,7 @@ export async function results(ex, { symbol, xr }) {
  * card(ev) — необов'язково: надіслати картку сигналу замість тексту; true — надіслано (текст тоді не потрібен).
  */
 export async function handleBot({ bot, g, r, symbol, mirror, native, ex, save, log, notify, card = null, risk = null, now = Date.now() }) {
-  const pend = [...(Array.isArray(bot.state?.pend) ? bot.state.pend : []), ...(mirror ? actionsFor(r.events, bot.id, native) : [])];
+  const pend = [...(Array.isArray(bot.state?.pend) ? bot.state.pend : []), ...(mirror ? actionsFor(r.events, bot.id, native, g) : [])];
   const fl = { ...(bot.state?.fl || {}) }, fl0 = JSON.stringify(fl);
   // нейтральний бот (g.d = 0): біржа працює в напрямі поточної угоди моделі; fl.dd пам'ятає його, поки біржа ще закриває угоду
   if (!g.d) { const pd = r.state?.b?.pos?.d || bot.state?.b?.pos?.d; if (pd) fl.dd = pd; g = { ...g, d: pd || fl.dd || 1 }; }

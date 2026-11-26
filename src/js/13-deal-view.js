@@ -9,12 +9,12 @@ const pnl0=p.real+d*(p.q*px-p.cost)-ft*p.q*px,pnl=Math.abs(pnl0)<.005?0:pnl0,mar
 const done=(p.f||[]).filter(e=>e.k==='e').slice(0,p.n).map((e,i)=>({k:i+1,p:e.p})); // після закриття в беззбиток — лише ордери, що лишились
 const lim=a=>{const s=a*(1-d*g.sl),q=L>1?a*(1-d*Math.max(1/L-.005,0)):0;return q&&(d>0?q>s:q<s)?q:s};
 const rest=[];let q=p.q,cost=p.cost,prev=p.last||avg;
-if(!p.t1&&!p.dx)for(let k=p.n;k<(g.orders||1);k++){const pr=prev*(1-d*g.step*(g.smul||1)**(k-1)),n=g.base*L*bf*(g.mult||1)**k;
-const ok=!rest.some(r=>!r.ok)&&(d>0?pr>lim(cost/q):pr<lim(cost/q));if(ok){q+=n/pr;cost+=n}rest.push({k:k+1,p:pr,m:n/L,ok});prev=pr}
+if(!p.t1&&!p.dx)for(let k=p.n;k<(g.orders||1);k++){const pr=prev*(1-d*stepAt(g,k)),n=g.base*L*bf*volAt(g,k),c=!!ocOf(g,k);
+const ok=!rest.some(r=>!r.ok)&&(d>0?pr>lim(cost/q):pr<lim(cost/q));if(ok){q+=n/pr;cost+=n}rest.push({k:k+1,p:pr,m:n/L,ok,...(c?{c:1}:{})});prev=pr}
 const fin=cost/q,sl=p.t1&&p.be?p.be:g.sl>0?fin*(1-d*g.sl):0,liq=L>1?fin*(1-d*Math.max(1/L-.005,0)):0;
 const trail=p.ta&&g.trail>0&&p.peak>0;
 const tp=trail?p.peak*(1-d*g.trail):p.t1&&p.a1?p.a1*(1+d*(g.tp2||g.tp)):avg*(1+d*g.tp);
-const next=rest.find(r=>r.ok)||null,tot=(g.base||0)*bf*Array.from({length:g.orders||1},(_,k)=>(g.mult||1)**k).reduce((a,b)=>a+b,0);
+const next=rest.find(r=>r.ok)||null,tot=(g.base||0)*bf*ladder(g);
 return{d,px,pnl,roe:margin>0?pnl/margin:0,avg,tp,tpKind:trail?'trail':'tp',sl,liq,done,rest,next,n:p.n,orders:g.orders||1,used:margin,tot,
 tpGain:p.real+d*(p.q*tp-p.cost)-ft*p.q*tp}}
 /* статус бота як у Veles: помилка → зупинено → в угоді → очікує сигнал */

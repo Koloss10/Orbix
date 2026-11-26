@@ -3,7 +3,7 @@
 // і фільтрів, що й вхід рушія (engine.js), тож пояснення збігається з тим, чому модель справді увійшла.
 // Тексти — за шаблонами, без AI.
 import { slStop } from "./mirror.js";
-import { SIG, ema, rsi, bbands, cci, stoch, macdH, whale, liq, act, casc, htf, lv, tfMs } from "./engine.js";
+import { SIG, ema, rsi, bbands, cci, stoch, macdH, whale, liq, act, casc, htf, lv, tfMs, ladder } from "./engine.js";
 
 const cl = (A) => A.map((x) => x.c);
 const f = (x, d = 1) => (Number.isFinite(x) ? (+x.toFixed(d)).toString() : "—");
@@ -75,7 +75,7 @@ export function cardSpec({ g, ev, pos, candles, reasons = [], exchange, theme = 
   const marks = [];
   const fills = (pos && pos.f) || (trade && trade.f) || [];
   for (const x of fills) marks.push({ t: Math.floor(x.t / W) * W, p: x.p, k: x.k });
-  const base = (+g.base || 0) * (() => { let u = 0; for (let k = 0; k < (g.orders || 1); k++) u += (g.mult || 1) ** k; return u; })();
+  const base = (+g.base || 0) * ladder({ ...g, orders: g.orders || 1, mult: g.mult || 1 });
   const result = ev.pnl != null && Number.isFinite(ev.pnl) ? { pnl: ev.pnl, pct: base > 0 ? (ev.pnl / base) * 100 : null } : null;
   return { theme, pair: g.pair, side: g.d < 0 ? -1 : 1, tf: g.tf || 1, lev: +g.fut ? g.lev || 1 : 1, exchange, time: ev.t || Date.now(),
     event: { kind, title }, candles: cs, lines, marks, reasons: kind === "open" ? reasons : [], result, parts };

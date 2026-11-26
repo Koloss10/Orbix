@@ -303,3 +303,15 @@ background:color-mix(in srgb,var(--pan2) 96%,transparent);border:1px solid var(-
 .w.tb~#aipop{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 @media (max-width:600px){#aipop,#aipop.l{left:8px;right:8px;width:auto;height:min(78vh,640px)}}
 @media (prefers-reduced-motion:reduce){#aifab .aifo,#aipop{animation:none}#aifab.snap{transition:none}}
+/* конструктор: умови докупівлі — картка на ордер, умова — компактний рядок (індикатор на всю ширину, далі ТФ і знак, значення й ×) */
+.ocb{display:flex;flex-direction:column;gap:8px}
+.ocb>.mu{font-size:12px;line-height:1.45}
+#foc{display:flex;flex-direction:column;gap:10px}
+.ocg{border:1px solid var(--ln);border-radius:14px;padding:10px;background:var(--pan2);display:flex;flex-direction:column;gap:8px}
+.ocn{font:700 13px 'Space Grotesk',Inter,sans-serif;letter-spacing:.04em;color:var(--ac)}
+.ocr{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-bottom:8px;border-bottom:1px dashed var(--ln)}
+.ocr select,.ocr input{min-width:0;width:100%;margin:0}
+.ocr [data-o="i"]{grid-column:1/-1}
+.ocr .ocx{width:100%;min-height:40px;border:1px solid var(--ln);border-radius:10px;background:none;color:var(--dn);font:700 16px Inter,sans-serif;cursor:pointer}
+.ocg .oca{align-self:flex-start;border:1px dashed var(--ac);border-radius:10px;background:none;color:var(--ac);padding:8px 14px;font:600 13px Inter,sans-serif;cursor:pointer}
+.ocx:focus-visible,.oca:focus-visible{outline:2px solid var(--ac);outline-offset:2px}

@@ -1076,3 +1076,14 @@ test('Беззбиток на біржі: закривається та сама
   assert.deepEqual(live.map((o) => +o.price.toFixed(4)).sort(), L.slice(1).map((r) => +r.price.toFixed(4)).sort(), 'ордери 3 і 4 знову на своїх рівнях');
   assert.ok(live.every((o) => /e\d+x\d+$/.test(o.link)), 'нові ідентифікатори (Bybit не приймає повтор)');
 });
+
+test('Умови докупівлі: на Bybit драбини лімітних ордерів немає, докупівля моделі — ринковий ордер; сітка вручну — у лімітних рівнях', () => {
+  const gc = botConfig({ pair: 'TON/USDT', tf: 1, d: 1, fut: 1, lev: 3, orders: 3, base: 20, step: 0.02, mult: 1.5, tp: 0.012, sl: 0.08, oc: [[], [{ i: 'rsi', tf: 0, op: '<', v: 30 }], []] });
+  assert.deepEqual(ladder(gc, 2, F), [], 'лімітних докупівель немає');
+  const ev = [{ kind: 'dca', t: T, notional: 30, n: 2 }];
+  assert.equal(actionsFor(ev, BOT, true, gc)[0].kind, 'dca', 'Bybit: ринкова докупівля за подією моделі');
+  assert.equal(actionsFor(ev, BOT, true, g).length, 0, 'звичайний бот на Bybit — докупівлі лімітні, дії немає');
+  const gm = botConfig({ pair: 'TON/USDT', tf: 1, d: 1, fut: 1, lev: 1, orders: 3, base: 20, step: 0.02, mult: 1.5, tp: 0.012, sl: 0.08, gs: [0.02, 0.05], gv: [1, 2, 4] });
+  const L = ladder(gm, 2, F);
+  assert.deepEqual(L.map((x) => x.price), [1.96, 1.862]); assert.deepEqual(L.map((x) => x.qty), [20.4, 42.9]); // 40 і 80 USDT (обсяги 1 : 2 : 4 від 20)
+});

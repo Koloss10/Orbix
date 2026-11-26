@@ -310,6 +310,18 @@ background:color-mix(in srgb,var(--pan2) 96%,transparent);border:1px solid var(-
 .w.tb~#aipop{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 @media (max-width:600px){#aipop,#aipop.l{left:8px;right:8px;width:auto;height:min(78vh,640px)}}
 @media (prefers-reduced-motion:reduce){#aifab .aifo,#aipop{animation:none}#aifab.snap{transition:none}}
+/* конструктор: умови докупівлі — картка на ордер, умова — компактний рядок (індикатор на всю ширину, далі ТФ і знак, значення й ×) */
+.ocb{display:flex;flex-direction:column;gap:8px}
+.ocb>.mu{font-size:12px;line-height:1.45}
+#foc{display:flex;flex-direction:column;gap:10px}
+.ocg{border:1px solid var(--ln);border-radius:14px;padding:10px;background:var(--pan2);display:flex;flex-direction:column;gap:8px}
+.ocn{font:700 13px 'Space Grotesk',Inter,sans-serif;letter-spacing:.04em;color:var(--ac)}
+.ocr{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-bottom:8px;border-bottom:1px dashed var(--ln)}
+.ocr select,.ocr input{min-width:0;width:100%;margin:0}
+.ocr [data-o="i"]{grid-column:1/-1}
+.ocr .ocx{width:100%;min-height:40px;border:1px solid var(--ln);border-radius:10px;background:none;color:var(--dn);font:700 16px Inter,sans-serif;cursor:pointer}
+.ocg .oca{align-self:flex-start;border:1px dashed var(--ac);border-radius:10px;background:none;color:var(--ac);padding:8px 14px;font:600 13px Inter,sans-serif;cursor:pointer}
+.ocx:focus-visible,.oca:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -623,11 +635,12 @@ crsi:A=>memo(A,'crsi',()=>crsi(cl(A))).map(x=>x<10?1:x>90?-1:0),
 wt:A=>{const[a,b]=memo(A,'wt',()=>waveTrend(A));return A.map((_,i)=>i<40?0:a[i]>b[i]&&a[i-1]<=b[i-1]&&a[i]<-53?1:a[i]<b[i]&&a[i-1]>=b[i-1]&&a[i]>53?-1:0)},
 sqz:A=>{const S=memo(A,'sqz',()=>squeeze(A));return A.map((_,i)=>i<41||!S.on[i-1]||S.on[i]?0:S.val[i]>0&&S.val[i]>S.val[i-1]?1:S.val[i]<0&&S.val[i]<S.val[i-1]?-1:0)},
 ichi:A=>memo(A,'ichi',()=>ichimoku(A)),
+roc:A=>{const R=memo(A,'roc9',()=>rocA(cl(A),9));return A.map((x,i)=>i<10?0:R[i]>0&&R[i-1]<=0?1:R[i]<0&&R[i-1]>=0?-1:0)},
 don:A=>A.map((x,i)=>{if(i<21)return 0;const h=hhv(A,i-1,20),l=llv(A,i-1,20);return x.c>h?1:x.c<l?-1:0}),
 ta:A=>{const c=cl(A),R=memo(A,'r14',()=>rsi(c,14)),S=memo(A,'s',()=>stoch(A)),C=memo(A,'c20',()=>cci(A,20)),M=memo(A,'m',()=>macdH(c)),E1=memo(A,'e20',()=>ema(c,20)),E2=memo(A,'e50',()=>ema(c,50));
 return A.map((x,i)=>{const v=(R[i]<30?1:R[i]>70?-1:0)+(S[i]<20?1:S[i]>80?-1:0)+(C[i]<-100?1:C[i]>100?-1:0)+(M[i]>0?1:-1)+(x.c>E1[i]?1:-1)+(E1[i]>E2[i]?1:-1);return v>=3?1:v<=-3?-1:0})}};
-const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг',st:'SuperTrend',kc:'Keltner Channel',psar:'Parabolic SAR',hma:'Hull MA',pc:'% зміни ціни',mfi:'Money Flow Index',wr:'Williams %R',srsi:'Stochastic RSI',crsi:'Connors RSI',wt:'WaveTrend (VuManChu)',sqz:'Squeeze Momentum',ichi:'Ichimoku',don:'Donchian (пробій)'};
-const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,bz:0,adx:0,adxm:1,avl:0,avh:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
+const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг',st:'SuperTrend',kc:'Keltner Channel',psar:'Parabolic SAR',hma:'Hull MA',pc:'% зміни ціни',mfi:'Money Flow Index',wr:'Williams %R',srsi:'Stochastic RSI',crsi:'Connors RSI',wt:'WaveTrend (VuManChu)',sqz:'Squeeze Momentum',ichi:'Ichimoku',don:'Donchian (пробій)',roc:'ROC — розворот імпульсу'};
+const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,bz:0,adx:0,adxm:1,avl:0,avh:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,gs:[],gv:[],oc:[],fee:.001,slip:.0005};
 /* Фільтр китів (сплеск об'єму): свічка i — «кит», якщо її об'єм ≥ wk × середнього за попередні WHL свічок,
    оборот (об'єм × ціна) ≥ wn USDT і переважають покупці (Long) чи продавці (Short): частка taker-buy об'єму
    ≥ wb (Long) або ≤ 1 − wb (Short). Якщо біржа не дає taker-buy об'єму (Bybit, демо-дані), напрям — за кольором свічки.
@@ -682,13 +695,51 @@ let key=null,full=false,ema=null,cnt=0,last=null;
 for(let i=0;i<n;i++){const t=A[i].t,k=Math.floor((t-off)/W);if(k!==key){key=k;full=t===k*W+off}
 if(full&&t+Wb===(k+1)*W+off){const c=A[i].c;cnt++;ema=cnt===1?c:ema+(c-ema)*a;last=c;full=false}
 o[i]=cnt>=p&&(d>0?last>=ema-1e-12:last<=ema+1e-12)}return o}
+/* ---------- сітка вручну й умови докупівлі (як у Veles) ----------
+   g.gs — відступи кожної докупівлі від попереднього ордера (частки; довжина orders−1), g.gv — обсяги ордерів (пропорції;
+   довжина orders, перший ордер = base). Порожні — крок step·smul^k і мартингейл mult^k.
+   g.oc[k] — умови для ордера k+1 (k ≥ 1): [{i, tf, op, v}] — індикатор i на таймфреймі tf (год, не менше таймфрейму бота;
+   0 — таймфрейм бота) порівнюється з v (op '<' або '>'). Умови задаються для Long; для Short індикатор віддзеркалюється
+   (RSI → 100−RSI, ROC → −ROC тощо), ATR і ADX — без змін. Ордер з умовами не лежить лімітним: він виконується за
+   закриттям свічки, коли ціна дійшла до рівня й усі умови виконані (ринковий ордер, комісія тейкера). */
+const stepAt=(g,n)=>Array.isArray(g.gs)&&g.gs.length&&g.gs.every(x=>+x>0&&+x<1)?+g.gs[Math.min(n,g.gs.length)-1]:g.step*(g.smul||1)**(n-1);
+const volAt=(g,k)=>Array.isArray(g.gv)&&g.gv.length&&+g.gv[0]>0?(+g.gv[Math.min(k,g.gv.length-1)])/(+g.gv[0]):(g.mult||1)**k;
+const ocOf=(g,k)=>Array.isArray(g.oc)&&Array.isArray(g.oc[k])&&g.oc[k].length?g.oc[k]:null;
+const ocOn=g=>Array.isArray(g.oc)&&g.oc.some((c,k)=>k>0&&k<(g.orders||1)&&Array.isArray(c)&&c.length>0);
+function rocA(c,n){return c.map((x,i)=>i>=n&&c[i-n]>0?(x/c[i-n]-1)*100:0)}
+/* індикатори умов: [назва, розігрів (свічок), віддзеркалення для Short] */
+const OCI={rsi:['RSI (14)',28,x=>100-x],roc:['ROC (9) — зміна ціни, %',10,x=>-x],atr:['ATR (14) — волатильність, % від ціни',28,x=>x],adx:['ADX (14) — сила тренду',28,x=>x],
+wr:['Williams %R (14)',14,x=>-100-x],bbp:['Bollinger %B (0 — нижня смуга, 100 — верхня)',20,x=>100-x],cci:['CCI (20)',20,x=>-x],stoch:['Stochastic %K (14)',14,x=>100-x],mfi:['MFI (14)',15,x=>100-x]};
+function ocSeries(B,i){const c=cl(B);switch(i){case'rsi':return rsi(c,14);case'roc':return rocA(c,9);case'atr':{const T=atr(B,14);return B.map((x,j)=>T[j]/x.c*100)}
+case'adx':return adx(B,14);case'wr':return willr(B,14);case'bbp':{const[L,U]=bbands(c,20,2);return B.map((x,j)=>U[j]>L[j]&&isFinite(L[j])?(x.c-L[j])/(U[j]-L[j])*100:50)}
+case'cci':return cci(B,20);case'stoch':return stoch(B,14);case'mfi':return mfi(B,14)}return B.map(()=>NaN)}
+/* свічки старшого таймфрейму H з закритих свічок бота: m[i] — індекс останньої ЗАКРИТОЇ свічки H на закритті свічки i (−1 — ще немає) */
+function ocTf(A,H,tfb){const W=tfMs(H),off=tfOff(H),Wb=tfMs(tfb),B=[],m=new Array(A.length).fill(-1);let key=null,cur=null;
+for(let i=0;i<A.length;i++){const x=A[i],t=x.t!=null?x.t:i*Wb,k=Math.floor((t-off)/W);if(k!==key){key=k;cur=t===k*W+off?{t:k*W+off,o:x.o,h:x.h,l:x.l,c:x.c,v:+x.v||0}:null}
+else if(cur){cur.h=Math.max(cur.h,x.h);cur.l=Math.min(cur.l,x.l);cur.c=x.c;cur.v+=+x.v||0}
+if(cur&&t+Wb===(k+1)*W+off){B.push(cur);cur=null}m[i]=B.length-1}return{B,m}}
+/* масиви умов: o[k][i] — умови ордера k+1 виконані на закритті свічки i (напрям d) */
+function ocArr(A,g,d){if(!ocOn(g))return null;const tfb=g.tf||1,o=[],S={};
+const val=(i,H)=>{const key=i+'|'+H;if(S[key])return S[key];let r;if(H<=tfb){const v=memo(A,'oc_'+i,()=>ocSeries(A,i));r=A.map((_,j)=>j>=OCI[i][1]?v[j]:NaN)}
+else{const T=memo(A,'oct'+H,()=>ocTf(A,H,tfb)),v=ocSeries(T.B,i);r=T.m.map(j=>j>=OCI[i][1]?v[j]:NaN)}return S[key]=r};
+for(let k=0;k<(g.orders||1);k++){const C=k?ocOf(g,k):null;if(!C){o.push(null);continue}
+if(C.some(c=>!OCI[c.i]||!isFinite(+c.v))){o.push(A.map(()=>false));continue} // зіпсована умова — ордер не виконується (а не без умови)
+const V=C.map(c=>({v:val(c.i,Math.max(+c.tf||tfb,tfb)),f:d<0?OCI[c.i][2]:x=>x,op:c.op,t:+c.v}));
+o.push(A.map((_,j)=>V.every(c=>{const x=c.v[j];if(!isFinite(x))return false;const y=c.f(x);return c.op==='>'?y>c.t:y<c.t})))}return o}
+/* свічок таймфрейму бота, потрібних умовам (для сервера: біржа дає до 1000) */
+const ocNeed=g=>{if(!ocOn(g))return 0;const tfb=g.tf||1;let n=0;for(const C of g.oc)if(Array.isArray(C))for(const c of C){const H=Math.max(+c.tf||tfb,tfb),w=OCI[c.i]?OCI[c.i][1]:30;n=Math.max(n,Math.ceil((w*2+3)*H/tfb))}return n};
+const needOf=g=>Math.max(htfNeed(g),ocNeed(g));
+/* умови на свічці i для кроку рушія: (d, k) → чи виконані умови ордера k+1 */
+const ocAt=(e,i)=>e&&e.oc?(d,k)=>{const O=e.oc[d<0?-1:1];return!!(O&&O[k]&&O[k][i])}:null;
 /* масив входів із додатковим масивом виходів за сигналом (.x); зріз зберігає .x — без нього e.slice() у бектестах втратив би виходи */
-function withX(o,X){Object.defineProperty(o,'x',{value:X});Object.defineProperty(o,'slice',{value:function(a,b){return withX(Array.prototype.slice.call(this,a,b),this.x.slice(a,b))}});return o}
+function withX(o,X,OC){if(X)Object.defineProperty(o,'x',{value:X});if(OC)Object.defineProperty(o,'oc',{value:OC});
+Object.defineProperty(o,'slice',{value:function(a,b){const oc=this.oc?Object.fromEntries(Object.entries(this.oc).map(([d,L])=>[d,L&&L.map(x=>x&&x.slice(a,b))])):null;
+return withX(Array.prototype.slice.call(this,a,b),this.x?this.x.slice(a,b):null,oc)}});return o}
 const hasXs=g=>typeof g.xs==='string'&&Object.prototype.hasOwnProperty.call(SIG,g.xs);
 /* вихід за сигналом: протилежний сигнал обраного індикатора на закритій свічці (для Long — «Short»-сигнал, і навпаки) */
 function exitArr(A,g,w){const S=SIG[g.xs](A,g),W=Math.max(w,g.xs==='ema'||g.xs==='lvl'?100:g.xs==='fib'?50:60),o=new Array(A.length).fill(false);for(let i=W;i<A.length;i++)o[i]=S[i]===-g.d;return o}
 /* реінвест: множник розміру нової угоди = 1 + частка прибутку / маржа сітки (не менше 1). Спільна для рушія й ліміту ризику (runner/risk.js) */
-function reinvestFactor(g,cum){if(!(g.rv>0)||!(cum>0))return 1;const M=g.base*(g.mult===1?g.orders:(g.mult**g.orders-1)/(g.mult-1));return M>0?1+g.rv*cum/M:1}
+function reinvestFactor(g,cum){if(!(g.rv>0)||!(cum>0))return 1;const M=g.base*ladder(g);return M>0?1+g.rv*cum/M:1}
 /* Нейтральний бот (g.d = 0): напрям обирається на вході — сигнали й фільтри рахуються для Long і для Short,
    вхід лише туди, куди сходяться; суперечливі сигнали — без входу. Напрям угоди — pos.d; gOf дає налаштування угоди. */
 const dOf=(g,p)=>p&&p.d||g.d||1;
@@ -698,11 +749,12 @@ const gOf=(g,p)=>!g.d&&p&&p.d?{...g,d:p.d}:g;
 function adxF(A,g){const X=memo(A,'adx',()=>adx(A,14)),t=+g.adx,m=+g.adxm===2?2:1;return X.map((x,i)=>i>=28&&(m===1?x<t:x>t))}
 function atrF(A,g){const T=memo(A,'atr14',()=>atr(A,14)),lo=+g.avl||0,hi=+g.avh||0;return A.map((x,i)=>{if(i<14)return false;const p=T[i]/x.c*100;return(!lo||p>=lo)&&(!hi||p<=hi)})}
 function entry(A,g){if(!g.d){const L=entry(A,{...g,d:1}),S=entry(A,{...g,d:-1}),o=L.map((v,i)=>v&&!S[i]?1:S[i]&&!v?-1:0);
-return L.x?withX(o,L.x.map((v,i)=>v?-1:S.x[i]?1:0)):o}
+const oc=ocOn(g)?{1:ocArr(A,g,1),'-1':ocArr(A,g,-1)}:null;
+return L.x||oc?withX(o,L.x?L.x.map((v,i)=>v?-1:S.x[i]?1:0):null,oc):o}
 const S=g.sg.map(k=>SIG[k](A,g)),n=A.length,o=new Array(n).fill(false),f=PAIRS[g.pair],
 w=Math.max(g.rp,g.bn,g.cn,30,g.sg.includes('ema')?100:0,g.sg.includes('lvl')?100:0,g.sg.includes('fib')?50:0,g.sg.includes('hma')||g.sg.includes('kc')||g.sg.includes('st')?60:0,g.sg.some(k=>k==='crsi'||k==='ichi'||k==='sqz')?101:g.sg.some(k=>k==='wt'||k==='srsi')?45:0),k=Math.min(g.k||S.length,S.length);
 if(!S.length||(g.fm&&f&&f.f<g.fm))return o;const WH=+g.wk>0?whale(A,g):null,FL=[+g.lq>0?liq(A,g):null,+g.ak>0?act(A,g):null,+g.lk>0?casc(A,g):null,+g.htf>0?htf(A,g):null,+g.adx>0?adxF(A,g):null,+g.avl>0||+g.avh>0?atrF(A,g):null].filter(Boolean);
-for(let i=Math.max(w,WH?WHL:0,FL.length?AVN:0);i<n;i++){let c=0;for(const s of S)if(s[i]===g.d)c++;o[i]=c>=k&&(!WH||WH[i])&&FL.every(F=>F[i])}return hasXs(g)?withX(o,exitArr(A,g,w)):o}
+for(let i=Math.max(w,WH?WHL:0,FL.length?AVN:0);i<n;i++){let c=0;for(const s of S)if(s[i]===g.d)c++;o[i]=c>=k&&(!WH||WH[i])&&FL.every(F=>F[i])}const oc=ocOn(g)?{[g.d<0?-1:1]:ocArr(A,g,g.d)}:null;return hasXs(g)||oc?withX(o,hasXs(g)?exitArr(A,g,w):null,oc):o}
 /* Комісії: ftk — тейкер (ринковий вхід, стоп, трейлінг, ліквідація), fmk — мейкер (лімітні DCA і TP).
    Funding: події fr={t,r}; при r>0 Long платить, Short отримує, сума = r·кількість·ціна.
    g.frx — множник funding для перевірки якості (за замовчуванням 1; 0 — без funding, 2 — подвоєний).
@@ -722,7 +774,7 @@ lp(x,up){const F=this.F;return F&&F.tick?rnd(x,F.tick,up?'ceil':'floor'):x}
 eqv(r){const g=this.g,p=this.pos;if(!p)return this.cum;const v=p.q*r.c;return this.cum+p.real+dOf(g,p)*(v-p.cost)-this.ft*v}
 fund(r){const p=this.pos,F=this.fr;if(!p||!F||!F.length||r.t==null)return;const W=tfMs(this.g.tf||1);let k=lbT(F,r.t);
 for(;k<F.length&&F[k].t<r.t+W;k++){const px=F[k].t-r.t<6e4?r.o:r.c,a=dOf(this.g,p)*F[k].r*p.q*px*(this.g.frx!=null?this.g.frx:1);p.real-=a;p.fd+=a}}
-step(i,r,en,h=i,xs=false){const g=this.g,p=this.pos,d=p?dOf(g,p):g.d||(en<0?-1:1),L=g.lev||1,fv=x=>d>0?r.h>=x:r.l<=x,ad=x=>d>0?r.l<=x:r.h>=x,adm=x=>d>0?(r.ml!=null?r.ml:r.l)<=x:(r.mh!=null?r.mh:r.h)>=x;
+step(i,r,en,h=i,xs=false,oc=null){const g=this.g,p=this.pos,d=p?dOf(g,p):g.d||(en<0?-1:1),L=g.lev||1,fv=x=>d>0?r.h>=x:r.l<=x,ad=x=>d>0?r.l<=x:r.h>=x,adm=x=>d>0?(r.ml!=null?r.ml:r.l)<=x:(r.mh!=null?r.mh:r.h)>=x;
 if(!p){if(en&&i>=this.cd&&!(g.maxd>0&&this.nd>=g.maxd)){const bf=this.bf(),q0=this.qty(g.base*L*bf,r.c);if(!q0)return;const s0=q0*r.c;this.pos={q:q0,bf,cost:s0,n:1,last:r.c,first:r.c,peak:r.c,real:-this.ft*s0,fd:0,t1:0,f:[{t:r.t,p:r.c,k:'e'}],...(g.bz>0?{lots:[q0]}:{}),...(g.d?{}:{d})}}return}
 this.fund(r);
 let avg,x=0,lq=0,slp,lqp,stop=0,filled=0,tk=0;
@@ -731,9 +783,9 @@ let avg,x=0,lq=0,slp,lqp,stop=0,filled=0,tk=0;
 const tst=g.trail&&p.ta&&(d>0?r.o>p.peak*(1-g.trail):r.o<p.peak*(1+g.trail))?p.peak*(1-d*g.trail):0;
 for(;;){avg=p.cost/p.q;slp=p.t1&&p.be?p.be:avg*(1-d*g.sl);lqp=L>1?avg*(1-d*Math.max(1/L-.005,0)):0;
 const lqF=lqp&&(d>0?lqp>slp:lqp<slp),lim=lqF?lqp:slp;
-const nx=!p.t1&&!p.dx&&p.n<g.orders?this.lp(p.last*(1-d*g.step*g.smul**(p.n-1)),d<0):0;
+const nx=!p.t1&&!p.dx&&p.n<g.orders&&!ocOf(g,p.n)?this.lp(p.last*(1-d*stepAt(g,p.n)),d<0):0;
 if(tst&&!filled&&(d>0?tst>lim:tst<lim)&&!(nx&&(d>0?nx>=tst:nx<=tst))&&ad(tst))break; // вихід за трейлінгом нижче
-if(nx&&(d>0?nx>lim:nx<lim)&&ad(nx)){const qn=this.qty(g.base*L*(p.bf||1)*g.mult**p.n,nx);if(!qn){p.dx=1;continue}const s=qn*nx;p.q+=qn;p.cost+=s;p.real-=this.fmk*s;p.n++;p.last=nx;p.f.push({t:r.t,p:nx,k:'e'});if(p.lots)p.lots.push(qn);filled=1;continue}
+if(nx&&(d>0?nx>lim:nx<lim)&&ad(nx)){const qn=this.qty(g.base*L*(p.bf||1)*volAt(g,p.n),nx);if(!qn){p.dx=1;continue}const s=qn*nx;p.q+=qn;p.cost+=s;p.real-=this.fmk*s;p.n++;p.last=nx;p.f.push({t:r.t,p:nx,k:'e'});if(p.lots)p.lots.push(qn);filled=1;continue}
 const hitL=lqp&&adm(lqp),hitS=ad(slp);
 if(lqF?hitL:(!hitS&&hitL)){x=lqp;lq=1;stop=1}else if(hitS){x=slp*(1-d*(g.slip||0));stop=1;tk=1}break}
 /* закриття в беззбиток (g.bz — кількість останніх ордерів): коли виконано більше за bz ордерів і ціна повертається до
@@ -751,15 +803,18 @@ if(g.s1>0&&!p.t1){if(fv(t)){const sh=this.F?rnd(p.q*g.s1,this.F.step,'floor')/p.
    позицію не гірше за цей стоп — вихід за ним. */
 else if(g.trail){if(p.ta){const st=p.peak*(1-d*g.trail);if(ad(st)){x=st;tk=1}else p.peak=d>0?Math.max(p.peak,r.h):Math.min(p.peak,r.l)}else if(fv(t)){p.ta=1;p.peak=t;const st=t*(1-d*g.trail);if(d>0?r.c<=st:r.c>=st){x=st;tk=1}}}
 else if(fv(t))x=t}
+/* докупівля з умовами: за закриттям свічки, якщо ціна дійшла до рівня, лишилась до SL і ліквідації, а умови виконані */
+if(!x&&!stop&&!filled&&!p.t1&&!p.dx&&p.n<g.orders&&ocOf(g,p.n)&&oc&&oc(d,p.n)){const lvl=p.last*(1-d*stepAt(g,p.n)),lqF=lqp&&(d>0?lqp>slp:lqp<slp),lim=lqF?lqp:slp;
+if((d>0?r.c<=lvl:r.c>=lvl)&&(d>0?r.c>lim:r.c<lim)){const qn=this.qty(g.base*L*(p.bf||1)*volAt(g,p.n),r.c);if(!qn)p.dx=1;else{const s=qn*r.c;p.q+=qn;p.cost+=s;p.real-=this.ft*s;p.n++;p.last=r.c;p.f.push({t:r.t,p:r.c,k:'e',m:1});if(p.lots)p.lots.push(qn);return}}}
 if(!x&&(xs===true||xs===-d)&&this.pos&&d*(r.c-p.cost/p.q)/(p.cost/p.q)>=(g.xmin||0)){x=r.c;tk=1;p.xsig=1}
 if(x){let pnl;if(lq)pnl=p.real-p.cost/L;else{const v=p.q*x;pnl=p.real+d*(v-p.cost)-(tk?this.ft:this.fmk)*v}this.cum+=pnl;
 this.tr.push({i:h,ts:r.t,pnl,n:p.n,...(p.d?{d:p.d}:{}),liq:lq,sl:stop&&!lq,...(p.xsig?{xs:1}:{}),fd:p.fd,f:p.f.concat({t:r.t,p:x,k:'x'})});this.pos=null;this.nd++;this.cd=i+g.cd+1}}}
-function run(A,e,g,off=0,keep=0,dep=0){const b=new Bot(g),tf=g.tf||1,M=dep?g.base*ladder(g):0,eq=keep?[]:null;let pk=0,dd=0,v=0,broke=0;for(let i=0;i<A.length;i++){const ok=!dep||dep+v>=M;if(!ok)broke=1;b.step(i,A[i],ok?e[i]:false,off+i*tf,e.x&&e.x[i]);v=b.eqv(A[i]);if(v>pk)pk=v;if(v-pk<dd)dd=v-pk;if(keep)eq.push(v)}return{b,dd,last:v,eq,broke,pk}}
+function run(A,e,g,off=0,keep=0,dep=0){const b=new Bot(g),tf=g.tf||1,M=dep?g.base*ladder(g):0,eq=keep?[]:null;let pk=0,dd=0,v=0,broke=0;for(let i=0;i<A.length;i++){const ok=!dep||dep+v>=M;if(!ok)broke=1;b.step(i,A[i],ok?e[i]:false,off+i*tf,e.x&&e.x[i],ocAt(e,i));v=b.eqv(A[i]);if(v>pk)pk=v;if(v-pk<dd)dd=v-pk;if(keep)eq.push(v)}return{b,dd,last:v,eq,broke,pk}}
 function summ(R,dep){const tr=R.b.tr;let w=0,gp=0,gl=0,o=0;for(const t of tr){if(t.pnl>0){w++;gp+=t.pnl}else gl-=t.pnl;o+=t.n}const n=tr.length,s=R.eq?Math.ceil(R.eq.length/240):1;
 return{n,wr:n?w/n*100:0,pnl:R.last,real:R.b.cum,unr:R.last-R.b.cum,dd:R.dd,ddp:R.dd/dep*100,roi:R.last/dep*100,pf:gl?gp/gl:gp?Infinity:0,avg:n?R.b.cum/n:0,ao:n?o/n:0,liq:tr.filter(t=>t.liq).length,fund:tr.reduce((a,t)=>a+(t.fd||0),0)+(R.b.pos?R.b.pos.fd||0:0),broke:R.broke,cur:R.eq?R.eq.filter((_,i)=>i%s===0):[]}}
-const ladder=g=>{let u=0;for(let k=0;k<g.orders;k++)u+=g.mult**k;return u};
+const ladder=g=>{let u=0;for(let k=0;k<g.orders;k++)u+=volAt(g,k);return u};
 function bt(g,per,dep,keep=1){normG(g);const tf=g.tf||1,A=aggC(hist(dk(g)),tf),k=Math.min(A.length,Math.floor(per/tf)),e=entry(A,g);return run(A.slice(-k),e.slice(-k),g,(A.length-k)*tf,keep,dep)}
-function lv(g,p0,F){if(!g.d)g={...g,d:1};const L=[];let p=p0,q=0,c=0;const B=new Bot(g,null,F===undefined?null:F);for(let k=0;k<g.orders;k++){if(k)p=B.lp(p*(1-g.d*g.step*g.smul**(k-1)),g.d<0);const qq=B.qty(g.base*(g.lev||1)*g.mult**k,p);if(!qq)break;const s=qq*p;L.push({p,s});q+=qq;c+=s}const avg=c/q,Lv=g.lev||1;return{L,avg,tp:avg*(1+g.d*g.tp),sl:avg*(1-g.d*g.sl),liq:Lv>1?avg*(1-g.d*Math.max(1/Lv-.005,0)):0}}
+function lv(g,p0,F){if(!g.d)g={...g,d:1};const L=[];let p=p0,q=0,c=0;const B=new Bot(g,null,F===undefined?null:F);for(let k=0;k<g.orders;k++){if(k)p=B.lp(p*(1-g.d*stepAt(g,k)),g.d<0);const qq=B.qty(g.base*(g.lev||1)*volAt(g,k),p);if(!qq)break;const s=qq*p;L.push({p,s});q+=qq;c+=s}const avg=c/q,Lv=g.lev||1;return{L,avg,tp:avg*(1+g.d*g.tp),sl:avg*(1-g.d*g.sl),liq:Lv>1?avg*(1-g.d*Math.max(1/Lv-.005,0)):0}}
 const SC=[{n:'Різкий обвал −20% за годину',d:()=>0,v:.004,j:-.2},{n:'Повільне падіння −35% за 30 днів',d:()=>-.35/720,v:.0004,j:0},{n:'Обвал −40% за добу',d:i=>i<=24?-.4/24:0,v:.001,j:0},{n:'Різкий стрибок +20% за годину',d:()=>0,v:.004,j:.2},{n:'Pump +40% за 30 днів',d:()=>.4/720,v:.0004,j:0},{n:'Бічний ринок, висока волатильність',d:()=>0,v:.02,j:0},{n:'Волатильність ×3',d:()=>0,v:.018,j:0}];
 function stress(g){const tf=g.tf||1,g2={...g,slip:.02};return SC.map(s=>{const R=rng(99);let c=100;const cs=[];for(let i=0;i<tf;i++)cs.push({o:100,h:100,l:100,c:100});for(let i=1;i<=720;i++){const r=(i===1?s.j:0)+s.d(i)+s.v*gs(R),n=c*(1+r),w=Math.abs(s.v*gs(R))*.6;cs.push({o:c,h:Math.max(c,n)*(1+w),l:Math.min(c,n)*(1-w),c:n});c=n}
 const A=agg(cs,tf),b=new Bot(g2,null,(F=>F?{minN:F.minN}:null)(fltOf(g)));let mn=0,dca=0;A.forEach((r,i)=>{b.step(i,r,i===0);mn=Math.min(mn,b.eqv(r));if(b.pos)dca=Math.max(dca,b.pos.n)});dca=Math.max(dca,...b.tr.map(t=>t.n));
@@ -1079,12 +1134,12 @@ const pnl0=p.real+d*(p.q*px-p.cost)-ft*p.q*px,pnl=Math.abs(pnl0)<.005?0:pnl0,mar
 const done=(p.f||[]).filter(e=>e.k==='e').slice(0,p.n).map((e,i)=>({k:i+1,p:e.p})); // після закриття в беззбиток — лише ордери, що лишились
 const lim=a=>{const s=a*(1-d*g.sl),q=L>1?a*(1-d*Math.max(1/L-.005,0)):0;return q&&(d>0?q>s:q<s)?q:s};
 const rest=[];let q=p.q,cost=p.cost,prev=p.last||avg;
-if(!p.t1&&!p.dx)for(let k=p.n;k<(g.orders||1);k++){const pr=prev*(1-d*g.step*(g.smul||1)**(k-1)),n=g.base*L*bf*(g.mult||1)**k;
-const ok=!rest.some(r=>!r.ok)&&(d>0?pr>lim(cost/q):pr<lim(cost/q));if(ok){q+=n/pr;cost+=n}rest.push({k:k+1,p:pr,m:n/L,ok});prev=pr}
+if(!p.t1&&!p.dx)for(let k=p.n;k<(g.orders||1);k++){const pr=prev*(1-d*stepAt(g,k)),n=g.base*L*bf*volAt(g,k),c=!!ocOf(g,k);
+const ok=!rest.some(r=>!r.ok)&&(d>0?pr>lim(cost/q):pr<lim(cost/q));if(ok){q+=n/pr;cost+=n}rest.push({k:k+1,p:pr,m:n/L,ok,...(c?{c:1}:{})});prev=pr}
 const fin=cost/q,sl=p.t1&&p.be?p.be:g.sl>0?fin*(1-d*g.sl):0,liq=L>1?fin*(1-d*Math.max(1/L-.005,0)):0;
 const trail=p.ta&&g.trail>0&&p.peak>0;
 const tp=trail?p.peak*(1-d*g.trail):p.t1&&p.a1?p.a1*(1+d*(g.tp2||g.tp)):avg*(1+d*g.tp);
-const next=rest.find(r=>r.ok)||null,tot=(g.base||0)*bf*Array.from({length:g.orders||1},(_,k)=>(g.mult||1)**k).reduce((a,b)=>a+b,0);
+const next=rest.find(r=>r.ok)||null,tot=(g.base||0)*bf*ladder(g);
 return{d,px,pnl,roe:margin>0?pnl/margin:0,avg,tp,tpKind:trail?'trail':'tp',sl,liq,done,rest,next,n:p.n,orders:g.orders||1,used:margin,tot,
 tpGain:p.real+d*(p.q*tp-p.cost)-ft*p.q*tp}}
 /* статус бота як у Veles: помилка → зупинено → в угоді → очікує сигнал */
@@ -1138,7 +1193,7 @@ const actAt=(x,t)=>(x.sp||[]).some(([a,b])=>t>a&&(b==null||t<=b));
 function advance(x,live){if(x.srv&&(live||x.srvSt))return;const g=x.g,tf=g.tf||1,H=D[dk(g)];if(!H||!H.length)return;const A=aggC(H,tf),W=tfMs(tf);if(!A.length)return;
 if(A[0].t>x.t0)x.trunc=1;let i=A.length;while(i>0&&A[i-1].t+W>x.lt)i--;if(i>=A.length)return;const V=[...(x.gh||[]),{u:Infinity,g}],EC=[];let vi=-1,e=null;
 for(;i<A.length;i++){const c=A[i],ct=c.t+W;x.lt=ct;{let v=0;while(ct>V[v].u)v++;if(v!==vi){vi=v;x.b.g=V[v].g;e=EC[v]||(EC[v]=entry(A,V[v].g))}}if(!actAt(x,ct))continue;const n0=x.b.tr.length,p0=x.b.pos,o0=p0?p0.n:0,c0=p0?p0.cost:0;
-x.b.step(Math.floor(c.t/W),c,e[i],undefined,e.x&&e.x[i]);const v=x.b.eqv(c);x.pk=Math.max(x.pk,v);x.dd=Math.min(x.dd,v-x.pk);if(!live)continue;const t=x.b.tr,p=x.b.pos;
+x.b.step(Math.floor(c.t/W),c,e[i],undefined,e.x&&e.x[i],ocAt(e,i));const v=x.b.eqv(c);x.pk=Math.max(x.pk,v);x.dd=Math.min(x.dd,v-x.pk);if(!live)continue;const t=x.b.tr,p=x.b.pos;
 if(t.length>n0){const l=t[t.length-1];notify(l.sl||l.liq?'sl':'close',x,{pnl:l.pnl,liq:l.liq});tnMirror(x,'close')}else if(!p0&&p){notify('open',x,{price:c.c});tnMirror(x,'open',p.cost)}else if(p0&&p&&p.n>o0){notify('dca',x,{price:p.last,n:p.n});tnMirror(x,'dca',p.cost-c0)}}}
 /* історія налаштувань бота (редагування): [{u — час зміни, до якого діяла ця версія, g}] у порядку часу */
 const ghOk=a=>Array.isArray(a)?a.filter(v=>v&&v.g&&typeof v.g==='object'&&isFinite(v.u)).map(v=>({u:+v.u,g:normG({...DEF,...v.g})})).sort((p,q)=>p.u-q.u).slice(-50):[];
@@ -1250,20 +1305,26 @@ FGI={fb:'main',flv:'main',frp:'sig',frs:'sig',fbn:'sig',fbk:'sig',fcn:'sig',fcv:
 fin=([i,l,k,m])=>`<label>${l}<input id="${i}" type="number" inputmode="decimal" step="any" value="${k==='base'?+(DEF.base*ladder(DEF)).toFixed(2):+(DEF[k]*m).toFixed(4)}"></label>`,fgn=g=>NUM.filter(n=>(FGI[n[0]]||'flt')===g).map(fin).join(''),
 FGH={main:()=>sel('fe','Біржа',[])+sel('fp','Пара',PK.map(k=>[k,k]))+sel('fmk','Ринок',[[1,'Futures'],[0,'Spot']])+sel('fdr','Напрямок',[[1,'Long'],[-1,'Short'],[0,'Нейтральний (Long або Short за сигналом)']])+sel('ftf','Таймфрейм свічок',TFS)+fgn('main'),
 sig:()=>'<label class="fw">Готова стратегія<select id="fst"></select></label><div class="sgr fw" id="fsg"></div>'+fgn('sig'),
-dca:()=>fgn('dca'),ex:()=>sel('fbe','SL у беззбиток після TP1',[[0,'Ні'],[1,'На нулі'],[2,'На ціні TP1']])+sel('fxs','Вихід за сигналом: індикатор',[['','Немає'],...Object.entries(SGN)])+fgn('ex'),flt:()=>sel('fhtf','Тренд старшого таймфрейму',[[0,'Вимкнено'],[4,'4 год'],[12,'12 год'],[24,'1 день'],[168,'1 тиждень']],0)+sel('fadxm','ADX: режим ринку',[[1,'Лише боковик (ADX нижче порогу)'],[2,'Лише тренд (ADX вище порогу)']],1)+sel('flq','Ліквідність',[[0,'Вимкнено'],[1,'Розворот після зняття стопів'],[2,'Рух до ліквідності']],0)+fgn('flt'),
+dca:()=>fgn('dca')+gridHtml(),ex:()=>sel('fbe','SL у беззбиток після TP1',[[0,'Ні'],[1,'На нулі'],[2,'На ціні TP1']])+sel('fxs','Вихід за сигналом: індикатор',[['','Немає'],...Object.entries(SGN)])+fgn('ex'),flt:()=>sel('fhtf','Тренд старшого таймфрейму',[[0,'Вимкнено'],[4,'4 год'],[12,'12 год'],[24,'1 день'],[168,'1 тиждень']],0)+sel('fadxm','ADX: режим ринку',[[1,'Лише боковик (ADX нижче порогу)'],[2,'Лише тренд (ADX вище порогу)']],1)+sel('flq','Ліквідність',[[0,'Вимкнено'],[1,'Розворот після зняття стопів'],[2,'Рух до ліквідності']],0)+fgn('flt'),
 bt:()=>sel('fper','Період бектесту',PER,8760)+'<label>Депозит, USDT<input id="fdp" type="number" inputmode="decimal" step="any" value="1000"></label>'};
 $('#fg').innerHTML=FGR.map(([k,t,o])=>`<details class="fgs" data-g="${k}"${o?' open':''}><summary><b>${t}</b><span class="mu" id="fgs-${k}"></span></summary><div class="fg">${FGH[k]()}</div></details>`).join('');
 /* короткий підсумок у заголовку кожного розділу */
 function fgSum(c){const g=c.g,p=x=>n2(x*100,2).replace(/,?0+$/,'')+' %',S={main:`${g.pair} · ${dir(g)} · ${tfl(g.tf)} · ${n2(g.base,0)} USDT${g.fut&&g.lev>1?' · '+g.lev+'×':''}`,
-sig:`${g.sg.map(k=>SGN[k]).join(', ')||'не вибрано'} · мін. ${g.k}`,dca:`${g.orders} орд. · крок ${p(g.step)} · ×${String(g.mult).replace(".",",")}`,
+sig:`${g.sg.map(k=>SGN[k]).join(', ')||'не вибрано'} · мін. ${g.k}`,dca:`${g.orders} орд. · ${g.gs.length?'відступи вручну':'крок '+p(g.step)} · ${g.gv.length?'обсяги вручну':'×'+String(g.mult).replace(".",",")}${ocOn(g)?' · умови докупівлі':''}`,
 ex:`TP ${p(g.tp)} · SL ${p(g.sl)}${g.trail>0?' · трейлінг '+p(g.trail):''}${g.s1>0?' · Multi-TP':''}`,flt:[g.fm>0?`фунд. бал ≥ ${g.fm}`:'',g.wk>0?`кити ≥ ${g.wk}×`:'',g.lq===1?'зняття стопів':g.lq===2?'рух до ліквідності':'',g.ak>0?`активність ≥ ${g.ak}×`:'',g.lk>0?`каскад ≥ ${g.lk}×`:'',g.htf>0?`тренд ${tfl(g.htf)} EMA${g.hte}`:''].filter(Boolean).join(' · ')||'вимкнено',bt:`${perl(c.per)} · депозит ${n2(c.dep,0)} USDT`};
 for(const k in S){const e=$('#fgs-'+k);if(e)e.textContent=S[k]}}
 $('#fsg').innerHTML=Object.entries(SGN).map(([k,l])=>`<label class="ck"><input type="checkbox" data-sg="${k}"${DEF.sg.includes(k)?' checked':''}>${l}</label>`).join('');
 $('#fst').innerHTML='<option value="">Власний набір сигналів</option>'+STR.map((s,i)=>`<option value="${i}">${s[0]}</option>`).join('');
 $('#fst').onchange=e=>{const s=STR[+e.target.value];if(!s)return;$$('[data-sg]').forEach(c=>c.checked=s[1].includes(c.dataset.sg));$('#fk').value=s[2];pv()};
-function cfg(){const g={htf:+$('#fhtf').value,adxm:+$('#fadxm').value,lq:+$('#flq').value,d:+$('#fdr').value,tf:+$('#ftf').value,fut:+$('#fmk').value,be:+$('#fbe').value,xs:$('#fxs').value,pair:$('#fp').value,sg:$$('[data-sg]').filter(c=>c.checked).map(c=>c.dataset.sg),fee:.001,slip:.0005};NUM.forEach(([i,,k,m])=>g[k]=+$('#'+i).value/m);['orders','rp','bn','cn','cd','k','maxd','bz','live','lqn','hte'].forEach(k=>g[k]=Math.round(g[k]));if(!g.fut)g.lev=1;{const u=ladder(g);if(u>0)g.base/=u}return{g,ex:$('#fe').value,per:+$('#fper').value,dep:+$('#fdp').value}}
-function bad(c){const g=c.g;if(!c.ex)return'Підключіть біржу в профілі.';if(!PAIRS[g.pair]||!listed(g.pair,c.ex))return'Ця пара не торгується на вибраній біржі.';if(!g.sg.length)return'Оберіть хоча б один сигнал входу.';if(Object.values(g).some(v=>typeof v==='number'&&!isFinite(v)))return'Усі числові поля мають бути заповнені.';if(!(g.base>0&&g.step>0&&g.tp>0&&g.sl>0&&g.mult>0&&g.smul>0&&g.tp2>0&&c.dep>0))return'Сума на бота, крок, TP, SL, множники й депозит мають бути більшими за 0.';if(g.orders<1||g.orders>30)return'Ордерів DCA: від 1 до 30.';if(g.xs&&!Object.prototype.hasOwnProperty.call(SGN,g.xs))return'Невідомий індикатор виходу за сигналом.';if(g.xmin<-1||g.xmin>10)return'Вихід за сигналом: мін. прибуток від −100 до 1000 %.';if(g.bz<0||g.bz!==Math.floor(g.bz)||g.bz>0&&g.bz>=g.orders)return'Закриття в беззбиток: ціле число від 0 до кількості ордерів мінус 1 (хоча б один ордер іде до TP).';if(g.maxd<0||g.maxd>10000)return'Зупинка після N угод: від 0 (без ліміту) до 10000.';if(g.rv<0||g.rv>1)return'Реінвест прибутку: від 0 до 100 %.';if(g.wk<0||g.wn<0)return'Фільтр китів: значення не можуть бути від\'ємними.';if(g.wk>0&&(g.wb<.5||g.wb>1))return'Фільтр китів: частка покупців чи продавців — від 50 до 100%.';if(g.lq>0&&(g.lqt<.0005||g.lqt>.03))return'Ліквідність: допуск зони — від 0,05 до 3%.';if(g.lq>0&&(g.lqn<2||g.lqn>10))return'Ліквідність: мінімум дотиків — від 2 до 10.';if(g.lq===2&&(g.lqd<.005||g.lqd>.2))return'Рух до ліквідності: відстань — від 0,5 до 20%.';if(g.htf>0&&g.htf<=g.tf)return'Тренд старшого таймфрейму: оберіть таймфрейм, більший за таймфрейм бота ('+tfl(g.tf)+').';if(g.htf>0&&(g.hte<5||g.hte>200))return'Тренд: період EMA — від 5 до 200 свічок старшого таймфрейму.';if(g.htf>0&&htfNeed(g)>970)return`Тренд: серверу знадобиться ${htfNeed(g)} свічок ${tfl(g.tf)}, а біржа дає до 1000. Зменшіть період EMA до ${Math.floor(970*g.tf/g.htf)-2} або оберіть менший старший таймфрейм.`;if(g.ak!==0&&(g.ak<1.2||g.ak>20))return'Сплеск активності: множник 0 (вимкнено) або від 1,2 до 20.';if(g.adx!==0&&(g.adx<10||g.adx>60))return'ADX: поріг 0 (вимкнено) або від 10 до 60.';if(g.avl<0||g.avh<0||g.avl>20||g.avh>20)return'ATR: межі волатильності від 0 до 20 %.';if(g.avl>0&&g.avh>0&&g.avh<=g.avl)return'ATR: максимум має бути більшим за мінімум.';if(g.lk!==0&&(g.lk<1.2||g.lk>20))return'Каскад ліквідацій: множник 0 (вимкнено) або від 1,2 до 20.';if(g.live<0||g.live>30)return'Ордерів DCA одночасно на біржі: від 0 (усі) до 30.';if(g.rp<2||g.bn<2||g.cn<2)return'Періоди індикаторів мають бути не менші за 2.';if(!g.d&&!g.fut)return'Нейтральний режим доступний лише на ф\'ючерсах: на споті немає Short.';if(g.d<0&&!g.fut)return'Short доступний лише на Futures.';const m=maxLev(g.pair,c.ex);if(g.lev<1||g.lev>m)return'Плече для цієї пари на цій біржі: від 1 до '+m+'×.';if(g.s1<0||g.s1>=1)return'Частка Multi-TP: від 0 до 99%.';const F=fltOf(g);if(F&&F.minN){const mo=g.base*(g.fut?g.lev:1)*Math.min(1,g.mult**(g.orders-1));if(mo<F.minN-1e-9)return`Біржа не прийме такий ордер: мінімум ${n2(F.minN,2)} USDT на ордер для ${g.pair}${g.fut?' (ф\'ючерси)':''}. ${g.mult<1?'Найменший ордер сітки':'Перший ордер з плечем'}: ${n2(mo,2)} USDT.`}if(g.k<1)return'Мін. сигналів має бути не менше 1.';{const r=minFirst(g);if(r&&g.base<r.min-1e-9)return minText(r)}return''}
-function fill(g,ex){g={...DEF,...g};$('#fp').value=g.pair;if(ex&&cx.includes(ex))$('#fe').value=ex;$('#fdr').value=g.d;$('#fxs').value=g.xs||'';$('#ftf').value=g.tf;$('#fmk').value=g.fut;$('#fbe').value=g.be;$('#flq').value=g.lq||0;$('#fhtf').value=g.htf||0;$('#fadxm').value=g.adxm||1;NUM.forEach(([i,,k,m])=>$('#'+i).value=+(g[k]*m).toFixed(4));$('#fb').value=+(g.base*ladder(g)).toFixed(2);$$('[data-sg]').forEach(c=>c.checked=g.sg.includes(c.dataset.sg))}
+function cfg(){const g={htf:+$('#fhtf').value,adxm:+$('#fadxm').value,lq:+$('#flq').value,d:+$('#fdr').value,tf:+$('#ftf').value,fut:+$('#fmk').value,be:+$('#fbe').value,xs:$('#fxs').value,pair:$('#fp').value,sg:$$('[data-sg]').filter(c=>c.checked).map(c=>c.dataset.sg),fee:.001,slip:.0005};NUM.forEach(([i,,k,m])=>g[k]=+$('#'+i).value/m);g.gs=gridNums($('#fgs').value).map(x=>x/100);g.gv=gridNums($('#fgv').value);g.oc=ocRead();['orders','rp','bn','cn','cd','k','maxd','bz','live','lqn','hte'].forEach(k=>g[k]=Math.round(g[k]));if(!g.fut)g.lev=1;{const u=ladder(g);if(u>0)g.base/=u}return{g,ex:$('#fe').value,per:+$('#fper').value,dep:+$('#fdp').value}}
+/* сітка вручну й умови докупівлі: довжини, межі, таймфрейми умов (не менші за таймфрейм бота, історія для сервера) */
+function gridBad(g){const n=g.orders;if(g.gs.length&&(g.gs.length!==n-1||g.gs.some(x=>!(x>0&&x<1))))return`Відступи вручну: потрібно по одному числу на кожну докупівлю (докупівель — ${n-1}), кожне від 0 до 100 %, через пробіл.`;
+if(g.gv.length&&(g.gv.length!==n||g.gv.some(x=>!(x>0))))return`Обсяги вручну: потрібно по одному числу на кожен ордер, включно з першим (ордерів — ${n}), кожне більше за 0, через пробіл.`;
+for(let k=1;k<g.oc.length;k++)for(const c of g.oc[k]||[]){if(k>=n)return`Умови задано для ордера ${k+1}, а ордерів лише ${n}: зменште умови або збільште кількість ордерів.`;
+if(!OCI[c.i]||!(c.op==='<'||c.op==='>')||!isFinite(c.v))return`Ордер ${k+1}: умова заповнена не повністю.`;if(c.tf&&c.tf<g.tf)return`Ордер ${k+1}: таймфрейм умови не може бути меншим за таймфрейм бота (${tfl(g.tf)}).`}
+const nd=ocNeed(g);if(nd>970)return`Умови докупівлі: серверу знадобиться ${nd} свічок ${tfl(g.tf)}, а біржа дає до 1000. Оберіть менший таймфрейм умов або більший таймфрейм бота.`;return''}
+function bad(c){const g=c.g;if(!c.ex)return'Підключіть біржу в профілі.';if(!PAIRS[g.pair]||!listed(g.pair,c.ex))return'Ця пара не торгується на вибраній біржі.';if(!g.sg.length)return'Оберіть хоча б один сигнал входу.';if(Object.values(g).some(v=>typeof v==='number'&&!isFinite(v)))return'Усі числові поля мають бути заповнені.';if(!(g.base>0&&g.step>0&&g.tp>0&&g.sl>0&&g.mult>0&&g.smul>0&&g.tp2>0&&c.dep>0))return'Сума на бота, крок, TP, SL, множники й депозит мають бути більшими за 0.';if(g.orders<1||g.orders>30)return'Ордерів DCA: від 1 до 30.';if(g.xs&&!Object.prototype.hasOwnProperty.call(SGN,g.xs))return'Невідомий індикатор виходу за сигналом.';if(g.xmin<-1||g.xmin>10)return'Вихід за сигналом: мін. прибуток від −100 до 1000 %.';if(g.bz<0||g.bz!==Math.floor(g.bz)||g.bz>0&&g.bz>=g.orders)return'Закриття в беззбиток: ціле число від 0 до кількості ордерів мінус 1 (хоча б один ордер іде до TP).';{const e=gridBad(g);if(e)return e}if(g.maxd<0||g.maxd>10000)return'Зупинка після N угод: від 0 (без ліміту) до 10000.';if(g.rv<0||g.rv>1)return'Реінвест прибутку: від 0 до 100 %.';if(g.wk<0||g.wn<0)return'Фільтр китів: значення не можуть бути від\'ємними.';if(g.wk>0&&(g.wb<.5||g.wb>1))return'Фільтр китів: частка покупців чи продавців — від 50 до 100%.';if(g.lq>0&&(g.lqt<.0005||g.lqt>.03))return'Ліквідність: допуск зони — від 0,05 до 3%.';if(g.lq>0&&(g.lqn<2||g.lqn>10))return'Ліквідність: мінімум дотиків — від 2 до 10.';if(g.lq===2&&(g.lqd<.005||g.lqd>.2))return'Рух до ліквідності: відстань — від 0,5 до 20%.';if(g.htf>0&&g.htf<=g.tf)return'Тренд старшого таймфрейму: оберіть таймфрейм, більший за таймфрейм бота ('+tfl(g.tf)+').';if(g.htf>0&&(g.hte<5||g.hte>200))return'Тренд: період EMA — від 5 до 200 свічок старшого таймфрейму.';if(g.htf>0&&htfNeed(g)>970)return`Тренд: серверу знадобиться ${htfNeed(g)} свічок ${tfl(g.tf)}, а біржа дає до 1000. Зменшіть період EMA до ${Math.floor(970*g.tf/g.htf)-2} або оберіть менший старший таймфрейм.`;if(g.ak!==0&&(g.ak<1.2||g.ak>20))return'Сплеск активності: множник 0 (вимкнено) або від 1,2 до 20.';if(g.adx!==0&&(g.adx<10||g.adx>60))return'ADX: поріг 0 (вимкнено) або від 10 до 60.';if(g.avl<0||g.avh<0||g.avl>20||g.avh>20)return'ATR: межі волатильності від 0 до 20 %.';if(g.avl>0&&g.avh>0&&g.avh<=g.avl)return'ATR: максимум має бути більшим за мінімум.';if(g.lk!==0&&(g.lk<1.2||g.lk>20))return'Каскад ліквідацій: множник 0 (вимкнено) або від 1,2 до 20.';if(g.live<0||g.live>30)return'Ордерів DCA одночасно на біржі: від 0 (усі) до 30.';if(g.rp<2||g.bn<2||g.cn<2)return'Періоди індикаторів мають бути не менші за 2.';if(!g.d&&!g.fut)return'Нейтральний режим доступний лише на ф\'ючерсах: на споті немає Short.';if(g.d<0&&!g.fut)return'Short доступний лише на Futures.';const m=maxLev(g.pair,c.ex);if(g.lev<1||g.lev>m)return'Плече для цієї пари на цій біржі: від 1 до '+m+'×.';if(g.s1<0||g.s1>=1)return'Частка Multi-TP: від 0 до 99%.';const F=fltOf(g);if(F&&F.minN){const mo=g.base*(g.fut?g.lev:1)*Math.min(...Array.from({length:g.orders},(_,k)=>volAt(g,k)));if(mo<F.minN-1e-9)return`Біржа не прийме такий ордер: мінімум ${n2(F.minN,2)} USDT на ордер для ${g.pair}${g.fut?' (ф\'ючерси)':''}. ${g.mult<1?'Найменший ордер сітки':'Перший ордер з плечем'}: ${n2(mo,2)} USDT.`}if(g.k<1)return'Мін. сигналів має бути не менше 1.';{const r=minFirst(g);if(r&&g.base<r.min-1e-9)return minText(r)}return''}
+function fill(g,ex){g={...DEF,...g};$('#fp').value=g.pair;if(ex&&cx.includes(ex))$('#fe').value=ex;$('#fdr').value=g.d;$('#fxs').value=g.xs||'';$('#ftf').value=g.tf;$('#fmk').value=g.fut;$('#fbe').value=g.be;$('#flq').value=g.lq||0;$('#fhtf').value=g.htf||0;$('#fadxm').value=g.adxm||1;NUM.forEach(([i,,k,m])=>$('#'+i).value=+(g[k]*m).toFixed(4));$('#fb').value=+(g.base*ladder(g)).toFixed(2);$$('[data-sg]').forEach(c=>c.checked=g.sg.includes(c.dataset.sg));gridFill(g)}
 const MODES=[{step:.025,orders:4,mult:1.15,tp:.006,sl:.06},{step:.015,orders:5,mult:1.3,tp:.01,sl:.05},{step:.01,orders:7,mult:1.6,tp:.015,sl:.08}];
 $$('[data-m]').forEach(b=>b.onclick=()=>{const c=cfg();{const T=c.g.base*ladder(c.g),n={...c.g,...MODES[+b.dataset.m]};n.base=T/ladder(n);fill(n,c.ex)};pv()});
 /* округлення кількості на демо-біржі: кожен ордер сітки (вхід і докупівлі) біржа округлює вниз до кроку кількості,
@@ -1274,7 +1335,7 @@ const XNAME={bybit:'Bybit Demo',binance:'Binance Testnet'};
 function rndInfo(g,ex){if(!g||!g.fut||!PAIRS[g.pair])return null;const F=MD.xflt[ex]&&MD.xflt[ex][sym(g.pair)];if(!F||!(F.step>0))return null;
 let px;try{px=lastC(dk(g)).c}catch(e){return null}if(!(px>0))return null;
 const lev=g.fut?(+g.lev||1):1,P=lv({...g,fee:0,slip:0},px,null).L.map(x=>x.p),n=Math.max(1,Math.round(g.orders||1));let worst=0,zero=false,first=null,mm=Infinity;
-for(let k=0;k<n;k++){const p=P[k]||px,m=(+g.mult||1)**k,s=(+g.base||0)*lev*m,q=s/p,qf=Math.floor(q/F.step+1e-9)*F.step,loss=q>0?1-qf/q:0;
+for(let k=0;k<n;k++){const p=P[k]||px,m=volAt(g,k),s=(+g.base||0)*lev*m,q=s/p,qf=Math.floor(q/F.step+1e-9)*F.step,loss=q>0?1-qf/q:0;
 if(qf<=0)zero=true;if(loss>worst)worst=loss;if(k===0)first=[s,qf*p];if(m*lev<mm)mm=m*lev}
 const need=Math.ceil(10*F.step*px/(mm||1)/5)*5;return{worst,first,step:F.step,coin:g.pair.split('/')[0],need,zero}}
 const rndText=(r,ex,short)=>{const pc=x=>'−'+Math.round(x*100)+' %';
@@ -1294,9 +1355,9 @@ const botEx=()=>(typeof TN!=='undefined'&&TN.ex)||'bybit';
 function minFirst(g,ex=botEx()){if(!g||!g.fut||!PAIRS[g.pair])return null;const s=sym(g.pair),F=MD.xflt[ex]&&MD.xflt[ex][s];if(!F||!(F.step>0))return null;
 const c=MD.xpx[ex+s];let px=c&&c.p,src='з біржі';if(!(px>0)){try{px=lastC(dk(g)).c;src='з графіка'}catch(e){}}if(!(px>0))return null;
 const L=+g.lev||1,m=+g.mult||1,n=Math.max(1,Math.round(g.orders||1)),P=lv({...g,base:1,lev:L,orders:n,fee:0,slip:0},px,null).L;let need=0;
-for(let k=0;k<n;k++){const p=(P[k]||{p:px}).p,v=Math.max(10*F.step*p,(F.minQty||0)*p,F.minN||0);need=Math.max(need,v/(L*m**k))}
-return{min:Math.ceil(need-1e-9),F,px,src,ex,L,n,m,coin:g.pair.split('/')[0]}}
-const minText=r=>`Замала сума на бота для ${XNAME[r.ex]||r.ex}: потрібно від ${n2(r.min*ladder({orders:r.n,mult:r.m}),0)} USDT маржі на всю сітку з плечем ${r.L}× (ціна ${r.coin} ${n2(r.px,r.px<1?5:2)} ${r.src}, крок кількості ${String(r.F.step).replace('.',',')} ${r.coin}). З меншою сумою біржа округлить ордери більш ніж на 10 % або не прийме їх. Збільште суму на бота, плече або зменште кількість ордерів.`;
+for(let k=0;k<n;k++){const p=(P[k]||{p:px}).p,v=Math.max(10*F.step*p,(F.minQty||0)*p,F.minN||0);need=Math.max(need,v/(L*volAt(g,k)))}
+return{min:Math.ceil(need-1e-9),F,px,src,ex,L,n,m,g,coin:g.pair.split('/')[0]}}
+const minText=r=>`Замала сума на бота для ${XNAME[r.ex]||r.ex}: потрібно від ${n2(r.min*ladder({...r.g,orders:r.n,mult:r.m}),0)} USDT маржі на всю сітку з плечем ${r.L}× (ціна ${r.coin} ${n2(r.px,r.px<1?5:2)} ${r.src}, крок кількості ${String(r.F.step).replace('.',',')} ${r.coin}). З меншою сумою біржа округлить ордери більш ніж на 10 % або не прийме їх. Збільште суму на бота, плече або зменште кількість ордерів.`;
 /* біржові дані для мінімуму: правила (xRules, кеш на добу) і ціна (кеш на 2 хв); після завантаження — перерахунок форми */
 const XLD={};
 function minLoad(g){if(!g||!g.fut||!PAIRS[g.pair])return;const ex=botEx(),s=sym(g.pair),k=ex+s,redo=()=>{if(CUR==='bd')pv()};
@@ -1307,7 +1368,7 @@ const lo=!!(r&&g.base<r.min-1e-9);fb.classList.toggle('inv',lo);fb.setAttribute(
 const w=$('#frw');if(w){w.hidden=!lo;w.textContent=lo?minText(r):''}}
 /* під полем «Сума на бота»: на які ордери ділиться сума (з урахуванням мартингейла), обсяг з плечем і ліміт угоди з профілю */
 function fbInfo(g){const fb=$('#fb');if(!fb)return;let el=$('#fbi');if(!el){el=document.createElement('p');el.id='fbi';el.className='mu';el.style.margin='-4px 0 8px';fb.closest('label').after(el)}
-const n=Math.max(1,Math.round(g.orders||1)),L=g.fut?(+g.lev||1):1,q=[];for(let k=0;k<n;k++)q.push(g.base*(+g.mult||1)**k);
+const n=Math.max(1,Math.round(g.orders||1)),L=g.fut?(+g.lev||1):1,q=[];for(let k=0;k<n;k++)q.push(g.base*volAt(g,k));
 if(!(g.base>0)||!q.every(isFinite)){el.textContent='';return}const T=q.reduce((a,v)=>a+v,0),N=T*L,lim=typeof RK!=='undefined'&&RK.l&&g.fut?RK.l.pos:0;
 const same=q.every(v=>Math.abs(v-q[0])<1e-9);
 el.textContent=`${n} орд. ${same?'по '+n2(q[0],2):'— '+q.map(v=>n2(v,2)).join(' · ')} USDT маржі${L>1?` · з плечем ${L}× позиція до ${n2(N,0)} USDT`:''}`+(lim?(N>lim+1e-9?` · ⚠ більше за ваш ліміт угоди ${n2(lim,0)} USDT — на сервері бот не відкриватиме угод`:` · ліміт угоди ${n2(lim,0)} USDT ✓`):'');
@@ -1384,7 +1445,7 @@ return g.fut?`Ф'ючерсних даних для пари немає${MD.ferr
    плече): драбина на біржі вже стоїть за старими рівнями. Вихід (TP, SL, трейлінг) і сигнали змінюються одразу.
    Зберігається лише змінене поверх наявних налаштувань бота; стара версія з часом зміни — у x.gh (для відтворення історії). */
 let EDIT=null;
-const ED_FIX=['fp','fdr','fmk','ftf','fe'],ED_GRID=['fb','fo','fs','fx','fm','flv'];
+const ED_FIX=['fp','fdr','fmk','ftf','fe'],ED_GRID=['fb','fo','fs','fx','fm','flv','fgs','fgv'];
 const edBusy=x=>!!(x.b.pos||x.b.pe);
 function edLock(on,x){const busy=on&&edBusy(x);
 for(const id of ED_FIX){const e=$('#'+id);if(e){e.disabled=on;e.title=on?'Не змінюється в наявного бота — для іншої пари чи напряму скористайтеся «Клонувати»':''}}
@@ -1419,6 +1480,32 @@ if(a==='g'){const el=t.closest('.bc').querySelector('.gr');el.hidden=!el.hidden;
 if(a==='r'){withData(dk(b.g),null,()=>{mk(b.g,b.ex);sbots();lst();go(VARIANT===2?'bots':'ov')});return}
 const gone=BT.splice(i,1)[0];sv('zbt',BT);bsl();if(CLOUD.u&&gone&&gone.rid)SB.from('backtests').delete().eq('id',gone.rid).then(r=>{if(r.error)cloudFail(r.error)})};
 
+/* ---------- конструктор: сітка вручну й умови докупівлі (як у Veles) ----------
+   Відступи — від попереднього ордера, у %; обсяги — пропорції ордерів (наприклад, % суми бота: 11 16 24 49).
+   Числа розділяються пробілом, «;» або комою з пробілом; дробові — з крапкою (або комою, якщо між числами є пробіл).
+   Умови докупівлі: для кожного ордера 2…N — список умов «індикатор · таймфрейм · < або > · значення»; усі мають виконатися. */
+function gridNums(t){t=String(t||'').trim();if(!t)return[];const P=/[;\s]/.test(t)?t.split(/[;\s]+/).map(x=>x.replace(/,$/,'').replace(',','.')):t.split(',');
+return P.filter(x=>x!=='').map(Number)}
+function gnTxt(a){return(a||[]).map(x=>String(+(+x).toFixed(4)).replace('.',',')).join('  ')}
+function gridHtml(){return'<label class="fw">Відступи вручну, % від попереднього ордера (порожньо — за кроком і множником)<input id="fgs" type="text" inputmode="decimal" placeholder="напр. 2  3  5"></label>'+
+'<label class="fw">Обсяги ордерів вручну, пропорції з першим ордером (порожньо — мартингейл)<input id="fgv" type="text" inputmode="decimal" placeholder="напр. 11  16  24  49"></label>'+
+'<div class="fw ocb"><b>Умови докупівлі</b><span class="mu"> — ордер з умовами виконується за закриттям свічки, коли ціна дійшла до рівня і всі умови виконані. Умови задаються для Long; для Short — дзеркально.</span><div id="foc"></div></div>'}
+function ocRow(k,c){const OCTF=[[0,'ТФ бота'],[1,'1 год'],[4,'4 год'],[12,'12 год'],[24,'1 день']];return`<div class="ocr" data-k="${k}"><select data-o="i">${Object.entries(OCI).map(([a,v])=>`<option value="${a}"${a===c.i?' selected':''}>${v[0]}</option>`).join('')}</select>`+
+`<select data-o="tf">${OCTF.map(([a,b])=>`<option value="${a}"${a==(c.tf||0)?' selected':''}>${b}</option>`).join('')}</select>`+
+`<select data-o="op"><option value="<"${c.op==='<'?' selected':''}>менше</option><option value=">"${c.op==='>'?' selected':''}>більше</option></select>`+
+`<input data-o="v" type="number" inputmode="decimal" step="any" value="${isFinite(c.v)?c.v:''}"><button type="button" class="ghost ocx" title="Прибрати умову">×</button></div>`}
+/* умови з форми: oc[k] — масив умов ордера k+1 (k ≥ 1), oc[0] порожній */
+function ocRead(){const o=[];$$('#foc .ocr').forEach(r=>{const k=+r.dataset.k,v=x=>r.querySelector(`[data-o="${x}"]`).value;(o[k]=o[k]||[]).push({i:v('i'),tf:+v('tf'),op:v('op'),v:v('v')===''?NaN:+v('v')})});
+for(let k=0;k<o.length;k++)if(!o[k])o[k]=[];return o.some(x=>x.length)?o:[]}
+function ocDraw(oc){const n=Math.max(1,Math.round(+$('#fo').value||1)),e=$('#foc');if(!e)return;let h='';
+for(let k=1;k<n;k++)h+=`<div class="ocg"><div class="ocn">Ордер ${k+1}</div>${(oc[k]||[]).map(c=>ocRow(k,c)).join('')}<button type="button" class="ghost oca" data-k="${k}">+ умова</button></div>`;
+const extra=oc.slice(n).some(c=>c&&c.length);e.innerHTML=(n>1?h:'<span class="mu">Лише один ордер — докупівель немає.</span>')+(extra?'<div class="mu">Умови для ордерів понад кількість ордерів буде прибрано.</div>':'');e.dataset.n=n}
+function gridFill(g){$('#fgs').value=gnTxt((g.gs||[]).map(x=>x*100));$('#fgv').value=gnTxt(g.gv);ocDraw(Array.isArray(g.oc)?g.oc:[])}
+$('#foc').addEventListener('click',e=>{const a=e.target.closest('.oca'),x=e.target.closest('.ocx');if(!a&&!x)return;e.preventDefault();const oc=ocRead();
+if(a){const k=+a.dataset.k;(oc[k]=oc[k]||[]).push({i:'rsi',tf:0,op:'<',v:30})}else{const r=x.closest('.ocr'),k=+r.dataset.k,j=[...r.parentNode.querySelectorAll('.ocr')].indexOf(r);oc[k].splice(j,1)}
+ocDraw(oc.slice(0,Math.max(1,Math.round(+$('#fo').value||1))));pv()});
+$('#fo').addEventListener('input',()=>{const n=Math.max(1,Math.round(+$('#fo').value||1));if(+$('#foc').dataset.n!==n)ocDraw(ocRead().slice(0,n))});
+ocDraw([]);
 /* ---------- Авто-майстер ---------- */
 const AWP=[[168,'1 тиждень'],[720,'1 місяць'],[4380,'6 місяців'],[8760,'1 рік'],[26208,'3 роки']];
 $('#awf').innerHTML=sel('awe','Біржа',[])+sel('awp','Пара',PK.map(k=>[k,k]),'BTC/USDT')+'<label>Депозит, USDT (0 = підібрати)<input id="awa" type="number" inputmode="decimal" step="any" value="1000"></label>'+sel('awr2','Період бектесту',AWP,8760)+sel('awt','Таймфрейм свічок',[[0,'Авто (1г, 4г, 12г, 1д, 1т)'],...TFS])+sel('awd','Напрямок',[[0,'Авто'],[1,'Long'],[-1,'Short'],[9,'Нейтральний']])+sel('awtr','Лише за денним трендом',[[1,'Так — менше угод, менше збитків'],[0,'Ні']])+sel('awm','Ринок',[[1,'Futures'],[0,'Spot']])+sel('awl','Плече',[[0,'Авто (1–3×)'],[1,'1×'],[2,'2×'],[3,'3×'],[5,'5×'],[10,'10×']]);
@@ -1967,6 +2054,7 @@ const HG=[
 ['sg:kc','Keltner Channel','Канал EMA(20) ± 2 × ATR(10): закриття під нижньою межею — Long, над верхньою — Short.','Keltner Channel схожий на Bollinger, але ширина каналу залежить від ATR (середнього діапазону свічки), а не від стандартного відхилення, тож він рівніший. Вихід ціни за межу каналу — сигнал на повернення до середини.'],
 ['sg:psar','Parabolic SAR','Точки під ціною — тренд угору (Long), над ціною — униз (Short).','Parabolic SAR (крок 0,02, максимум 0,2) підтягує точку за ціною й перевертається, коли ціна її перетинає. Сигнал — напрям поточного тренду.'],
 ['sg:hma','Hull MA','Швидка ковзна середня HMA(50): росте — Long, падає — Short.','Hull Moving Average реагує швидше за EMA і SMA з меншим запізненням. Сигнал — напрям нахилу лінії на останній закритій свічці.'],
+['sg:roc','ROC — розворот імпульсу','Rate of Change: зміна ціни за 9 свічок у %. Сигнал — коли ROC перетинає нуль.','Long — ROC перейшов з мінуса в плюс (падіння видихнулось, ціна пішла вгору), Short — навпаки. Добре працює як вихід за сигналом: закрити Long, коли імпульс розвернувся вниз.'],
 ['sg:pc','% зміни ціни','Падіння ≥ 3 % за 24 свічки — Long, зростання ≥ 3 % — Short.','Простий фільтр «купити просідання»: бот заходить у Long, якщо ціна за останні 24 свічки впала щонайменше на 3 % (Short — якщо виросла на 3 %).'],
 ['sg:mfi','Money Flow Index','RSI з урахуванням об\'єму: нижче 20 — Long, вище 80 — Short.','MFI (14) рахує перевагу покупців чи продавців за типовою ціною й об\'ємом. Перепроданість з великим об\'ємом продажів часто означає вичерпання продавців. Є у фільтрах Veles.'],
 ['sg:wr','Williams %R','Нижче −80 — Long, вище −20 — Short.','Williams %R (14): де закриття відносно максимуму й мінімуму за 14 свічок. Швидкий осцилятор перепроданості, добре поєднується з каналами (Keltner, Bollinger).'],
@@ -1999,6 +2087,8 @@ const HG=[
 ['fl','Stop-Loss, %','Максимальний збиток від середньої ціни — далі угода закривається.','SL 4 % — якщо ціна пішла проти вас на 4 % від середньої ціни, бот закриває угоду зі збитком. Стоп-лос захищає депозит від великих втрат і має бути ближче за ліквідацію при вашому плечі.'],
 ['fxs','Вихід за сигналом: індикатор','Закрити угоду, коли обраний індикатор дає протилежний сигнал.','Для Long вихід — коли індикатор дає сигнал Short (наприклад, RSI вище порога), для Short — навпаки. Перевірка на закритті свічки, закриття за ринком (комісія тейкера). TP, SL і трейлінг працюють як раніше; що настане першим, те й закриє угоду. «Немає» — вихід лише за TP / SL / трейлінгом.'],
 ['fxm','Вихід за сигналом: мін. прибуток, %','Сигнал виходу спрацьовує, лише коли угода в плюсі не менше ніж на стільки.','0 — виходити від беззбитку (за ціною вище середньої для Long). Додатне число вимагає більшого прибутку; від’ємне дозволяє вихід і зі збитком (наприклад, −100 — за будь-якого стану).'],
+['fgs','Відступи вручну','Свій відступ для кожної докупівлі — від ціни попереднього ордера, у %.','Приклад (як у Veles): 2  3  5 — ордер 2 на 2 % нижче входу, ордер 3 на 3 % нижче ордера 2, ордер 4 на 5 % нижче ордера 3, тобто до −9,7 % від входу. Скільки докупівель — стільки чисел. Порожньо — крок і множник кроку.'],
+['fgv','Обсяги вручну','Пропорції ордерів сітки: перший ордер — перше число.','Приклад: 11  16  24  49 — ордери 11 %, 16 %, 24 % і 49 % суми на бота. Чисел — скільки ордерів, включно з першим. Сума на бота ділиться саме в цих пропорціях. Порожньо — мартингейл (множник ордера).'],
 ['fbz','Закриття в беззбиток','Коли ціна повертається до беззбитку всієї угоди, бот закриває останні N ордерів, а решта йде до TP.','Приклад: 4 ордери, N = 3. Ціна просіла, виконались ордери 2–4, потім відскочила до середньої ціни входу — бот закриває ордери 2–4 у беззбиток (без збитку з урахуванням комісій), ордер 1 лишається й чекає TP. Закриті рівні знову стоять у сітці: якщо ціна знову просяде, бот докупить на тих самих рівнях, і цикл повториться. Так угода частіше розвантажується без збитку й рідше доходить до SL. На реальних цінах (20 пар, 2,7 року) це помітно зменшує просадку, але й трохи зменшує прибуток — функція для обережної торгівлі. 0 — вимкнено. Діє до першої часткової фіксації TP.'],
 ['fmd','Зупинити після N угод','Після стількох закритих угод бот більше не відкриває нових.','0 — без обмеження. Корисно, щоб бот зробив, наприклад, 10 угод і зупинився: відкрита угода доводиться до кінця, нова вже не відкривається.'],
 ['frv','Реінвест прибутку, %','Частка накопиченого прибутку, яка додається до розміру нових угод.','Наприклад, 50 %: якщо бот заробив 20 USDT, а сітка розрахована на 200 USDT маржі, наступні угоди будуть на 5 % більші. Після збитків розмір не падає нижче початкового. 0 — без реінвесту.'],
