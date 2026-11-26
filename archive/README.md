@@ -26,6 +26,7 @@
 | 2026-11-26 v24 | `a077dca` (PR #89, #90) | Авто-майстер «Лише за денним трендом»; індикатори з Veles і TradingView, фільтри ADX і ATR | `runner` v24 (Supabase 28), `ai-assistant` (оновлено), `exchange` v8 |
 | 2026-11-26 v25 | `27c7a8f` (PR #92) | Закриття в беззбиток: останні N ордерів при поверненні до беззбитку, повторне виставлення рівнів на Bybit | `runner` v25 (Supabase 29), `ai-assistant` (Supabase 8), `exchange` v8 |
 | 2026-11-26 v26 | `69a253a` (PR #94) | Сітка вручну (відступи й обсяги), умови докупівлі за індикаторами, сигнал ROC | `runner` v26 (Supabase 30), `ai-assistant` (Supabase 9), `exchange` v8 |
+| 2026-11-26 v27 | `602f2e7` (PR #96) | Таймфрейми 5 і 15 хв для ботів і умов докупівлі | `runner` v27 (Supabase 31), `ai-assistant` (Supabase 10), `exchange` v8 |
 
 Старі гілки ZORYA. Їхні файли скопійовано в `zorya/branches/`, а коміти GitHub зберігає в закритих PR, тож самі гілки можна видалити без втрати історії:
 
