@@ -44,7 +44,7 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
     if (ct <= lt) continue;
     lt = ct;
     if (!act(ct)) continue;
-    const n0 = b.tr.length, p0 = b.pos, o0 = p0 ? p0.n : 0, c0 = p0 ? p0.cost : 0, q0 = p0 ? p0.q : 0, h0 = p0 ? !!p0.t1 : false;
+    const n0 = b.tr.length, p0 = b.pos, o0 = p0 ? p0.n : 0, c0 = p0 ? p0.cost : 0, q0 = p0 ? p0.q : 0, h0 = p0 ? !!p0.t1 : false, z0 = p0 ? p0.nbz || 0 : 0;
     let en = e[i];
     if (en && !p0 && !entryOk) { en = false; skipped++; } // ліміт ризику: нову угоду не відкривати
     b.step(Math.floor(c.t / W), c, en, undefined, e.x && e.x[i]);
@@ -53,6 +53,8 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
     if (b.tr.length > n0) { const l = b.tr[b.tr.length - 1]; events.push({ kind: l.liq ? "liq" : l.sl ? "sl" : "close", pnl: l.pnl, price: l.f[l.f.length - 1].p, t: ct, ...(l.xs ? { xs: 1 } : {}) , ...nd }); }
     else if (!p0 && p) events.push({ kind: "open", notional: p.cost, price: c.c, t: ct, ...(p.bf > 1 ? { bf: p.bf } : {}) , ...nd }); // bf — множник реінвесту (драбина на біржі)
     else if (p0 && p && p.n > o0) events.push({ kind: "dca", notional: p.cost - c0, price: p.last, n: p.n, t: ct , ...nd });
+    // закриття в беззбиток (g.bz): модель закрила останні ордери — ту саму частку закрити й на біржі
+    else if (p0 && p && (p.nbz || 0) > z0 && q0 > 0) events.push({ kind: "bz", share: 1 - p.q / q0, price: p.f[p.f.length - 1].p, n: p.n, t: ct, ...nd });
     // часткова фіксація TP (g.s1): модель зменшила позицію — цю частку треба закрити й на біржі
     else if (p0 && p && !h0 && p.t1 && q0 > 0) events.push({ kind: "part", share: 1 - p.q / q0, price: p.f[p.f.length - 1].p, t: ct , ...nd });
   }
@@ -66,6 +68,7 @@ export function eventText(ev, g) {
   const f = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
   if (ev.kind === "open") return `Orbix (сервер): ${pair} — відкрито позицію по ${ev.price}`;
   if (ev.kind === "dca") return `Orbix (сервер): ${pair} — докупівля №${ev.n} по ${ev.price}`;
+  if (ev.kind === "bz") return `Orbix (сервер): ${pair} — закриття в беззбиток: закрито ${Math.round(ev.share * 100)} % позиції за ${ev.price}, лишилось ордерів: ${ev.n}`;
   if (ev.kind === "part") return `Orbix (сервер): ${pair} — часткова фіксація TP: закрито ${Math.round(ev.share * 100)} % позиції по ${ev.price}`;
   if (ev.kind === "close") return `Orbix (сервер): ${pair} — угоду закрито${ev.xs ? " за сигналом виходу по " + ev.price : ""}, PnL ${f(ev.pnl)} USDT`;
   return `Orbix (сервер): ${pair} — ${ev.kind === "liq" ? "ліквідація" : "Stop-Loss"}, PnL ${f(ev.pnl)} USDT`;

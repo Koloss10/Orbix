@@ -26,7 +26,7 @@ don:A=>A.map((x,i)=>{if(i<21)return 0;const h=hhv(A,i-1,20),l=llv(A,i-1,20);retu
 ta:A=>{const c=cl(A),R=memo(A,'r14',()=>rsi(c,14)),S=memo(A,'s',()=>stoch(A)),C=memo(A,'c20',()=>cci(A,20)),M=memo(A,'m',()=>macdH(c)),E1=memo(A,'e20',()=>ema(c,20)),E2=memo(A,'e50',()=>ema(c,50));
 return A.map((x,i)=>{const v=(R[i]<30?1:R[i]>70?-1:0)+(S[i]<20?1:S[i]>80?-1:0)+(C[i]<-100?1:C[i]>100?-1:0)+(M[i]>0?1:-1)+(x.c>E1[i]?1:-1)+(E1[i]>E2[i]?1:-1);return v>=3?1:v<=-3?-1:0})}};
 const SGN={rsi:'RSI',bb:'Bollinger',cci:'CCI',macd:'MACD',stoch:'Stochastic',ema:'EMA-тренд',pat:'Свічкові патерни',fib:'Fibonacci 0.618',lvl:'Рівні підтримки й опору',ta:'TA-рейтинг',st:'SuperTrend',kc:'Keltner Channel',psar:'Parabolic SAR',hma:'Hull MA',pc:'% зміни ціни',mfi:'Money Flow Index',wr:'Williams %R',srsi:'Stochastic RSI',crsi:'Connors RSI',wt:'WaveTrend (VuManChu)',sqz:'Squeeze Momentum',ichi:'Ichimoku',don:'Donchian (пробій)'};
-const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,adx:0,adxm:1,avl:0,avh:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
+const DEF={tf:1,d:1,fut:1,lev:1,sg:['rsi','bb'],k:2,rp:14,rm:35,bn:20,bk:2,cn:20,cv:100,base:100,orders:5,step:.015,smul:1,mult:1.3,tp:.01,s1:0,tp2:.02,be:0,trail:0,sl:.04,cd:0,maxd:0,rv:0,bz:0,adx:0,adxm:1,avl:0,avh:0,xs:'',xmin:0,fm:0,wk:0,wn:0,wb:.6,lq:0,lqt:.003,lqn:2,lqd:.03,ak:0,lk:0,htf:0,hte:50,live:0,fee:.001,slip:.0005};
 /* Фільтр китів (сплеск об'єму): свічка i — «кит», якщо її об'єм ≥ wk × середнього за попередні WHL свічок,
    оборот (об'єм × ціна) ≥ wn USDT і переважають покупці (Long) чи продавці (Short): частка taker-buy об'єму
    ≥ wb (Long) або ≤ 1 − wb (Short). Якщо біржа не дає taker-buy об'єму (Bybit, демо-дані), напрям — за кольором свічки.
@@ -122,7 +122,7 @@ eqv(r){const g=this.g,p=this.pos;if(!p)return this.cum;const v=p.q*r.c;return th
 fund(r){const p=this.pos,F=this.fr;if(!p||!F||!F.length||r.t==null)return;const W=tfMs(this.g.tf||1);let k=lbT(F,r.t);
 for(;k<F.length&&F[k].t<r.t+W;k++){const px=F[k].t-r.t<6e4?r.o:r.c,a=dOf(this.g,p)*F[k].r*p.q*px*(this.g.frx!=null?this.g.frx:1);p.real-=a;p.fd+=a}}
 step(i,r,en,h=i,xs=false){const g=this.g,p=this.pos,d=p?dOf(g,p):g.d||(en<0?-1:1),L=g.lev||1,fv=x=>d>0?r.h>=x:r.l<=x,ad=x=>d>0?r.l<=x:r.h>=x,adm=x=>d>0?(r.ml!=null?r.ml:r.l)<=x:(r.mh!=null?r.mh:r.h)>=x;
-if(!p){if(en&&i>=this.cd&&!(g.maxd>0&&this.nd>=g.maxd)){const bf=this.bf(),q0=this.qty(g.base*L*bf,r.c);if(!q0)return;const s0=q0*r.c;this.pos={q:q0,bf,cost:s0,n:1,last:r.c,first:r.c,peak:r.c,real:-this.ft*s0,fd:0,t1:0,f:[{t:r.t,p:r.c,k:'e'}],...(g.d?{}:{d})}}return}
+if(!p){if(en&&i>=this.cd&&!(g.maxd>0&&this.nd>=g.maxd)){const bf=this.bf(),q0=this.qty(g.base*L*bf,r.c);if(!q0)return;const s0=q0*r.c;this.pos={q:q0,bf,cost:s0,n:1,last:r.c,first:r.c,peak:r.c,real:-this.ft*s0,fd:0,t1:0,f:[{t:r.t,p:r.c,k:'e'}],...(g.bz>0?{lots:[q0]}:{}),...(g.d?{}:{d})}}return}
 this.fund(r);
 let avg,x=0,lq=0,slp,lqp,stop=0,filled=0,tk=0;
 /* активний трейлінг-стоп, якщо свічка відкрилась по прибутковий бік від нього: шлях до докупівлі чи SL, що лежать далі,
@@ -132,9 +132,15 @@ for(;;){avg=p.cost/p.q;slp=p.t1&&p.be?p.be:avg*(1-d*g.sl);lqp=L>1?avg*(1-d*Math.
 const lqF=lqp&&(d>0?lqp>slp:lqp<slp),lim=lqF?lqp:slp;
 const nx=!p.t1&&!p.dx&&p.n<g.orders?this.lp(p.last*(1-d*g.step*g.smul**(p.n-1)),d<0):0;
 if(tst&&!filled&&(d>0?tst>lim:tst<lim)&&!(nx&&(d>0?nx>=tst:nx<=tst))&&ad(tst))break; // вихід за трейлінгом нижче
-if(nx&&(d>0?nx>lim:nx<lim)&&ad(nx)){const qn=this.qty(g.base*L*(p.bf||1)*g.mult**p.n,nx);if(!qn){p.dx=1;continue}const s=qn*nx;p.q+=qn;p.cost+=s;p.real-=this.fmk*s;p.n++;p.last=nx;p.f.push({t:r.t,p:nx,k:'e'});filled=1;continue}
+if(nx&&(d>0?nx>lim:nx<lim)&&ad(nx)){const qn=this.qty(g.base*L*(p.bf||1)*g.mult**p.n,nx);if(!qn){p.dx=1;continue}const s=qn*nx;p.q+=qn;p.cost+=s;p.real-=this.fmk*s;p.n++;p.last=nx;p.f.push({t:r.t,p:nx,k:'e'});if(p.lots)p.lots.push(qn);filled=1;continue}
 const hitL=lqp&&adm(lqp),hitS=ad(slp);
 if(lqF?hitL:(!hitS&&hitL)){x=lqp;lq=1;stop=1}else if(hitS){x=slp*(1-d*(g.slip||0));stop=1;tk=1}break}
+/* закриття в беззбиток (g.bz — кількість останніх ордерів): коли виконано більше за bz ордерів і ціна повертається до
+   беззбитку всієї позиції (з урахуванням комісій), останні bz ордерів закриваються лімітним ордером; решта йде до TP.
+   Їхні рівні знову в сітці (p.last — ціна останнього ордера, що лишився): нова просадка — нові докупівлі на тих самих рівнях */
+if(!stop&&!filled&&g.bz>0&&!p.t1&&p.n>g.bz&&p.lots&&p.lots.length===p.n){const qs=p.lots.slice(-g.bz).reduce((a,b)=>a+b,0);
+if(qs<p.q){const px=this.lp((d*p.cost-p.real)/(d*p.q-this.fmk*qs),d>0);if(fv(px)){const v=qs*px,c=avg*qs;p.real+=d*(v-c)-this.fmk*v;p.q-=qs;p.cost-=c;p.n-=g.bz;p.lots=p.lots.slice(0,-g.bz);
+const fe=p.f.filter(e=>e.k==='e');p.last=fe[p.n-1]?fe[p.n-1].p:p.last;p.f.push({t:r.t,p:px,k:'b'});p.nbz=(p.nbz||0)+1;return}}}
 if(!stop&&!filled){const t=this.lp(p.t1?p.a1*(1+d*g.tp2):avg*(1+d*g.tp),d>0);
 if(g.s1>0&&!p.t1){if(fv(t)){const sh=this.F?rnd(p.q*g.s1,this.F.step,'floor')/p.q:g.s1;if(sh<=0||sh>=1){x=t}else{const v=p.q*sh*t,c=p.cost*sh;p.real+=d*(v-c)-this.fmk*v;p.q*=1-sh;p.cost*=1-sh;p.t1=1;p.f.push({t:r.t,p:t,k:'x'});p.a1=avg;p.be=g.be==1?avg:g.be==2?t:0}}}
 /* трейлінг: активується при досягненні TP і далі діє на кожній свічці; стоп рахується від піку

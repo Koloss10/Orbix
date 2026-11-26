@@ -6,7 +6,7 @@ const VWS=[['ladder','Драбина'],['board','Табло'],['chart','Граф
 const vwOk=v=>VWS.some(([k])=>k===v)?v:'ladder';
 function dealPlan(g,p,px){const d=dOf(g,p)<0?-1:1;g=gOf(g,p);const L=g.lev||1,ft=g.ftk!=null?g.ftk:g.fee||0,bf=p.bf||1,avg=p.cost/p.q;
 const pnl0=p.real+d*(p.q*px-p.cost)-ft*p.q*px,pnl=Math.abs(pnl0)<.005?0:pnl0,margin=p.cost/L;
-const done=(p.f||[]).filter(e=>e.k==='e').map((e,i)=>({k:i+1,p:e.p}));
+const done=(p.f||[]).filter(e=>e.k==='e').slice(0,p.n).map((e,i)=>({k:i+1,p:e.p})); // після закриття в беззбиток — лише ордери, що лишились
 const lim=a=>{const s=a*(1-d*g.sl),q=L>1?a*(1-d*Math.max(1/L-.005,0)):0;return q&&(d>0?q>s:q<s)?q:s};
 const rest=[];let q=p.q,cost=p.cost,prev=p.last||avg;
 if(!p.t1&&!p.dx)for(let k=p.n;k<(g.orders||1);k++){const pr=prev*(1-d*g.step*(g.smul||1)**(k-1)),n=g.base*L*bf*(g.mult||1)**k;
