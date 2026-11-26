@@ -2,7 +2,7 @@
 let bots=[],uid=0;
 /* Paper-бот торгує лише з моменту запуску (t0). Стан не вигадується з минулого: після перезавантаження
    він детерміновано відтворюється прогоном закритих свічок від t0 з урахуванням пауз (sp — інтервали роботи). */
-const clk=p=>{const H=DT[p];return Math.max(Date.now(),H&&H.length?H[H.length-1].t+36e5:0)};
+const clk=p=>{const H=DT[p];return Math.max(Date.now(),H&&H.length?H[H.length-1].t+stepK(p):0)};
 const actAt=(x,t)=>(x.sp||[]).some(([a,b])=>t>a&&(b==null||t<=b));
 function advance(x,live){if(x.srv&&(live||x.srvSt))return;const g=x.g,tf=g.tf||1,H=D[dk(g)];if(!H||!H.length)return;const A=aggC(H,tf),W=tfMs(tf);if(!A.length)return;
 if(A[0].t>x.t0)x.trunc=1;let i=A.length;while(i>0&&A[i-1].t+W>x.lt)i--;if(i>=A.length)return;const V=[...(x.gh||[]),{u:Infinity,g}],EC=[];let vi=-1,e=null;
@@ -80,11 +80,11 @@ function chart(v,H=200){if(v.length<2)return'<p class="mu">Недостатнь�
 return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Крива капіталу" preserveAspectRatio="none" style="height:${H>150?'auto':H+'px'}"><path d="M0 ${Y(0)}H${W}" stroke="var(--ln)"/><path d="M${P.join('L')}V${H}H0Z" fill="var(--ac)" fill-opacity=".12"/><path d="M${P.join('L')}" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`}
 function stepBots(k){bots.filter(x=>dk(x.g)===k&&x.on).forEach(x=>advance(x,1))}
 /* демо: нова синтетична свічка кожні 1,5 с */
-function tick(){for(const k of Object.keys(DT)){const cs=DT[k];const c=nextC(PAIRS[pairOf(k)],Math.random);c.t=cs[cs.length-1].t+H1;cs.push(c);stepBots(k)}upd()}
+function tick(){for(const k of Object.keys(DT)){const cs=DT[k];const c=nextC(PAIRS[pairOf(k)],Math.random);c.t=cs[cs.length-1].t+stepK(k);cs.push(c);stepBots(k)}upd()}
 /* live: опитування біржі, нові закриті свічки й поточна ціна */
 let polling=0;async function poll(){if(polling||MD.mode!=='live'||document.hidden)return;polling=1;try{const W=new Set(bots.filter(x=>x.on).map(x=>dk(x.g)));$$('.chv').forEach(c=>{if(c.offsetParent&&c._d){const v=c===$('#gv')?$('#gv')._k:null;if(v)W.add(v)}});
 $$('.gr').forEach(g=>{if(!g.hidden){const b=g.closest('[data-bot]');if(b){const x=bots.find(y=>y.id===+b.dataset.bot);if(x)W.add(dk(x.g))}}});let ch=0;
-for(const p of W){if(!DT[p])continue;try{const a=await kl(p,{lim:3}),H=DT[p],now=Date.now();for(const c of a){if(c.t+H1<=now){if(c.t>H[H.length-1].t){if(isF(p)&&c.t%(8*H1)===0)try{await frLoad(pairOf(p))}catch(e){}H.push(c);stepBots(p);ch=1}}else{MD.live[p]=c;ch=1}}}catch(e){}}
+for(const p of W){if(!DT[p])continue;try{const a=await kl(p,{lim:3}),H=DT[p],now=Date.now();for(const c of a){if(c.t+stepK(p)<=now){if(c.t>H[H.length-1].t){if(isF(p)&&c.t%(8*H1)===0)try{await frLoad(pairOf(p))}catch(e){}H.push(c);stepBots(p);ch=1}}else{MD.live[p]=c;ch=1}}}catch(e){}}
 if(ch)upd();const mc=$('#mkc');if(CUR==='mk'&&mc._poll)await mc._poll().catch(()=>{})}finally{polling=0}}
 function botClick(e){const t=e.target.closest('button');if(!t||!t.dataset.a)return;const x=bots.find(b=>b.id===+t.dataset.id),a=t.dataset.a;if(!x)return;
 if(a==='m'){const m=t.closest('.bc').querySelector('.bmo');if(m){m.hidden=!m.hidden;t.setAttribute('aria-expanded',!m.hidden)}return}

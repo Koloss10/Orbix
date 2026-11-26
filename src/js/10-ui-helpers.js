@@ -9,7 +9,7 @@ const hsrc=()=>MD.mode==='live'?'реальній історії '+MD.src:'де�
 const now=()=>new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
 const ld=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const pf=s=>s.n?(isFinite(s.pf)?s.pf.toFixed(2):'∞'):'—';
-const TFS=[[1,'1 год'],[4,'4 год'],[12,'12 год'],[24,'1 день'],[168,'1 тиждень']],PER=[[168,'1 тиждень'],[720,'1 місяць'],[4380,'6 місяців'],[8760,'1 рік'],[26208,'3 роки']];
+const TFS=[[1/12,'5 хв'],[.25,'15 хв'],[1,'1 год'],[4,'4 год'],[12,'12 год'],[24,'1 день'],[168,'1 тиждень']],PER=[[168,'1 тиждень'],[720,'1 місяць'],[4380,'6 місяців'],[8760,'1 рік'],[26208,'3 роки']];
 const tfl=k=>(TFS.find(x=>x[0]===k)||[0,k+' год'])[1],perl=k=>(PER.find(x=>x[0]===k)||[0,k+' год'])[1];
 const K=(l,v,k='')=>`<div class="card"><div class="mu">${l}</div><div class="num ${k}">${v}</div></div>`;
 const KV=(a,b)=>`<div class="tr"><span>${a}</span><span class="mono">${b}</span></div>`;

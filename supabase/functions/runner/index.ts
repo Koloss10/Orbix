@@ -14,7 +14,7 @@ import { applyCommands, CMD_TTL } from "./commands.js";
 import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
-const BYIV: Record<string, string> = { "1h": "60", "4h": "240", "12h": "720", "1d": "D", "1w": "W" };
+const BYIV: Record<string, string> = { "5m": "5", "15m": "15", "1h": "60", "4h": "240", "12h": "720", "1d": "D", "1w": "W" };
 type C = { t: number; o: number; h: number; l: number; c: number; v: number; bv?: number; nt?: number; ml?: number; mh?: number };
 
 async function getJson(u: string) { const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status} ${u.split("?")[0]}`); return r.json(); }
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     try {
       const g: any = botConfig(bot.config), cfg = bot.config || {};
       if (!/^[A-Z0-9]{2,20}\/USDT$/.test(g.pair || "")) continue;
-      const iv = (INTERVAL as Record<number, string>)[g.tf || 1];
+      const iv = (INTERVAL as Record<number, string>)[+g.tf > 0 && +g.tf < 1 ? Math.round(+g.tf * 60) / 60 : g.tf || 1];
       if (!iv) continue;
       // фільтр тренду старшого таймфрейму й умови докупівлі потребують довшої історії: до 1000 свічок (ліміт Bybit)
       const lim = Math.min(1000, Math.max(400, needOf(g) + 30));
