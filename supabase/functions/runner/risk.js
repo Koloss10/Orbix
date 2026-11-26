@@ -11,7 +11,7 @@
 //   max_total — сума повних драбин усіх ботів користувача, що зараз мають позицію, разом із новою угодою;
 //   day_loss  — реалізований збиток за поточну добу UTC по всіх ботах користувача з біржею
 //               (закриття за даними біржі state.xr.l, а для ботів без них — угоди моделі state.b.tr).
-import { tfMs, reinvestFactor } from "./engine.js";
+import { tfMs, reinvestFactor, ladder } from "./engine.js";
 
 const DAY = 864e5;
 const num = (x) => (Number.isFinite(+x) && +x > 0 ? +x : 0);
@@ -27,10 +27,9 @@ export function limitsOf(row) {
 
 /* повна драбина бота: вхід і всі докупівлі, з плечем (так само, як lv у рушії без правил біржі) */
 export function ladderNotional(g) {
-  const L = +g.lev || 1, m = +g.mult || 1, n = Math.max(1, Math.round(+g.orders || 1));
-  let u = 0;
-  for (let k = 0; k < n; k++) u += m ** k;
-  return (+g.base || 0) * L * u;
+  const L = +g.lev || 1, n = Math.max(1, Math.round(+g.orders || 1));
+  // ladder — сума обсягів сітки в одиницях першого ордера (мартингейл або сітка вручну, як у рушії)
+  return (+g.base || 0) * L * ladder({ ...g, orders: n, mult: +g.mult || 1 });
 }
 
 /* експозиція бота, що вже має позицію: повна драбина з урахуванням реінвесту (pos.bf), але не менше за фактичну вартість

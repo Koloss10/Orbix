@@ -1,6 +1,6 @@
 // Ядро серверного запуску бота: чиста функція без мережі й бази (тестується в Node: tests/runner-core.test.mjs).
 // Відновлює стан бота, проганяє закриті свічки після останньої обробленої (lt) і повертає новий стан і події.
-import { Bot, DEF, entry, normG, tfMs } from "./engine.js";
+import { Bot, DEF, entry, normG, ocAt, tfMs } from "./engine.js";
 
 /* інтервали бірж для таймфреймів бота (години → рядок API) */
 export const INTERVAL = { 1: "1h", 4: "4h", 12: "12h", 24: "1d", 168: "1w" };
@@ -47,7 +47,7 @@ export function processBot({ g, state, candles, funding = null, filters = null, 
     const n0 = b.tr.length, p0 = b.pos, o0 = p0 ? p0.n : 0, c0 = p0 ? p0.cost : 0, q0 = p0 ? p0.q : 0, h0 = p0 ? !!p0.t1 : false, z0 = p0 ? p0.nbz || 0 : 0;
     let en = e[i];
     if (en && !p0 && !entryOk) { en = false; skipped++; } // ліміт ризику: нову угоду не відкривати
-    b.step(Math.floor(c.t / W), c, en, undefined, e.x && e.x[i]);
+    b.step(Math.floor(c.t / W), c, en, undefined, e.x && e.x[i], ocAt(e, i));
     const v = b.eqv(c); pk = Math.max(pk, v); dd = Math.min(dd, v - pk);
     const p = b.pos, nd = g.d ? {} : { d: (p || p0)?.d || 1 }; // нейтральний бот: напрям угоди в кожній події
     if (b.tr.length > n0) { const l = b.tr[b.tr.length - 1]; events.push({ kind: l.liq ? "liq" : l.sl ? "sl" : "close", pnl: l.pnl, price: l.f[l.f.length - 1].p, t: ct, ...(l.xs ? { xs: 1 } : {}) , ...nd }); }

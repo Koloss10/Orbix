@@ -9,7 +9,7 @@ import { botConfig, INTERVAL, processBot } from "./core.js";
 import { binance, bybit } from "./exchanges.ts";
 import { handleBot, owners, park } from "./mirror.js";
 import { addCap, limitsOf, riskBlock } from "./risk.js";
-import { htfNeed, tfMs } from "./engine.js";
+import { needOf, tfMs } from "./engine.js";
 import { applyCommands, CMD_TTL } from "./commands.js";
 import { cardCaption, cardPrefs, cardSpec, entryReasons, themeFor, wantCard, wantMsg } from "./signal.js";
 
@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
       if (!/^[A-Z0-9]{2,20}\/USDT$/.test(g.pair || "")) continue;
       const iv = (INTERVAL as Record<number, string>)[g.tf || 1];
       if (!iv) continue;
-      // фільтр тренду старшого таймфрейму потребує довшої історії: до 1000 свічок (ліміт Bybit)
-      const lim = Math.min(1000, Math.max(400, htfNeed(g) + 30));
+      // фільтр тренду старшого таймфрейму й умови докупівлі потребують довшої історії: до 1000 свічок (ліміт Bybit)
+      const lim = Math.min(1000, Math.max(400, needOf(g) + 30));
       const symbol = g.pair.replace("/", ""), mk = `${symbol}|${iv}|${g.fut ? 1 : 0}|${lim}`;
       if (!mcache.has(mk)) mcache.set(mk, market(symbol, iv, !!g.fut, lim));
       const m = await mcache.get(mk);

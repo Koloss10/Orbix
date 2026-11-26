@@ -1,12 +1,13 @@
 // Orbix AI, етап 2 (AI Bot Monitor): детерміновані правила пошуку проблем ботів.
 // Критичні висновки формує цей код, а не модель: вона лише пояснює знайдене й радить.
 import { ladderNotional, riskBlock } from "./risk.js";
+import { ladder, stepAt } from "./engine.js";
 
 const SEV = { high: 3, medium: 2, low: 1 };
 const r = (x, d = 2) => (Number.isFinite(+x) ? Math.round(+x * 10 ** d) / 10 ** d : null);
-const ladderSum = (g) => { const n = Math.max(1, Math.round(+g.orders || 1)), m = +g.mult || 1; let u = 0; for (let k = 0; k < n; k++) u += m ** k; return u; };
+const ladderSum = (g) => ladder({ ...g, orders: Math.max(1, Math.round(+g.orders || 1)), mult: +g.mult || 1 });
 /* наскільки ціна має піти проти позиції, щоб виставились усі докупівлі (частка) */
-export function gridDepth(g) { const n = Math.max(1, Math.round(+g.orders || 1)), s = +g.step || 0, k = +g.smul || 1; let d = 0; for (let i = 1; i < n; i++) d += s * k ** (i - 1); return d; }
+export function gridDepth(g) { const n = Math.max(1, Math.round(+g.orders || 1)), h = { ...g, step: +g.step || 0, smul: +g.smul || 1 }; let d = 0; for (let i = 1; i < n; i++) d += stepAt(h, i); return d; }
 /* приблизна відстань до ліквідації від середньої ціни (частка), як у підказці конструктора */
 export const liqDist = (lev) => (lev > 1 ? 1 / lev - 0.005 : Infinity);
 

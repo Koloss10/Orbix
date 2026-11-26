@@ -10,7 +10,7 @@
 //   * розрахунки ризику — та сама логіка, що й у runner (risk.js), модель їх не рахує сама.
 import { DEF_LIMITS, dayStart, ladderNotional, limitsOf, realizedSince, riskBlock } from "./risk.js";
 import { searchDocs } from "./docs.js";
-import { DEF, normG } from "./engine.js";
+import { DEF, normG, ladder } from "./engine.js";
 import { marketSnapshot, PAIR_RE } from "./market.js";
 import { findIssues } from "./monitor.js";
 
@@ -45,7 +45,7 @@ export const STAGE2_DEFS = [
 ];
 
 /* ---------- що саме бачить модель ---------- */
-const ladderSum = (g) => { const n = Math.max(1, Math.round(+g.orders || 1)), m = +g.mult || 1; let u = 0; for (let k = 0; k < n; k++) u += m ** k; return u; };
+const ladderSum = (g) => ladder({ ...g, orders: Math.max(1, Math.round(+g.orders || 1)), mult: +g.mult || 1 });
 const cfgOf = (b) => { const c = b.config && typeof b.config === "object" ? b.config : {}; const g = {}; for (const [k, v] of Object.entries(c)) if (!k.startsWith("_")) g[k] = v;
   /* так само, як runner (botConfig): значення за замовчуванням і нормалізація — інакше драбина й ризик розійдуться */
   let n; try { n = normG({ ...DEF, ...g }); } catch { n = { ...DEF, ...g }; }

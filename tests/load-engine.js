@@ -11,7 +11,7 @@ function loadEngine() {
 ;({mfi,willr,stochRsi,crsi,waveTrend,squeeze,ichimoku,adx,Bot,run,summ,ladder,lv,entry,normG,rnd,wfo,wfPlan,wfFold,wfSum,searchWin,lbT,SIG,agg,aggC,ema,rsi,bbands,cci,stoch,macdH,auto,evalC,stress,DEF,PAIRS,DT,MD,STR,
   atr,wma,hma,supertrend,psar,
   bt:typeof bt==='function'?bt:null,aggT:typeof aggT==='function'?aggT:null,closedTf:typeof closedTf==='function'?closedTf:null,
-  replay:typeof replay==='function'?replay:null,whale:typeof whale==='function'?whale:null,swings:typeof swings==='function'?swings:null,liqZones:typeof liqZones==='function'?liqZones:null,liq:typeof liq==='function'?liq:null,act:typeof act==='function'?act:null,casc:typeof casc==='function'?casc:null,htf:typeof htf==='function'?htf:null,htfNeed:typeof htfNeed==='function'?htfNeed:null,qualityA,qMarket})`;
+  replay:typeof replay==='function'?replay:null,whale:typeof whale==='function'?whale:null,swings:typeof swings==='function'?swings:null,liqZones:typeof liqZones==='function'?liqZones:null,liq:typeof liq==='function'?liq:null,act:typeof act==='function'?act:null,casc:typeof casc==='function'?casc:null,htf:typeof htf==='function'?htf:null,htfNeed:typeof htfNeed==='function'?htfNeed:null,ocAt,ocArr,ocTf,ocNeed,ocOn,stepAt,volAt,OCI,qualityA,qMarket})`;
   const ctx = vm.createContext({ console, Math, Date, JSON, Array, Object, Number, String, Set, Map, Promise, Proxy,
     isFinite, Infinity, NaN, setTimeout, clearTimeout, AbortController, indexedDB: undefined, fetch: undefined });
   return vm.runInContext(code, ctx, { filename: 'orbix-engine.js' });
