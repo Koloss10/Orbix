@@ -12,7 +12,7 @@ function nextC(P,R){const o=P.c;if(R()<1/400)P.m=gs(R)*.0004;if(R()<1/3000)P.a*=
 let PK=Object.keys(PAIRS);
 /* ---------- ринкові дані: реальні свічки з бірж, демо як запасний варіант ---------- */
 const H1=36e5,SYN={};
-function synth(k){if(SYN[k])return SYN[k];const P=PAIRS[pairOf(k)],R=rng(P.s);P.c=P.a=P.p;const a=Array.from({length:N},()=>nextC(P,R)),b=Math.floor(Date.now()/H1)*H1-N*H1;a.forEach((c,i)=>c.t=b+i*H1);return SYN[k]=a}
+function synth(k){if(SYN[k])return SYN[k];const P=PAIRS[pairOf(k)],R=rng(P.s+(isM(k)?7:0)),S=stepK(k);P.c=P.a=P.p;const a=Array.from({length:N},()=>nextC(P,R)),b=Math.floor(Date.now()/S)*S-N*S;a.forEach((c,i)=>c.t=b+i*S);return SYN[k]=a}
 const DT={},MD={xflt:{},flt:{},flterr:'',mode:'init',src:'',base:'',tk:{},live:{},load:{},err:'',fut:0,fsrc:'',fbase:'',fk:'',ftk:{},fset:null,fr:{},ferr:''};
 const D=new Proxy(DT,{get(t,k){if(typeof k!=='string'||!PAIRS[pairOf(k)])return t[k];if(t[k])return t[k];if(MD.mode==='demo')return t[k]=synth(k);need(k).then(()=>onData(k)).catch(()=>{});return synth(k)}});
 const ready=p=>MD.mode==='demo'||!!DT[p];
@@ -23,20 +23,22 @@ const FSRCS=[{n:'Binance Futures',b:'https://fapi.binance.com',k:'bn'},{n:'Bybit
 async function jget(u,ms=15000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
 const sym=p=>p.replace('/','');
 /* ключ даних: 'BTC/USDT' — спот, 'BTC/USDT@F' — ф'ючерс (якщо ф'ючерсні дані доступні для пари) */
-const FK='@F',isF=k=>typeof k==='string'&&k.endsWith(FK),pairOf=k=>isF(k)?k.slice(0,-FK.length):k;
-const dk=g=>g&&g.fut&&MD.fut&&MD.fset&&MD.fset.has(g.pair)?g.pair+FK:g&&g.pair;
+/* хвилинні дані (таймфрейми 5 і 15 хв): ключ із суфіксом '~m5' — свічки 5 хв, з них збираються 15 хв */
+const FK='@F',MK='~m5',isM=k=>typeof k==='string'&&k.endsWith(MK),isF=k=>typeof k==='string'&&k.replace(MK,'').endsWith(FK),pairOf=k=>String(k).replace(MK,'').replace(FK,'');
+const stepK=k=>isM(k)?3e5:H1,depthK=k=>isM(k)?26000:DEPTH;
+const dk=g=>{if(!g)return g;const b=g.fut&&MD.fut&&MD.fset&&MD.fset.has(g.pair)?g.pair+FK:g.pair;return(+g.tf||1)<1?b+MK:b};
 const mkLbl=k=>isF(k)?'ф\'ючерси '+MD.fsrc:'спот '+(MD.src||'');
 const withMark=(c,m)=>{if(m){c.ml=+m[3];c.mh=+m[2]}return c};
-/* свічки 1г у порядку зростання; lim до 1000; end — час відкриття останньої потрібної свічки */
-async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),bc=r=>{const c={t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]};if(r.length>9&&isFinite(+r[9]))c.bv=+r[9];if(r.length>9&&isFinite(+r[8]))c.nt=+r[8];return c};
-if(isF(k)){if(MD.fk==='by'){const q=`category=linear&symbol=${s}&interval=60&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`;
+/* свічки 1г (або 5 хв для ключа '~m5') у порядку зростання; lim до 1000; end — час відкриття останньої потрібної свічки */
+async function kl(k,{end,start,lim=1000}={}){const s=sym(pairOf(k)),by=isM(k)?'5':'60',bn=isM(k)?'5m':'1h',bc=r=>{const c={t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],v:+r[5]};if(r.length>9&&isFinite(+r[9]))c.bv=+r[9];if(r.length>9&&isFinite(+r[8]))c.nt=+r[8];return c};
+if(isF(k)){if(MD.fk==='by'){const q=`category=linear&symbol=${s}&interval=${by}&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`;
 const[j,m]=await Promise.all([jget(`${MD.fbase}/v5/market/kline?${q}`),jget(`${MD.fbase}/v5/market/mark-price-kline?${q}`).catch(()=>null)]);if(j.retCode)throw new Error(j.retMsg||'Bybit');
 const mm=new Map((m&&m.result&&m.result.list||[]).map(r=>[+r[0],r]));return(j.result.list||[]).map(r=>withMark(bc(r),mm.get(+r[0]))).reverse()}
-const q=`symbol=${s}&interval=1h&limit=${lim}${end?'&endTime='+end:''}${start?'&startTime='+start:''}`;
+const q=`symbol=${s}&interval=${bn}&limit=${lim}${end?'&endTime='+end:''}${start?'&startTime='+start:''}`;
 const[j,m]=await Promise.all([jget(`${MD.fbase}/fapi/v1/klines?${q}`),jget(`${MD.fbase}/fapi/v1/markPriceKlines?${q}`).catch(()=>null)]);
 const mm=new Map((m||[]).map(r=>[+r[0],r]));return j.map(r=>withMark(bc(r),mm.get(+r[0])))}
-if(MD.k==='by'){const j=await jget(`${MD.base}/v5/market/kline?category=spot&symbol=${s}&interval=60&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`);if(j.retCode)throw new Error(j.retMsg||'Bybit');return(j.result.list||[]).map(bc).reverse()}
-const j=await jget(`${MD.base}/api/v3/klines?symbol=${s}&interval=1h&limit=${lim}${end?'&endTime='+end:''}${start?'&startTime='+start:''}`);return j.map(bc)}
+if(MD.k==='by'){const j=await jget(`${MD.base}/v5/market/kline?category=spot&symbol=${s}&interval=${by}&limit=${lim}${end?'&end='+end:''}${start?'&start='+start:''}`);if(j.retCode)throw new Error(j.retMsg||'Bybit');return(j.result.list||[]).map(bc).reverse()}
+const j=await jget(`${MD.base}/api/v3/klines?symbol=${s}&interval=${bn}&limit=${lim}${end?'&endTime='+end:''}${start?'&startTime='+start:''}`);return j.map(bc)}
 /* історія funding rate пари (події кожні 8 год) */
 const frOf=p=>MD.fr&&MD.fr[p]||null;
 async function frLoad(p){if(!MD.fut)return;const key='fr:'+MD.fk+':'+p,s=sym(p),now=Date.now();let F=MD.fr[p]||(await IDB.get(key))||[];
@@ -50,21 +52,21 @@ set:async(k,v)=>{try{const d=await open();d.transaction('k','readwrite').objectS
 const pack1=a=>({t:a.map(c=>c.t),o:a.map(c=>c.o),h:a.map(c=>c.h),l:a.map(c=>c.l),c:a.map(c=>c.c),v:a.map(c=>c.v),ml:a.map(c=>c.ml),mh:a.map(c=>c.mh),bv:a.map(c=>c.bv),nt:a.map(c=>c.nt)});
 const unpack1=s=>s&&s.t?s.t.map((t,i)=>{const c={t,o:s.o[i],h:s.h[i],l:s.l[i],c:s.c[i],v:s.v[i]};if(s.ml&&s.ml[i]!=null){c.ml=s.ml[i];c.mh=s.mh[i]}if(s.bv&&s.bv[i]!=null)c.bv=s.bv[i];if(s.nt&&s.nt[i]!=null)c.nt=s.nt[i];return c}):[];
 /* розділяє закриті свічки й поточну (незакриту) */
-function split(p,a){const now=Date.now();if(a.length&&a[a.length-1].t+H1>now)MD.live[p]=a.pop();return a}
-async function load1(p,hours){const key=(isF(p)?'f'+MD.fk:MD.k)+':'+p;let a=DT[p]?DT[p].slice():unpack1(await IDB.get(key));
-if(a.length){for(let g=0;g<40;g++){const b=split(p,await kl(p,{start:a[a.length-1].t+H1}));const nw=b.filter(c=>c.t>a[a.length-1].t);a.push(...nw);if(b.length<999||!nw.length)break}}
+function split(p,a){const now=Date.now();if(a.length&&a[a.length-1].t+stepK(p)>now)MD.live[p]=a.pop();return a}
+async function load1(p,hours){const key=(isF(p)?'f'+MD.fk:MD.k)+':'+p,S=stepK(p);let a=DT[p]?DT[p].slice():unpack1(await IDB.get(key));
+if(a.length){for(let g=0;g<40;g++){const b=split(p,await kl(p,{start:a[a.length-1].t+S}));const nw=b.filter(c=>c.t>a[a.length-1].t);a.push(...nw);if(b.length<999||!nw.length)break}}
 else a=split(p,await kl(p));
-for(let g=0;g<40&&a.length&&a.length<hours;g++){const b=(await kl(p,{end:a[0].t-H1})).filter(c=>c.t<a[0].t);if(!b.length)break;a=b.concat(a);if(b.length<999)break}
+for(let g=0;g<40&&a.length&&a.length<hours;g++){const b=(await kl(p,{end:a[0].t-S})).filter(c=>c.t<a[0].t);if(!b.length)break;a=b.concat(a);if(b.length<999)break}
 if(a.length<60)throw new Error('замало історії для '+p);
 if(isF(p))try{await frLoad(pairOf(p))}catch(e){}
 DT[p]=a;IDB.set(key,pack1(a.length>30000?a.slice(-30000):a));return a}
-function need(p,hours=DEPTH){if(MD.mode==='init')return MD.ip.then(()=>need(p,hours));if(MD.mode!=='live')return Promise.resolve();if(!PAIRS[pairOf(p)])return Promise.reject(new Error('невідома пара '+p));
+function need(p,hours=depthK(p)){if(MD.mode==='init')return MD.ip.then(()=>need(p,hours));if(MD.mode!=='live')return Promise.resolve();if(!PAIRS[pairOf(p)])return Promise.reject(new Error('невідома пара '+p));
 const h=DT[p];if(h&&(h.length>=hours||h._full))return Promise.resolve();const q=MD.load[p];if(q&&q.h>=hours)return q;
 const pr=(q||Promise.resolve()).catch(()=>{}).then(()=>load1(p,hours)).then(a=>{if(a.length<hours)a._full=1}).finally(()=>{if(MD.load[p]===pr)delete MD.load[p]});pr.h=hours;return MD.load[p]=pr}
 const needAll=async(ps,hours)=>{for(const p of ps)await need(p,hours)};
 /* скільки годин історії потрібно, щоб відтворити бота від запуску (з запасом на індикатори) */
-const hrsFor=(t0,tf)=>Math.min(30000,Math.max(DEPTH,Math.ceil((Date.now()-(+t0||Date.now()))/36e5)+300*(tf||1)));
-function withData(p,el,fn,hours=DEPTH){const h=DT[p];if(MD.mode==='demo'||(h&&(h.length>=hours||h._full)))return fn();
+const hrsFor=(t0,tf)=>{const S=(tf||1)<1?3e5:36e5,b=Math.max(1,Math.round((tf||1)*36e5/S));return Math.min(30000,Math.max(S<36e5?26000:DEPTH,Math.ceil((Date.now()-(+t0||Date.now()))/S)+300*b))};
+function withData(p,el,fn,hours=depthK(p)){const h=DT[p];if(MD.mode==='demo'||(h&&(h.length>=hours||h._full)))return fn();
 if(el)el.innerHTML=`<p class="mu">Завантажую історію ${esc(pairOf(p))} (${mkLbl(p)})…</p>`;need(p,hours).then(fn).catch(e=>{if(el)el.innerHTML=`<p class="dn">Не вдалося завантажити дані ${esc(pairOf(p))}: ${esc(e.message)}</p>`})}
 const tkSpot=async b=>{if(MD.k==='by'){const j=await jget(b+'/v5/market/tickers?category=spot',10000);if(j.retCode)throw new Error(j.retMsg);return j.result.list.map(r=>[r.symbol,+r.lastPrice,+r.prevPrice24h,+r.turnover24h,+r.highPrice24h,+r.lowPrice24h])}
 const j=await jget(b+'/api/v3/ticker/24hr?type=MINI',10000);return j.map(r=>[r.symbol,+r.lastPrice,+r.openPrice,+r.quoteVolume,+r.highPrice,+r.lowPrice])};
@@ -104,13 +106,15 @@ const maxLev=(p,e)=>{const i=PK.indexOf(p),F=MD.flt&&MD.flt[p+FK];return Math.mi
 function agg(cs,k){if(k===1)return cs;const o=[];for(let i=0;i+k<=cs.length;i+=k){let h=-1/0,l=1/0,v=0,bv=0,nb=0,nt=0,nn=0;for(let j=i;j<i+k;j++){if(cs[j].h>h)h=cs[j].h;if(cs[j].l<l)l=cs[j].l;v+=cs[j].v||0;if(cs[j].bv!=null){bv+=cs[j].bv;nb++}if(cs[j].nt!=null){nt+=cs[j].nt;nn++}}const x={t:cs[i].t,o:cs[i].o,h,l,c:cs[i+k-1].c,v};if(nb===k)x.bv=bv;if(nn===k)x.nt=nt;o.push(x)}return o}
 /* свічки старших таймфреймів вирівняні за UTC, як на біржах (тиждень — з понеділка 00:00 UTC);
    неповна перша група й ще не закрита остання відкидаються */
-const tfOff=tf=>tf===168?4*864e5:0,tfMs=tf=>tf*36e5;
-function aggT(cs,tf){if(tf===1)return cs;const o=[],W=tfMs(tf),off=tfOff(tf);let cur=null,key=null;
+const tfOff=tf=>tf===168?4*864e5:0,tfMs=tf=>Math.round(tf*36e5);
+/* крок базових свічок масиву (1 год або 5 хв): найменший проміжок серед перших свічок */
+const stepA=a=>{let s=Infinity;for(let i=1;i<Math.min(a.length,6);i++){const d=a[i].t-a[i-1].t;if(d>0&&d<s)s=d}return isFinite(s)?s:36e5};
+function aggT(cs,tf){const B=stepA(cs);if(tfMs(tf)<=B)return cs;const o=[],W=tfMs(tf),off=tfOff(tf);let cur=null,key=null;
 for(const c of cs){const k=Math.floor((c.t-off)/W);if(k!==key){if(cur)o.push(cur);key=k;cur={t:k*W+off,o:c.o,h:c.h,l:c.l,c:c.c,v:c.v||0,_s:c.t};if(c.bv!=null)cur.bv=c.bv;else cur._nb=1;if(c.nt!=null)cur.nt=c.nt;else cur._nn=1;if(c.ml!=null){cur.ml=c.ml;cur.mh=c.mh}}else{if(c.h>cur.h)cur.h=c.h;if(c.l<cur.l)cur.l=c.l;cur.c=c.c;cur.v+=c.v||0;if(c.bv!=null&&!cur._nb)cur.bv+=c.bv;else{cur._nb=1;delete cur.bv}if(c.nt!=null&&!cur._nn)cur.nt+=c.nt;else{cur._nn=1;delete cur.nt}if(c.ml!=null){cur.ml=cur.ml==null?c.ml:Math.min(cur.ml,c.ml);cur.mh=cur.mh==null?c.mh:Math.max(cur.mh,c.mh)}}}
-if(cur)o.push(cur);if(o.length&&o[0]._s!==o[0].t)o.shift();const L=cs[cs.length-1];if(o.length&&L&&L.t+36e5<o[o.length-1].t+W)o.pop();return o}
+if(cur)o.push(cur);if(o.length&&o[0]._s!==o[0].t)o.shift();const L=cs[cs.length-1];if(o.length&&L&&L.t+B<o[o.length-1].t+W)o.pop();return o}
 /* чи щойно закрилась свічка таймфрейму tf (за останньою годинною свічкою) */
-const closedTf=(cs,tf)=>{const L=cs[cs.length-1];return!!L&&(tf===1||(L.t+36e5-tfOff(tf))%tfMs(tf)===0)};
-const aggC=(a,k)=>{if(k===1)return a;const c=a._g||(a._g={}),e=c[k];if(e&&e.n===a.length&&e.t===a[0].t)return e.A;const A=a.length&&a[0].t!=null?aggT(a,k):agg(a,k);c[k]={n:a.length,t:a.length?a[0].t:0,A};return A};
+const closedTf=(cs,tf)=>{const L=cs[cs.length-1];if(!L)return false;const B=stepA(cs);return tfMs(tf)<=B||(L.t+B-tfOff(tf))%tfMs(tf)===0};
+const aggC=(a,k)=>{if(a.length>1&&a[0].t!=null?tfMs(k)<=stepA(a):k===1)return a;const c=a._g||(a._g={}),e=c[k];if(e&&e.n===a.length&&e.t===a[0].t)return e.A;const A=a.length&&a[0].t!=null?aggT(a,k):agg(a,k);c[k]={n:a.length,t:a.length?a[0].t:0,A};return A};
 const memo=(A,k,f)=>{const c=A._m||(A._m={}),e=c[k];if(e&&e.n===A.length)return e.v;return(c[k]={n:A.length,v:f()}).v};
 const cl=A=>A.map(x=>x.c);
 function ema(c,n){const a=2/(n+1),o=[c[0]];for(let i=1;i<c.length;i++)o.push(o[i-1]+a*(c[i]-o[i-1]));return o}
@@ -305,7 +309,7 @@ for(let i=Math.max(w,WH?WHL:0,FL.length?AVN:0);i<n;i++){let c=0;for(const s of S
 /* округлення під правила біржі: кількість — вниз до кроку, ціна лімітного ордера — у бік гіршого виконання */
 const decs=x=>{const s=String(x);if(s.includes('e-'))return+s.split('e-')[1];const i=s.indexOf('.');return i<0?0:s.length-i-1};
 const rnd=(v,st,m)=>st>0?+(Math[m](v/st+(m==='floor'?1e-9:-1e-9))*st).toFixed(decs(st)):v;
-const normG=g=>{if(g.ftk==null){g.ftk=g.fut?.0005:.001;g.fmk=g.fut?.0002:.001}return g};
+const normG=g=>{if(+g.tf>0&&+g.tf<1)g.tf=Math.round(g.tf*60)/60;if(g.ftk==null){g.ftk=g.fut?.0005:.001;g.fmk=g.fut?.0002:.001}return g};
 const lbT=(F,t)=>{let lo=0,hi=F.length;while(lo<hi){const m=(lo+hi)>>1;if(F[m].t<t)lo=m+1;else hi=m}return lo};
 class Bot{constructor(g,fr,flt){this.g=g;this.F=flt!==undefined?flt:(typeof fltOf==='function'?fltOf(g):null);this.pos=null;this.tr=[];this.cd=0;this.cum=0;this.nd=0;this.ft=g.ftk!=null?g.ftk:g.fee;this.fmk=g.fmk!=null?g.fmk:g.fee;
 this.fr=fr!==undefined?fr:(g.fut&&typeof frOf==='function'?frOf(g.pair):null)}

@@ -3,7 +3,7 @@
 import { Bot, DEF, entry, normG, ocAt, tfMs } from "./engine.js";
 
 /* інтервали бірж для таймфреймів бота (години → рядок API) */
-export const INTERVAL = { 1: "1h", 4: "4h", 12: "12h", 24: "1d", 168: "1w" };
+export const INTERVAL = { [1 / 12]: "5m", 0.25: "15m", 1: "1h", 4: "4h", 12: "12h", 24: "1d", 168: "1w" };
 
 /* налаштування бота з конфігу хмари (службові поля _t0, _sp, _tn, _srv, _ex прибираються) */
 export function botConfig(config) {

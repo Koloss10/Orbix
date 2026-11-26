@@ -8,7 +8,7 @@ function gnTxt(a){return(a||[]).map(x=>String(+(+x).toFixed(4)).replace('.',',')
 function gridHtml(){return'<label class="fw">Відступи вручну, % від попереднього ордера (порожньо — за кроком і множником)<input id="fgs" type="text" inputmode="decimal" placeholder="напр. 2  3  5"></label>'+
 '<label class="fw">Обсяги ордерів вручну, пропорції з першим ордером (порожньо — мартингейл)<input id="fgv" type="text" inputmode="decimal" placeholder="напр. 11  16  24  49"></label>'+
 '<div class="fw ocb"><b>Умови докупівлі</b><span class="mu"> — ордер з умовами виконується за закриттям свічки, коли ціна дійшла до рівня і всі умови виконані. Умови задаються для Long; для Short — дзеркально.</span><div id="foc"></div></div>'}
-function ocRow(k,c){const OCTF=[[0,'ТФ бота'],[1,'1 год'],[4,'4 год'],[12,'12 год'],[24,'1 день']];return`<div class="ocr" data-k="${k}"><select data-o="i">${Object.entries(OCI).map(([a,v])=>`<option value="${a}"${a===c.i?' selected':''}>${v[0]}</option>`).join('')}</select>`+
+function ocRow(k,c){const OCTF=[[0,'ТФ бота'],[1/12,'5 хв'],[.25,'15 хв'],[1,'1 год'],[4,'4 год'],[12,'12 год'],[24,'1 день']];return`<div class="ocr" data-k="${k}"><select data-o="i">${Object.entries(OCI).map(([a,v])=>`<option value="${a}"${a===c.i?' selected':''}>${v[0]}</option>`).join('')}</select>`+
 `<select data-o="tf">${OCTF.map(([a,b])=>`<option value="${a}"${a==(c.tf||0)?' selected':''}>${b}</option>`).join('')}</select>`+
 `<select data-o="op"><option value="<"${c.op==='<'?' selected':''}>менше</option><option value=">"${c.op==='>'?' selected':''}>більше</option></select>`+
 `<input data-o="v" type="number" inputmode="decimal" step="any" value="${isFinite(c.v)?c.v:''}"><button type="button" class="ghost ocx" title="Прибрати умову">×</button></div>`}
